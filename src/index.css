@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light values kept for completeness; app runs dark by default (class="dark" on <html>). */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 8%;
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 10% 8%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
+    --accent: 240 5% 96%;
+    --accent-foreground: 240 10% 8%;
+    --destructive: 4 86% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 160 84% 39%;
+    --profit: 152 66% 40%;
+    --loss: 4 78% 56%;
+    --radius: 0.7rem;
+  }
+
+  .dark {
+    /* near-black #0a0a0f base */
+    --background: 240 24% 5%;
+    --foreground: 240 12% 92%;
+    --card: 240 18% 7%;
+    --card-foreground: 240 12% 92%;
+    --popover: 240 20% 6%;
+    --popover-foreground: 240 12% 92%;
+    --primary: 160 84% 42%;
+    --primary-foreground: 160 90% 6%;
+    --secondary: 240 12% 12%;
+    --secondary-foreground: 240 12% 92%;
+    --muted: 240 12% 11%;
+    --muted-foreground: 240 8% 58%;
+    --accent: 240 12% 13%;
+    --accent-foreground: 240 12% 96%;
+    --destructive: 4 78% 56%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 12% 15%;
+    --input: 240 12% 16%;
+    --ring: 160 84% 42%;
+    --profit: 152 72% 50%;
+    --loss: 4 84% 63%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  /* Tabular figures for all monetary / numeric cells */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+}

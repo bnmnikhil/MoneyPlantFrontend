@@ -6,6 +6,7 @@ import { LoginPage } from "@/pages/LoginPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { PositionsPage } from "@/pages/PositionsPage";
 import { HoldingsPage } from "@/pages/HoldingsPage";
+import { PayoffPage } from "@/pages/PayoffPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/app" element={<DashboardPage />} />
           <Route path="/app/positions" element={<PositionsPage />} />
           <Route path="/app/holdings" element={<HoldingsPage />} />
+          <Route path="/app/payoff" element={<PayoffPage />} />
         </Route>
       </Route>
 

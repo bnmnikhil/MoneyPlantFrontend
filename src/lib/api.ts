@@ -3,6 +3,7 @@ import type {
   LoginUrl,
   Margins,
   Me,
+  PayoffResponse,
   Position,
   SessionStatus,
 } from "@/types/api";
@@ -114,5 +115,8 @@ export const api = {
   positions: () => request<Position[]>("/api/positions"),
   holdings: () => request<Holding[]>("/api/holdings"),
   margins: () => request<Margins>("/api/margins"),
+  payoffUnderlyings: () => request<string[]>("/api/payoff"),
+  payoff: (underlying: string) =>
+    request<PayoffResponse>(`/api/payoff/${encodeURIComponent(underlying)}`),
   logout: () => request<void>("/api/logout", { method: "POST" }),
 };

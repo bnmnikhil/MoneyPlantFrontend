@@ -49,3 +49,34 @@ export interface Margins {
 export interface KiteSessionExpiredError {
   error: "KITE_SESSION_EXPIRED";
 }
+
+export interface PayoffLeg {
+  symbol: string;
+  strike: number;
+  type: "CE" | "PE";
+  qty: number;
+  avgPrice: number;
+}
+
+export interface PayoffPoint {
+  spot: number;
+  pnl: number;
+}
+
+export interface Payoff {
+  points: PayoffPoint[];
+  breakevens: number[];
+  maxProfit: number;
+  maxLoss: number;
+  unboundedProfit: boolean;
+  unboundedLoss: boolean;
+}
+
+export interface PayoffResponse {
+  underlying: string;
+  spot: number;
+  legs: PayoffLeg[];
+  payoff: Payoff;
+  expiries: string[];
+}
+

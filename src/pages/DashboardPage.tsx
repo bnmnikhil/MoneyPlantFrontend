@@ -40,7 +40,7 @@ export function DashboardPage() {
   const margins = useMargins();
 
   // Broker not linked yet → prompt to connect (skip the whole dashboard body).
-  if (status.data && !status.data.kiteConnected) {
+  if (status.data && !status.kiteConnected) {
     return (
       <div className="py-8">
         <ConnectKiteCard />

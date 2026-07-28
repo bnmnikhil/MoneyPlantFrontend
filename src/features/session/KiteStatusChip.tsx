@@ -26,7 +26,7 @@ export function KiteStatusChip({ className }: { className?: string }) {
     );
   }
 
-  const connected = data?.kiteConnected;
+  const connected =  data?.brokers?.find((b) => b.id === "kite")?.connected ?? false;
 
   if (connected) {
     return (

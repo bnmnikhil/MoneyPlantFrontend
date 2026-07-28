@@ -17,14 +17,18 @@ export function useMe() {
 
 /** Broker (Kite) connection status. Polled so the top-bar chip stays fresh. */
 export function useKiteStatus() {
-  return useQuery({
+  const q = useQuery({
     queryKey: sessionKeys.status,
     queryFn: api.sessionStatus,
     staleTime: 20_000,
     refetchInterval: 60_000,
   });
-}
 
+  const kiteConnected =
+    q.data?.brokers?.find((b) => b.id === "kite")?.connected ?? false;
+
+  return { ...q, kiteConnected };
+}
 /**
  * Kick off the Kite (broker) connect flow:
  * GET /api/session/login-url -> { url } -> full-page redirect to Zerodha.

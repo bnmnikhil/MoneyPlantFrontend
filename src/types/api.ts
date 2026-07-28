@@ -10,9 +10,8 @@ export interface Me {
 }
 
 export interface SessionStatus {
-  kiteConnected: boolean;
+  brokers: { id: string; connected: boolean }[];
 }
-
 export interface LoginUrl {
   url: string;
 }

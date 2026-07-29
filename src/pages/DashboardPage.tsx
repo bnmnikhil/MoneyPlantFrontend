@@ -15,8 +15,10 @@ import { EmptyState, ErrorState } from "@/components/states";
 import { TableSkeleton } from "@/components/TableSkeleton";
 import { PositionsTable } from "@/features/positions/PositionsTable";
 import { ConnectKiteCard } from "@/features/session/ConnectKiteCard";
+import { BrokerWarnings } from "@/features/session/BrokerWarnings";
 import { useKiteStatus } from "@/features/session/hooks";
 import { useMargins, usePositions } from "@/features/positions/hooks";
+import type { BrokerWarning } from "@/types/api";
 import {
   formatINRWhole,
   formatSignedINR,
@@ -34,13 +36,27 @@ const POSITION_HEADERS = [
   "Day change",
 ];
 
+/**
+ * Positions and margins hit the same brokers, so one dead connection produces
+ * the same warning twice. Show it once.
+ */
+function mergeWarnings(...lists: (BrokerWarning[] | undefined)[]) {
+  const seen = new Map<string, BrokerWarning>();
+  for (const list of lists) {
+    for (const w of list ?? []) {
+      seen.set(`${w.connectionId}-${w.code}`, w);
+    }
+  }
+  return [...seen.values()];
+}
+
 export function DashboardPage() {
   const status = useKiteStatus();
   const positions = usePositions();
   const margins = useMargins();
 
-  // Broker not linked yet → prompt to connect (skip the whole dashboard body).
-  if (status.data && !status.kiteConnected) {
+  // No broker linked at all → prompt to connect, skip the dashboard body.
+  if (status.data && !status.anyConnected) {
     return (
       <div className="py-8">
         <ConnectKiteCard />
@@ -48,19 +64,26 @@ export function DashboardPage() {
     );
   }
 
-  const totalPnl =
-    positions.data?.reduce((sum, p) => sum + (p.pnl ?? 0), 0) ?? 0;
-  const openCount = positions.data?.length ?? 0;
+  const rows = positions.data?.items ?? [];
+  const totalPnl = rows.reduce((sum, p) => sum + (p.pnl ?? 0), 0);
+  const openCount = rows.length;
+
+  // Summed across every connected broker; the per-broker rows stay in .items.
+  const totals = margins.totals;
+
+  const warnings = mergeWarnings(
+    positions.data?.warnings,
+    margins.data?.warnings
+  );
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Dashboard"
-        description="Your account at a glance."
-      />
+      <PageHeader title="Dashboard" description="Your account at a glance." />
+
+      <BrokerWarnings warnings={warnings} />
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
         <StatCard
           label="P&L today"
           icon={<TrendingUp />}
@@ -72,28 +95,26 @@ export function DashboardPage() {
           label="Margin available"
           icon={<Wallet />}
           loading={margins.isLoading}
-          value={formatINRWhole(margins.data?.available ?? 0)}
+          value={formatINRWhole(totals.available)}
         />
         <StatCard
           label="Margin used"
           icon={<PiggyBank />}
           loading={margins.isLoading}
-          value={formatINRWhole(margins.data?.used ?? 0)}
+          value={formatINRWhole(totals.used)}
         />
-         <StatCard
-          label="cash available"
+        <StatCard
+          label="Cash available"
           icon={<Wallet />}
           loading={margins.isLoading}
-          value={formatINRWhole(margins.data?.cash ?? 0)}
+          value={formatINRWhole(totals.cash)}
         />
-        
         <StatCard
           label="Open positions"
           icon={<Layers />}
           loading={positions.isLoading}
           value={formatNumber(openCount)}
         />
-        
       </div>
 
       {/* Positions */}
@@ -124,7 +145,7 @@ export function DashboardPage() {
               description="When you have live positions they'll show up here in real time."
             />
           ) : (
-            <PositionsTable positions={positions.data!} />
+            <PositionsTable positions={rows} />
           )}
         </CardContent>
       </Card>

@@ -1,4 +1,5 @@
 import type {
+  BrokerAggregate,
   Holding,
   LoginUrl,
   Margins,
@@ -85,7 +86,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     throw new ApiError(401, "Not authenticated");
   }
 
-  // Broker-auth failure: surface the Connect Kite flow instead of an error.
+  // Whole-request broker failure. Since the aggregate endpoints report partial
+  // failures as 200 + warnings, a 409 now means everything failed — most often
+  // the payoff endpoints, which are still single-connection until 1g.
   if (res.status === 409) {
     const parsed = (await parseBody(res)) as { error?: string } | undefined;
     if (parsed?.error === KITE_SESSION_EXPIRED) {
@@ -112,9 +115,10 @@ export const api = {
   me: () => request<Me>("/api/me"),
   sessionStatus: () => request<SessionStatus>("/api/session/status"),
   loginUrl: () => request<LoginUrl>("/api/session/login-url"),
-  positions: () => request<Position[]>("/api/positions"),
-  holdings: () => request<Holding[]>("/api/holdings"),
-  margins: () => request<Margins>("/api/margins"),
+  // Aggregate endpoints: partial broker failures arrive as 200 + warnings.
+  positions: () => request<BrokerAggregate<Position>>("/api/positions"),
+  holdings: () => request<BrokerAggregate<Holding>>("/api/holdings"),
+  margins: () => request<BrokerAggregate<Margins>>("/api/margins"),
   payoffUnderlyings: () => request<string[]>("/api/payoff"),
   payoff: (underlying: string) =>
     request<PayoffResponse>(`/api/payoff/${encodeURIComponent(underlying)}`),

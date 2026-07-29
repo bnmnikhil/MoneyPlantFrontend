@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState, ErrorState } from "@/components/states";
 import { TableSkeleton } from "@/components/TableSkeleton";
 import { HoldingsTable } from "@/features/holdings/HoldingsTable";
+import { BrokerWarnings } from "@/features/session/BrokerWarnings";
 import { useHoldings } from "@/features/holdings/hooks";
 
 const HEADERS = [
@@ -21,11 +22,14 @@ export function HoldingsPage() {
   const { data, isLoading, isError, isFetching, dataUpdatedAt, refetch } =
     useHoldings();
 
+  const holdings = data?.items ?? [];
+  const warnings = data?.warnings ?? [];
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Holdings"
-        description="Your long-term equity holdings."
+        description="Your long-term equity holdings across all connected brokers."
         actions={
           <RefreshBar
             updatedAt={dataUpdatedAt}
@@ -34,6 +38,8 @@ export function HoldingsPage() {
           />
         }
       />
+
+      <BrokerWarnings warnings={warnings} />
 
       <Card>
         <CardContent className="p-0">
@@ -44,14 +50,14 @@ export function HoldingsPage() {
               title="Couldn't load holdings"
               onRetry={() => refetch()}
             />
-          ) : !data || data.length === 0 ? (
+          ) : holdings.length === 0 ? (
             <EmptyState
               icon={<Inbox />}
               title="No holdings"
               description="Stocks you hold for delivery will be listed here."
             />
           ) : (
-            <HoldingsTable holdings={data} />
+            <HoldingsTable holdings={holdings} />
           )}
         </CardContent>
       </Card>

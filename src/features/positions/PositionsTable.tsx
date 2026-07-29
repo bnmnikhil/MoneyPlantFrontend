@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { BrokerBadge, brokerLabel, hasMultipleSources } from "@/components/BrokerBadge";
 import type { Position } from "@/types/api";
 import { formatINR, formatSignedINR, formatNumber, pnlColor } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -16,7 +17,14 @@ function signedPoints(v: number) {
   return `${v > 0 ? "+" : ""}${v.toFixed(2)}`;
 }
 
+/** Two brokers can hold the same symbol, so the connection must be part of the key. */
+function rowKey(p: Position) {
+  return `${p.connectionId}-${p.symbol}-${p.product}`;
+}
+
 export function PositionsTable({ positions }: { positions: Position[] }) {
+  const showBroker = hasMultipleSources(positions);
+
   return (
     <>
       {/* Desktop table */}
@@ -25,6 +33,7 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead>Symbol</TableHead>
+              {showBroker && <TableHead>Broker</TableHead>}
               <TableHead>Product</TableHead>
               <TableHead className="text-right">Qty</TableHead>
               <TableHead className="text-right">Avg price</TableHead>
@@ -35,8 +44,13 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
           </TableHeader>
           <TableBody>
             {positions.map((p) => (
-              <TableRow key={`${p.symbol}-${p.product}`}>
+              <TableRow key={rowKey(p)}>
                 <TableCell className="font-medium">{p.symbol}</TableCell>
+                {showBroker && (
+                  <TableCell>
+                    <BrokerBadge brokerId={p.broker} />
+                  </TableCell>
+                )}
                 <TableCell>
                   <Badge variant="outline" className="font-normal">
                     {p.product}
@@ -70,7 +84,7 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
       {/* Mobile card list */}
       <div className="divide-y divide-border md:hidden">
         {positions.map((p) => (
-          <div key={`${p.symbol}-${p.product}`} className="p-4">
+          <div key={rowKey(p)} className="p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate font-medium">{p.symbol}</p>
@@ -79,6 +93,7 @@ export function PositionsTable({ positions }: { positions: Position[] }) {
                     {p.product}
                   </Badge>
                   <span className="tnum">Qty {formatNumber(p.qty)}</span>
+                  {showBroker && <span>· {brokerLabel(p.broker)}</span>}
                 </div>
               </div>
               <div className="text-right">

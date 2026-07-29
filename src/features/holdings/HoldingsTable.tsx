@@ -6,6 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { BrokerBadge, brokerLabel, hasMultipleSources } from "@/components/BrokerBadge";
 import type { Holding } from "@/types/api";
 import {
   formatINR,
@@ -16,7 +17,14 @@ import {
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+/** The same stock can be held at two brokers, so key on the connection too. */
+function rowKey(h: Holding) {
+  return `${h.connectionId}-${h.symbol}`;
+}
+
 export function HoldingsTable({ holdings }: { holdings: Holding[] }) {
+  const showBroker = hasMultipleSources(holdings);
+
   return (
     <>
       {/* Desktop table */}
@@ -25,6 +33,7 @@ export function HoldingsTable({ holdings }: { holdings: Holding[] }) {
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead>Symbol</TableHead>
+              {showBroker && <TableHead>Broker</TableHead>}
               <TableHead className="text-right">Qty</TableHead>
               <TableHead className="text-right">Avg cost</TableHead>
               <TableHead className="text-right">LTP</TableHead>
@@ -35,8 +44,13 @@ export function HoldingsTable({ holdings }: { holdings: Holding[] }) {
           </TableHeader>
           <TableBody>
             {holdings.map((h) => (
-              <TableRow key={h.symbol}>
+              <TableRow key={rowKey(h)}>
                 <TableCell className="font-medium">{h.symbol}</TableCell>
+                {showBroker && (
+                  <TableCell>
+                    <BrokerBadge brokerId={h.broker} />
+                  </TableCell>
+                )}
                 <TableCell className="tnum text-right">
                   {formatNumber(h.qty)}
                 </TableCell>
@@ -68,12 +82,13 @@ export function HoldingsTable({ holdings }: { holdings: Holding[] }) {
       {/* Mobile card list */}
       <div className="divide-y divide-border md:hidden">
         {holdings.map((h) => (
-          <div key={h.symbol} className="p-4">
+          <div key={rowKey(h)} className="p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate font-medium">{h.symbol}</p>
                 <p className="mt-1 text-xs text-muted-foreground tnum">
                   Qty {formatNumber(h.qty)} · {formatINR(h.currentValue)}
+                  {showBroker ? ` · ${brokerLabel(h.broker)}` : ""}
                 </p>
               </div>
               <div className="text-right">

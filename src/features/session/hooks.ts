@@ -27,7 +27,11 @@ export function useKiteStatus() {
   const kiteConnected =
     q.data?.brokers?.find((b) => b.id === "kite")?.connected ?? false;
 
-  return { ...q, kiteConnected };
+  /** Any broker at all. With multi-broker this, not kiteConnected, is what
+   *  decides whether to show the "connect a broker" empty state. */
+  const anyConnected = q.data?.brokers?.some((b) => b.connected) ?? false;
+
+  return { ...q, kiteConnected, anyConnected };
 }
 /**
  * Kick off the Kite (broker) connect flow:

@@ -3,7 +3,11 @@ import { Outlet } from "react-router-dom";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { MobileTabBar } from "@/components/layout/MobileTabBar";
-import { ConnectKiteBanner } from "@/features/session/ConnectKiteBanner";
+import { BrokerSessionBanner } from "@/features/session/BrokerSessionBanner";
+import {
+  BROKER_SESSION_LOST_EVENT,
+  type BrokerSessionLostDetail,
+} from "@/lib/api";
 
 const COLLAPSE_KEY = "moneyplant:sidebar-collapsed";
 
@@ -11,18 +15,22 @@ export function AppShell() {
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem(COLLAPSE_KEY) === "1"
   );
-  const [kiteExpired, setKiteExpired] = useState(false);
+  const [sessionLost, setSessionLost] = useState<BrokerSessionLostDetail | null>(
+    null
+  );
 
   useEffect(() => {
     localStorage.setItem(COLLAPSE_KEY, collapsed ? "1" : "0");
   }, [collapsed]);
 
-  // Surface the Connect Kite banner whenever any /api call reports an expired
-  // broker session (dispatched from the global fetch wrapper).
+  // Surface the banner whenever any /api call reports a broker that needs
+  // authorising. Carries the brokerId so the banner names the right one.
   useEffect(() => {
-    const onExpired = () => setKiteExpired(true);
-    window.addEventListener("moneyplant:kite-expired", onExpired);
-    return () => window.removeEventListener("moneyplant:kite-expired", onExpired);
+    const onLost = (e: Event) => {
+      setSessionLost((e as CustomEvent<BrokerSessionLostDetail>).detail);
+    };
+    window.addEventListener(BROKER_SESSION_LOST_EVENT, onLost);
+    return () => window.removeEventListener(BROKER_SESSION_LOST_EVENT, onLost);
   }, []);
 
   return (
@@ -34,7 +42,12 @@ export function AppShell() {
 
         <main className="flex-1 px-4 pb-24 pt-6 sm:px-6 md:pb-8 lg:px-8">
           <div className="mx-auto w-full max-w-6xl space-y-6">
-            {kiteExpired && <ConnectKiteBanner />}
+            {sessionLost && (
+              <BrokerSessionBanner
+                brokerId={sessionLost.brokerId}
+                code={sessionLost.code}
+              />
+            )}
             <Outlet />
           </div>
         </main>

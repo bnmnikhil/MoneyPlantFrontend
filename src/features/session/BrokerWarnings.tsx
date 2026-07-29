@@ -16,7 +16,7 @@ function label(brokerId: string) {
 /**
  * Per-broker failure notice shown above still-useful data.
  *
- * Distinct from ConnectKiteBanner: that one means the entire request failed,
+ * Distinct from BrokerSessionBanner: that one means the entire request failed,
  * this one means some brokers responded and some did not. The table below it
  * is real data, just incomplete — which is why this never replaces the content.
  */

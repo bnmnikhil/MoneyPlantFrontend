@@ -79,9 +79,26 @@ export interface Margins extends BrokerSourced {
   collateral: number;
 }
 
-/** Backend error body when the entire request failed (HTTP 409). */
-export interface KiteSessionExpiredError {
-  error: "KITE_SESSION_EXPIRED";
+/**
+ * Error body when the whole request failed, from ApiExceptionHandler.
+ *
+ * Only the single-connection endpoints (payoff) can produce this — the
+ * aggregate endpoints report per-broker failures as 200 + warnings.
+ *
+ * BROKER_SESSION_EXPIRED -> 409, reconnect this broker
+ * BROKER_NOT_CONNECTED   -> 409, connect it for the first time
+ * BROKER_CALL_FAILED     -> 502, upstream problem, retry may work
+ */
+export type BrokerErrorCode =
+  | "BROKER_SESSION_EXPIRED"
+  | "BROKER_NOT_CONNECTED"
+  | "BROKER_CALL_FAILED";
+
+export interface BrokerErrorBody {
+  error: BrokerErrorCode;
+  /** Null when the failure happened before a broker was resolved. */
+  brokerId: string | null;
+  message: string;
 }
 
 export interface PayoffLeg {

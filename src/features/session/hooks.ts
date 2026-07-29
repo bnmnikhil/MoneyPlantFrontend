@@ -15,8 +15,13 @@ export function useMe() {
   });
 }
 
-/** Broker (Kite) connection status. Polled so the top-bar chip stays fresh. */
-export function useKiteStatus() {
+/**
+ * Connection state for every broker the backend knows about.
+ *
+ * The list comes from BrokerRegistry, so a new broker appears here with no
+ * frontend change at all — which is the point of the 1f refactor.
+ */
+export function useBrokerStatus() {
   const q = useQuery({
     queryKey: sessionKeys.status,
     queryFn: api.sessionStatus,
@@ -24,22 +29,27 @@ export function useKiteStatus() {
     refetchInterval: 60_000,
   });
 
-  const kiteConnected =
-    q.data?.brokers?.find((b) => b.id === "kite")?.connected ?? false;
+  const brokers = q.data?.brokers ?? [];
 
-  /** Any broker at all. With multi-broker this, not kiteConnected, is what
-   *  decides whether to show the "connect a broker" empty state. */
-  const anyConnected = q.data?.brokers?.some((b) => b.connected) ?? false;
-
-  return { ...q, kiteConnected, anyConnected };
+  return {
+    ...q,
+    brokers,
+    anyConnected: brokers.some((b) => b.connected),
+    disconnected: brokers.filter((b) => !b.connected),
+  };
 }
+
 /**
- * Kick off the Kite (broker) connect flow:
- * GET /api/session/login-url -> { url } -> full-page redirect to Zerodha.
+ * Start a broker's login flow: GET /api/session/login-url?brokerId= -> { url }
+ * -> full-page redirect.
+ *
+ * The brokerId is the mutation variable rather than a hook argument, so one
+ * instance can serve a list of brokers and `variables` tells you which one is
+ * mid-flight for per-button spinners.
  */
-export function useConnectKite() {
+export function useConnectBroker() {
   return useMutation({
-    mutationFn: api.loginUrl,
+    mutationFn: (brokerId: string) => api.loginUrl(brokerId),
     onSuccess: ({ url }) => {
       window.location.assign(url);
     },

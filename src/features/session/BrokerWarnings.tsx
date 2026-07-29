@@ -1,6 +1,6 @@
 import { Loader2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useConnectKite } from "@/features/session/hooks";
+import { useConnectBroker } from "@/features/session/hooks";
 import type { BrokerWarning } from "@/types/api";
 
 const BROKER_LABELS: Record<string, string> = {
@@ -21,12 +21,12 @@ function label(brokerId: string) {
  * is real data, just incomplete — which is why this never replaces the content.
  */
 function WarningRow({ warning }: { warning: BrokerWarning }) {
-  const connect = useConnectKite();
+  const connect = useConnectBroker();
   const expired = warning.code === "SESSION_EXPIRED";
 
-  // Until 1f, /api/session/login-url is Kite-only, so offering "Reconnect" for
-  // any other broker would silently send the user to Zerodha. Show text instead.
-  const canReconnect = expired && warning.brokerId === "kite";
+  // login-url takes a brokerId as of 1f, so Reconnect now works for any broker.
+  const canReconnect = expired;
+  const pending = connect.isPending && connect.variables === warning.brokerId;
 
   return (
     <div className="flex flex-col items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -49,11 +49,11 @@ function WarningRow({ warning }: { warning: BrokerWarning }) {
       {canReconnect ? (
         <Button
           size="sm"
-          onClick={() => connect.mutate()}
-          disabled={connect.isPending}
+          onClick={() => connect.mutate(warning.brokerId)}
+          disabled={pending}
           className="shrink-0"
         >
-          {connect.isPending ? <Loader2 className="animate-spin" /> : null}
+          {pending ? <Loader2 className="animate-spin" /> : null}
           Reconnect
         </Button>
       ) : null}

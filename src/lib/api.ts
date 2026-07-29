@@ -156,7 +156,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 export const api = {
   me: () => request<Me>("/api/me"),
   sessionStatus: () => request<SessionStatus>("/api/session/status"),
-  loginUrl: () => request<LoginUrl>("/api/session/login-url"),
+  loginUrl: (brokerId: string) =>
+    request<LoginUrl>(`/api/session/login-url?brokerId=${encodeURIComponent(brokerId)}`),
   // Aggregate endpoints: partial broker failures arrive as 200 + warnings.
   positions: () => request<BrokerAggregate<Position>>("/api/positions"),
   holdings: () => request<BrokerAggregate<Holding>>("/api/holdings"),

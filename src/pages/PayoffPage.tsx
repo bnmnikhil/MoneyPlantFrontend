@@ -5,11 +5,11 @@ import { StatCard } from "@/components/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/states";
-import { ConnectKiteBanner } from "@/features/session/ConnectKiteBanner";
+import { BrokerSessionBanner } from "@/features/session/BrokerSessionBanner";
 import { PayoffChart } from "@/features/payoff/PayoffChart";
 import { LegsTable } from "@/features/payoff/LegsTable";
 import { usePayoff, usePayoffUnderlyings } from "@/features/payoff/hooks";
-import { isKiteSessionExpired } from "@/lib/api";
+import { brokerIdOf, isBrokerSessionError } from "@/lib/api";
 import { formatINRWhole } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -116,11 +116,13 @@ export function PayoffPage() {
         </Card>
       )}
 
-      {/* Broker session expired → reconnect banner */}
-      {isKiteSessionExpired(payoff.error) && <ConnectKiteBanner />}
+      {/* Broker needs authorising → nothing to plot */}
+      {isBrokerSessionError(payoff.error) && (
+        <BrokerSessionBanner brokerId={brokerIdOf(payoff.error)} />
+      )}
 
       {/* Main body: only when we have (or are loading) a selected underlying */}
-      {selected && !isKiteSessionExpired(payoff.error) && (
+      {selected && !isBrokerSessionError(payoff.error) && (
         <>
           {/* Summary cards */}
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

@@ -1,5 +1,7 @@
 import type {
   BrokerAggregate,
+  BrokerErrorBody,
+  BrokerErrorCode,
   Holding,
   LoginUrl,
   Margins,
@@ -9,25 +11,59 @@ import type {
   SessionStatus,
 } from "@/types/api";
 
-export const KITE_SESSION_EXPIRED = "KITE_SESSION_EXPIRED";
+export const BROKER_SESSION_EXPIRED = "BROKER_SESSION_EXPIRED";
+export const BROKER_NOT_CONNECTED = "BROKER_NOT_CONNECTED";
+export const BROKER_CALL_FAILED = "BROKER_CALL_FAILED";
+
+/** Event fired when a broker needs (re)authorising, so any listener can react. */
+export const BROKER_SESSION_LOST_EVENT = "moneyplant:broker-session-lost";
+
+export interface BrokerSessionLostDetail {
+  brokerId: string | null;
+  code: BrokerErrorCode;
+}
 
 /** Thrown by every non-2xx response from the API layer. */
 export class ApiError extends Error {
   status: number;
   code?: string;
+  brokerId?: string | null;
   body?: unknown;
 
-  constructor(status: number, message: string, code?: string, body?: unknown) {
+  constructor(
+    status: number,
+    message: string,
+    code?: string,
+    brokerId?: string | null,
+    body?: unknown
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.brokerId = brokerId;
     this.body = body;
   }
 }
 
-export function isKiteSessionExpired(err: unknown): boolean {
-  return err instanceof ApiError && err.code === KITE_SESSION_EXPIRED;
+/**
+ * The broker needs authorising — either the token died or it was never linked.
+ * Both are fixed by the same button, so callers rarely need to tell them apart.
+ */
+export function isBrokerSessionError(err: unknown): boolean {
+  return (
+    err instanceof ApiError &&
+    (err.code === BROKER_SESSION_EXPIRED || err.code === BROKER_NOT_CONNECTED)
+  );
+}
+
+/** Upstream broker problem. Do NOT prompt to reconnect — it fixes nothing. */
+export function isBrokerCallFailed(err: unknown): boolean {
+  return err instanceof ApiError && err.code === BROKER_CALL_FAILED;
+}
+
+export function brokerIdOf(err: unknown): string | null {
+  return err instanceof ApiError ? err.brokerId ?? null : null;
 }
 
 export function isUnauthorized(err: unknown): boolean {
@@ -44,12 +80,10 @@ function redirectToLogin() {
   window.location.assign("/login");
 }
 
-/**
- * Broadcast a Kite-session-expired signal so a top-level listener can surface
- * the "Connect Kite" banner regardless of which query failed.
- */
-function emitKiteExpired() {
-  window.dispatchEvent(new CustomEvent("moneyplant:kite-expired"));
+function emitBrokerSessionLost(detail: BrokerSessionLostDetail) {
+  window.dispatchEvent(
+    new CustomEvent<BrokerSessionLostDetail>(BROKER_SESSION_LOST_EVENT, { detail })
+  );
 }
 
 async function parseBody(res: Response): Promise<unknown> {
@@ -86,16 +120,24 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     throw new ApiError(401, "Not authenticated");
   }
 
-  // Whole-request broker failure. Since the aggregate endpoints report partial
-  // failures as 200 + warnings, a 409 now means everything failed — most often
-  // the payoff endpoints, which are still single-connection until 1g.
-  if (res.status === 409) {
-    const parsed = (await parseBody(res)) as { error?: string } | undefined;
-    if (parsed?.error === KITE_SESSION_EXPIRED) {
-      emitKiteExpired();
-      throw new ApiError(409, "Kite session expired", KITE_SESSION_EXPIRED, parsed);
+  // Broker failures from ApiExceptionHandler. 409 = needs authorising,
+  // 502 = upstream broker problem. Only the single-connection endpoints get
+  // here; the aggregate endpoints report partial failure as 200 + warnings.
+  if (res.status === 409 || res.status === 502) {
+    const parsed = (await parseBody(res)) as BrokerErrorBody | undefined;
+    const code = parsed?.error;
+    const brokerId = parsed?.brokerId ?? null;
+
+    if (code === BROKER_SESSION_EXPIRED || code === BROKER_NOT_CONNECTED) {
+      emitBrokerSessionLost({ brokerId, code });
+      throw new ApiError(res.status, parsed?.message ?? "Broker not authorised", code, brokerId, parsed);
     }
-    throw new ApiError(409, "Conflict", undefined, parsed);
+
+    if (code === BROKER_CALL_FAILED) {
+      throw new ApiError(res.status, parsed?.message ?? "Broker call failed", code, brokerId, parsed);
+    }
+
+    throw new ApiError(res.status, `Request failed (${res.status})`, undefined, null, parsed);
   }
 
   if (res.status === 204) {
@@ -104,7 +146,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   if (!res.ok) {
     const parsed = await parseBody(res);
-    throw new ApiError(res.status, `Request failed (${res.status})`, undefined, parsed);
+    throw new ApiError(res.status, `Request failed (${res.status})`, undefined, null, parsed);
   }
 
   return (await parseBody(res)) as T;

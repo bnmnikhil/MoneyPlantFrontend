@@ -3,7 +3,9 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 
 const proxyTarget = "http://localhost:8080";
-const proxied = ["/api", "/oauth2", "/login/oauth2", "/kite"];
+// Every backend-owned path. Broker callback routes must be listed here or the
+// OAuth redirect lands on Vite in dev and 404s instead of reaching the backend.
+const proxied = ["/api", "/oauth2", "/login/oauth2", "/kite", "/aliceblue"];
 
 export default defineConfig({
   plugins: [react()],

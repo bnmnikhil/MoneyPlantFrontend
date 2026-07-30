@@ -124,8 +124,24 @@ export interface Payoff {
   unboundedLoss: boolean;
 }
 
+/**
+ * One selectable curve.
+ *
+ * Curves are per (connection, underlying) and are deliberately not merged
+ * across brokers — a spread only earns margin benefit inside one account, so a
+ * combined curve would describe no real position. The same underlying held at
+ * two brokers therefore appears twice, distinguished by broker.
+ */
+export interface CurveRef {
+  connectionId: string;
+  brokerId: string;
+  underlying: string;
+}
+
 export interface PayoffResponse {
   underlying: string;
+  brokerId: string;
+  connectionId: string;
   spot: number;
   legs: PayoffLeg[];
   payoff: Payoff;

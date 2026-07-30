@@ -1,26 +1,30 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import type { CurveRef } from "@/types/api";
 
 export const payoffKeys = {
-  underlyings: ["payoff", "underlyings"] as const,
-  detail: (underlying: string) => ["payoff", underlying] as const,
+  curves: ["payoff", "curves"] as const,
+  // Keyed by connection AND underlying: the same underlying held at two brokers
+  // is two distinct curves and must not share a cache entry.
+  detail: (connectionId: string, underlying: string) =>
+    ["payoff", connectionId, underlying] as const,
 };
 
-/** Underlyings that currently have open F&O positions worth plotting. */
-export function usePayoffUnderlyings() {
+/** Every (broker, underlying) pair that currently has plottable positions. */
+export function usePayoffCurves() {
   return useQuery({
-    queryKey: payoffKeys.underlyings,
-    queryFn: api.payoffUnderlyings,
+    queryKey: payoffKeys.curves,
+    queryFn: api.payoffCurves,
     staleTime: 30_000,
   });
 }
 
-/** Payoff curve for one underlying. Disabled until an underlying is selected. */
-export function usePayoff(underlying: string | undefined) {
+/** Payoff curve for one reference. Disabled until one is selected. */
+export function usePayoff(curve: CurveRef | undefined) {
   return useQuery({
-    queryKey: payoffKeys.detail(underlying ?? ""),
-    queryFn: () => api.payoff(underlying as string),
-    enabled: !!underlying,
+    queryKey: payoffKeys.detail(curve?.connectionId ?? "", curve?.underlying ?? ""),
+    queryFn: () => api.payoff(curve!.connectionId, curve!.underlying),
+    enabled: !!curve,
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
   });

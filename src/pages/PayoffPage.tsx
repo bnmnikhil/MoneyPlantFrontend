@@ -8,35 +8,51 @@ import { EmptyState, ErrorState } from "@/components/states";
 import { BrokerSessionBanner } from "@/features/session/BrokerSessionBanner";
 import { PayoffChart } from "@/features/payoff/PayoffChart";
 import { LegsTable } from "@/features/payoff/LegsTable";
-import { usePayoff, usePayoffUnderlyings } from "@/features/payoff/hooks";
+import { usePayoff, usePayoffCurves } from "@/features/payoff/hooks";
+import { brokerLabel } from "@/components/BrokerBadge";
 import { brokerIdOf, isBrokerSessionError } from "@/lib/api";
 import { formatINRWhole } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { CurveRef } from "@/types/api";
 
-function UnderlyingSelector({
-  underlyings,
+const curveKey = (c: CurveRef) => `${c.connectionId}:${c.underlying}`;
+
+/**
+ * One button per (broker, underlying).
+ *
+ * The broker name is appended only when more than one broker is connected —
+ * same rule the positions and holdings tables use. With a single broker it is
+ * noise; with two it is the only thing distinguishing two BANKNIFTY curves.
+ */
+function CurveSelector({
+  curves,
   selected,
   onSelect,
 }: {
-  underlyings: string[];
-  selected: string | undefined;
-  onSelect: (u: string) => void;
+  curves: CurveRef[];
+  selected: CurveRef | undefined;
+  onSelect: (c: CurveRef) => void;
 }) {
+  const showBroker = new Set(curves.map((c) => c.brokerId)).size > 1;
+
   return (
     <div className="flex flex-wrap gap-1.5">
-      {underlyings.map((u) => (
+      {curves.map((c) => (
         <button
-          key={u}
+          key={curveKey(c)}
           type="button"
-          onClick={() => onSelect(u)}
+          onClick={() => onSelect(c)}
           className={cn(
             "rounded-md border px-3 py-1.5 text-sm font-medium transition-colors",
-            u === selected
+            selected && curveKey(c) === curveKey(selected)
               ? "border-primary/40 bg-primary/12 text-primary"
               : "border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground"
           )}
         >
-          {u}
+          {c.underlying}
+          {showBroker && (
+            <span className="ml-1.5 font-normal opacity-70">· {brokerLabel(c.brokerId)}</span>
+          )}
         </button>
       ))}
     </div>
@@ -61,14 +77,18 @@ function ModeToggle() {
 }
 
 export function PayoffPage() {
-  const underlyings = usePayoffUnderlyings();
-  const [selected, setSelected] = useState<string>();
+  const underlyings = usePayoffCurves();
+  const [selected, setSelected] = useState<CurveRef>();
 
-  // Auto-select the first underlying once the list arrives; keep selection valid.
+  // Auto-select the first curve once the list arrives, and keep the selection
+  // valid: a broker disconnecting can remove the curve currently being viewed.
   useEffect(() => {
     const list = underlyings.data;
     if (!list?.length) return;
-    setSelected((cur) => (cur && list.includes(cur) ? cur : list[0]));
+    setSelected((cur) => {
+      const stillThere = cur && list.some((c) => curveKey(c) === curveKey(cur));
+      return stillThere ? cur : list[0];
+    });
   }, [underlyings.data]);
 
   const payoff = usePayoff(selected);
@@ -82,8 +102,8 @@ export function PayoffPage() {
         description="Expiry payoff curve for your open F&O positions."
         actions={
           underlyings.data && underlyings.data.length > 0 ? (
-            <UnderlyingSelector
-              underlyings={underlyings.data}
+            <CurveSelector
+              curves={underlyings.data}
               selected={selected}
               onSelect={setSelected}
             />
@@ -96,7 +116,7 @@ export function PayoffPage() {
         <Card>
           <CardContent className="p-0">
             <ErrorState
-              title="Couldn't load underlyings"
+              title="Couldn't load payoff curves"
               onRetry={() => underlyings.refetch()}
             />
           </CardContent>

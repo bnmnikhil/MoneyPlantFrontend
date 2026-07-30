@@ -6,6 +6,7 @@ import type {
   LoginUrl,
   Margins,
   Me,
+  CurveRef,
   PayoffResponse,
   Position,
   SessionStatus,
@@ -162,8 +163,12 @@ export const api = {
   positions: () => request<BrokerAggregate<Position>>("/api/positions"),
   holdings: () => request<BrokerAggregate<Holding>>("/api/holdings"),
   margins: () => request<BrokerAggregate<Margins>>("/api/margins"),
-  payoffUnderlyings: () => request<string[]>("/api/payoff"),
-  payoff: (underlying: string) =>
-    request<PayoffResponse>(`/api/payoff/${encodeURIComponent(underlying)}`),
+  // Payoff is per connection, not global: the same underlying can be held at
+  // two brokers and each gets its own curve, so the connectionId is required.
+  payoffCurves: () => request<CurveRef[]>("/api/payoff"),
+  payoff: (connectionId: string, underlying: string) =>
+    request<PayoffResponse>(
+      `/api/payoff/${encodeURIComponent(underlying)}?connectionId=${encodeURIComponent(connectionId)}`
+    ),
   logout: () => request<void>("/api/logout", { method: "POST" }),
 };

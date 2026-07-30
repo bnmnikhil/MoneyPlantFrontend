@@ -14,9 +14,9 @@ import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/states";
 import { TableSkeleton } from "@/components/TableSkeleton";
 import { PositionsTable } from "@/features/positions/PositionsTable";
-import { ConnectKiteCard } from "@/features/session/ConnectKiteCard";
+import { ConnectBrokerCard } from "@/features/session/ConnectBrokerCard";
 import { BrokerWarnings } from "@/features/session/BrokerWarnings";
-import { useKiteStatus } from "@/features/session/hooks";
+import { useBrokerStatus } from "@/features/session/hooks";
 import { useMargins, usePositions } from "@/features/positions/hooks";
 import type { BrokerWarning } from "@/types/api";
 import {
@@ -51,7 +51,7 @@ function mergeWarnings(...lists: (BrokerWarning[] | undefined)[]) {
 }
 
 export function DashboardPage() {
-  const status = useKiteStatus();
+  const status = useBrokerStatus();
   const positions = usePositions();
   const margins = useMargins();
 
@@ -59,7 +59,7 @@ export function DashboardPage() {
   if (status.data && !status.anyConnected) {
     return (
       <div className="py-8">
-        <ConnectKiteCard />
+        <ConnectBrokerCard />
       </div>
     );
   }

@@ -1,7 +1,7 @@
 import { Loader2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { brokerLabel } from "@/components/BrokerBadge";
-import { useConnectKite } from "@/features/session/hooks";
+import { useConnectBroker } from "@/features/session/hooks";
 import type { BrokerErrorCode } from "@/types/api";
 
 /**
@@ -19,14 +19,15 @@ export function BrokerSessionBanner({
   brokerId?: string | null;
   code?: BrokerErrorCode;
 }) {
-  const connect = useConnectKite();
+  const connect = useConnectBroker();
 
   const name = brokerId ? brokerLabel(brokerId) : "Your broker";
   const firstTime = code === "BROKER_NOT_CONNECTED";
 
-  // /api/session/login-url is Kite-only until 1f. Offering the button for any
-  // other broker would silently send the user to Zerodha.
-  const canConnect = !brokerId || brokerId === "kite";
+  // login-url needs a brokerId as of 1f. When the failure happened before a
+  // broker was resolved we have none, so there is nothing to send them to.
+  const canConnect = Boolean(brokerId);
+  const pending = connect.isPending && connect.variables === brokerId;
 
   return (
     <div className="flex flex-col items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -47,11 +48,11 @@ export function BrokerSessionBanner({
       {canConnect ? (
         <Button
           size="sm"
-          onClick={() => connect.mutate()}
-          disabled={connect.isPending}
+          onClick={() => connect.mutate(brokerId as string)}
+          disabled={pending}
           className="shrink-0"
         >
-          {connect.isPending ? <Loader2 className="animate-spin" /> : null}
+          {pending ? <Loader2 className="animate-spin" /> : null}
           {firstTime ? "Connect" : "Reconnect"}
         </Button>
       ) : null}

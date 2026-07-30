@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Logo } from "@/components/Logo";
-import { KiteStatusChip } from "@/features/session/KiteStatusChip";
+import { BrokerStatusChips } from "@/features/session/BrokerStatusChips";
 import { useLogout, useMe } from "@/features/session/hooks";
 
 function initials(name?: string) {
@@ -38,7 +38,7 @@ export function Topbar() {
       </div>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
-        <KiteStatusChip />
+        <BrokerStatusChips />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

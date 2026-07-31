@@ -8,15 +8,8 @@ import { PositionsTable } from "@/features/positions/PositionsTable";
 import { BrokerWarnings } from "@/features/session/BrokerWarnings";
 import { usePositions } from "@/features/positions/hooks";
 
-const HEADERS = [
-  "Symbol",
-  "Product",
-  "Qty",
-  "Avg price",
-  "LTP",
-  "P&L",
-  "Day change",
-];
+// Matches PositionsTable: P&L and day change are stacked in one column.
+const HEADERS = ["Symbol", "Product", "Qty", "Avg price", "LTP", "P&L"];
 
 export function PositionsPage() {
   const { data, isLoading, isError, isFetching, dataUpdatedAt, refetch } =

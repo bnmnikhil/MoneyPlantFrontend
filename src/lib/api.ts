@@ -101,6 +101,28 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
 }
 
+/**
+ * Spring Security hands the CSRF token over as a JS-readable XSRF-TOKEN cookie
+ * and expects it echoed back in X-XSRF-TOKEN. Only mutating verbs are checked,
+ * so reads skip it entirely.
+ *
+ * This is belt-and-braces: the session cookie is SameSite=Lax, which already
+ * stops a cross-site POST from carrying credentials. Kept because the app drives
+ * a live brokerage account, where one layer of defence is not enough.
+ */
+function csrfHeader(method: string | undefined): Record<string, string> {
+  const verb = (method ?? "GET").toUpperCase();
+  if (verb === "GET" || verb === "HEAD" || verb === "OPTIONS") return {};
+
+  const prefix = "XSRF-TOKEN=";
+  const raw = document.cookie
+    .split("; ")
+    .find((c) => c.startsWith(prefix))
+    ?.slice(prefix.length);
+
+  return raw ? { "X-XSRF-TOKEN": decodeURIComponent(raw) } : {};
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { body, headers, ...rest } = options;
 
@@ -109,6 +131,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     headers: {
       Accept: "application/json",
       ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...csrfHeader(rest.method),
       ...headers,
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),

@@ -1,6 +1,23 @@
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
+
+/** Where Spring Security starts the Google flow. One registration, so no chooser. */
+const SIGN_IN_URL = "/oauth2/authorization/google";
+
+/**
+ * SecurityConfig redirects here with ?error= when sign-in fails. `not_invited`
+ * is the allowlist rejection and is not a fault the user can fix by retrying,
+ * so it reads differently from a transient failure.
+ */
+function errorMessage(code: string | null): string | null {
+  if (!code) return null;
+  if (code === "not_invited") {
+    return "That Google account is not on the invite list for this instance. Ask the owner to add it.";
+  }
+  return "Sign-in did not complete. Please try again.";
+}
 
 /** Google's "G" mark (official four-color logo). */
 function GoogleIcon() {
@@ -27,6 +44,9 @@ function GoogleIcon() {
 }
 
 export function LoginPage() {
+  const [params] = useSearchParams();
+  const message = errorMessage(params.get("error"));
+
   return (
     <div className="relative flex min-h-svh items-center justify-center bg-background px-4">
       <div
@@ -46,12 +66,23 @@ export function LoginPage() {
             </p>
           </div>
 
+          {message && (
+            <div
+              role="alert"
+              className="w-full rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-left text-sm text-destructive"
+            >
+              {message}
+            </div>
+          )}
+
           <Button
             size="lg"
             variant="outline"
             className="w-full bg-card"
             onClick={() => {
-              window.location.href = "/api/me";
+              // Full-document navigation, not fetch: this is the start of an
+              // OAuth redirect chain that leaves the origin entirely.
+              window.location.href = SIGN_IN_URL;
             }}
           >
             <GoogleIcon />

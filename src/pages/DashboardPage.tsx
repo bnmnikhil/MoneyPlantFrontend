@@ -26,15 +26,10 @@ import {
   pnlColor,
 } from "@/lib/format";
 
-const POSITION_HEADERS = [
-  "Symbol",
-  "Product",
-  "Qty",
-  "Avg price",
-  "LTP",
-  "P&L",
-  "Day change",
-];
+// Matches PositionsTable's columns. P&L and day change now share one column,
+// stacked, so the skeleton must not promise a "Day change" header that the
+// loaded table does not have.
+const POSITION_HEADERS = ["Symbol", "Product", "Qty", "Avg price", "LTP", "P&L"];
 
 /**
  * Positions and margins hit the same brokers, so one dead connection produces

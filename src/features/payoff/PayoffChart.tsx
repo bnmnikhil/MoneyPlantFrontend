@@ -125,19 +125,28 @@ export function PayoffChart({
             />
           ))}
 
-          {/* Spot */}
-          <ReferenceLine
-            x={spot}
-            stroke={AMBER}
-            strokeDasharray="4 4"
-            label={{
-              value: `Spot ${formatINRWhole(spot)}`,
-              position: "insideTopRight",
-              fill: AMBER,
-              fontSize: 11,
-              fontWeight: 600,
-            }}
-          />
+          {/*
+            Spot — only when we actually have one.
+
+            A spot of 0 means no broker could quote it, not that the index is
+            at zero. Rendering the line anyway pins it to the far left of the
+            chart and labels it "Spot ₹0", which reads as real. Better to show
+            no reference line than a confident wrong one.
+          */}
+          {spot > 0 && (
+            <ReferenceLine
+              x={spot}
+              stroke={AMBER}
+              strokeDasharray="4 4"
+              label={{
+                value: `Spot ${formatINRWhole(spot)}`,
+                position: "insideTopRight",
+                fill: AMBER,
+                fontSize: 11,
+                fontWeight: 600,
+              }}
+            />
+          )}
         </ComposedChart>
       </ResponsiveContainer>
     </div>

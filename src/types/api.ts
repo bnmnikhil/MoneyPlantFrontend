@@ -52,11 +52,20 @@ export interface BrokerSourced {
 
 export interface Position extends BrokerSourced {
   symbol: string;
+  /**
+   * BANKNIFTY, ITC — resolved server-side from the broker's contract master.
+   *
+   * Null for equity positions, and for any symbol the contract master doesn't
+   * know. The UI groups on this, so it must tolerate null rather than assume it.
+   */
+  underlying: string | null;
   product: string;
   qty: number;
   avgPrice: number;
   ltp: number;
+  /** Lifetime, since entry, in rupees. */
   pnl: number;
+  /** Today's movement, in rupees — not a per-unit price delta. */
   dayChange: number;
 }
 

@@ -146,11 +146,16 @@ export function PayoffPage() {
         <>
           {/* Summary cards */}
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {/*
+              "—" rather than ₹0 when no broker can quote spot. Kite's market
+              data is a paid add-on and Alice Blue has no in-hours quote
+              endpoint, so this is blank unless Paytm is connected.
+            */}
             <StatCard
               label="Current spot"
               icon={<Crosshair />}
               loading={payoff.isLoading}
-              value={formatINRWhole(data?.spot ?? 0)}
+              value={data && data.spot > 0 ? formatINRWhole(data.spot) : "—"}
             />
             <StatCard
               label="Max profit"

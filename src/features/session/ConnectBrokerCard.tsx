@@ -35,18 +35,18 @@ export function ConnectBrokerCard({ className }: { className?: string }) {
         </div>
 
         <div className="flex flex-wrap justify-center gap-2">
-          {disconnected.map((b) => {
-            const pending = connect.isPending && connect.variables === b.id;
+          {disconnected.map((id) => {
+            const pending = connect.isPending && connect.variables === id;
             return (
               <Button
-                key={b.id}
+                key={id}
                 size="lg"
-                variant={b.id === "kite" ? "default" : "outline"}
-                onClick={() => connect.mutate(b.id)}
+                variant={id === "kite" ? "default" : "outline"}
+                onClick={() => connect.mutate(id)}
                 disabled={pending}
               >
                 {pending ? <Loader2 className="animate-spin" /> : <Link2 />}
-                {pending ? "Redirecting…" : `Connect ${brokerLabel(b.id)}`}
+                {pending ? "Redirecting…" : `Connect ${brokerLabel(id)}`}
               </Button>
             );
           })}

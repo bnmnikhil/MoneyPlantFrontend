@@ -9,8 +9,34 @@ export interface Me {
   picture: string;
 }
 
+/** One linked broker account. Keyed by connectionId, like every other contract. */
+export interface BrokerConnection {
+  connectionId: string;
+  brokerId: string;
+  /**
+   * What to call this account: the broker's own client code where it gives one
+   * ("ZR4821"), otherwise the connectionId's label segment ("default").
+   * Never blank — the backend normalises it on BrokerSession.
+   */
+  accountLabel: string;
+  connected: boolean;
+}
+
+/**
+ * Two arrays, answering two questions.
+ *
+ * `connections` is what this user has linked, one row per account — so two
+ * accounts at the same broker are two rows, which the old broker-keyed
+ * `{id, connected}` shape could not express.
+ *
+ * `brokers` is every broker the backend knows about, which is what the Connect
+ * buttons are built from: a broker with no connection has no row in the first
+ * array. Do not read it as "brokers this user wants" — that distinction starts
+ * mattering only when brokers become user-configured.
+ */
 export interface SessionStatus {
-  brokers: { id: string; connected: boolean }[];
+  brokers: string[];
+  connections: BrokerConnection[];
 }
 export interface LoginUrl {
   url: string;

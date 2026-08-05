@@ -4,26 +4,32 @@ import { useBrokerStatus, useConnectBroker } from "@/features/session/hooks";
 import { cn } from "@/lib/utils";
 
 /**
- * One chip per broker the backend knows about.
+ * One chip per linked account, plus one per broker still to link.
  *
  * Replaces KiteStatusChip, which could only ever show Zerodha. The list is
  * driven by /api/session/status, so Alice Blue appears here on its own.
+ *
+ * Accounts, not brokers: two Kite accounts are two chips. The account label is
+ * appended only when that broker has more than one connection, matching the
+ * payoff selector's rule for the broker name — a lone account is unambiguous,
+ * and "Zerodha · ZR4821" beside nothing else is just noise.
  */
-function Chip({ brokerId, connected }: { brokerId: string; connected: boolean }) {
+function ConnectedChip({ brokerId, suffix }: { brokerId: string; suffix?: string }) {
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-profit/25 bg-profit/10 px-3 py-1.5 text-xs font-medium text-profit">
+      <span className="relative flex h-1.5 w-1.5">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-profit/70" />
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-profit" />
+      </span>
+      {brokerLabel(brokerId)}
+      {suffix && <span className="text-profit/70">· {suffix}</span>}
+    </span>
+  );
+}
+
+function ConnectChip({ brokerId }: { brokerId: string }) {
   const connect = useConnectBroker();
   const pending = connect.isPending && connect.variables === brokerId;
-
-  if (connected) {
-    return (
-      <span className="inline-flex items-center gap-2 rounded-full border border-profit/25 bg-profit/10 px-3 py-1.5 text-xs font-medium text-profit">
-        <span className="relative flex h-1.5 w-1.5">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-profit/70" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-profit" />
-        </span>
-        {brokerLabel(brokerId)}
-      </span>
-    );
-  }
 
   return (
     <button
@@ -44,7 +50,7 @@ function Chip({ brokerId, connected }: { brokerId: string; connected: boolean })
 }
 
 export function BrokerStatusChips({ className }: { className?: string }) {
-  const { brokers, isLoading } = useBrokerStatus();
+  const { connections, disconnected, isLoading } = useBrokerStatus();
 
   if (isLoading) {
     return (
@@ -62,8 +68,19 @@ export function BrokerStatusChips({ className }: { className?: string }) {
 
   return (
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
-      {brokers.map((b) => (
-        <Chip key={b.id} brokerId={b.id} connected={b.connected} />
+      {connections.map((c) => (
+        <ConnectedChip
+          key={c.connectionId}
+          brokerId={c.brokerId}
+          suffix={
+            connections.filter((o) => o.brokerId === c.brokerId).length > 1
+              ? c.accountLabel
+              : undefined
+          }
+        />
+      ))}
+      {disconnected.map((id) => (
+        <ConnectChip key={id} brokerId={id} />
       ))}
     </div>
   );

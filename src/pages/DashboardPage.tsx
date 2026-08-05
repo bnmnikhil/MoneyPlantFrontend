@@ -15,6 +15,7 @@ import { EmptyState, ErrorState } from "@/components/states";
 import { TableSkeleton } from "@/components/TableSkeleton";
 import { PositionsTable } from "@/features/positions/PositionsTable";
 import { ConnectBrokerCard } from "@/features/session/ConnectBrokerCard";
+import { ConnectError } from "@/features/session/ConnectError";
 import { BrokerWarnings } from "@/features/session/BrokerWarnings";
 import { useBrokerStatus } from "@/features/session/hooks";
 import { useMargins, usePositions } from "@/features/positions/hooks";
@@ -51,13 +52,7 @@ export function DashboardPage() {
   const margins = useMargins();
 
   // No broker linked at all → prompt to connect, skip the dashboard body.
-  if (status.data && !status.anyConnected) {
-    return (
-      <div className="py-8">
-        <ConnectBrokerCard />
-      </div>
-    );
-  }
+  const nothingConnected = Boolean(status.data && !status.anyConnected);
 
   const rows = positions.data?.items ?? [];
   const totalPnl = rows.reduce((sum, p) => sum + (p.pnl ?? 0), 0);
@@ -73,77 +68,94 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Dashboard" description="Your account at a glance." />
+      {/* Sits above the branch deliberately. The status query resolves after the
+          first render, so a ConnectError mounted inside either arm would be
+          torn down mid-transition, taking the ?error= it had already consumed
+          with it — the message would flash once and disappear. */}
+      <ConnectError />
 
-      <BrokerWarnings warnings={warnings} />
+      {nothingConnected ? (
+        <div className="py-4">
+          <ConnectBrokerCard />
+        </div>
+      ) : (
+        <>
+          <PageHeader
+            title="Dashboard"
+            description="Your account at a glance."
+          />
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-        <StatCard
-          label="P&L today"
-          icon={<TrendingUp />}
-          loading={positions.isLoading}
-          value={formatSignedINR(totalPnl)}
-          valueClassName={pnlColor(totalPnl)}
-        />
-        <StatCard
-          label="Margin available"
-          icon={<Wallet />}
-          loading={margins.isLoading}
-          value={formatINRWhole(totals.available)}
-        />
-        <StatCard
-          label="Margin used"
-          icon={<PiggyBank />}
-          loading={margins.isLoading}
-          value={formatINRWhole(totals.used)}
-        />
-        <StatCard
-          label="Cash available"
-          icon={<Wallet />}
-          loading={margins.isLoading}
-          value={formatINRWhole(totals.cash)}
-        />
-        <StatCard
-          label="Open positions"
-          icon={<Layers />}
-          loading={positions.isLoading}
-          value={formatNumber(openCount)}
-        />
-      </div>
+          <BrokerWarnings warnings={warnings} />
 
-      {/* Positions */}
-      <Card>
-        <CardHeader className="flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base">Open positions</CardTitle>
-          {openCount > 0 && (
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/app/positions">
-                View all
-                <ArrowRight />
-              </Link>
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent className="p-0">
-          {positions.isLoading ? (
-            <TableSkeleton headers={POSITION_HEADERS} rows={5} />
-          ) : positions.isError ? (
-            <ErrorState
-              title="Couldn't load positions"
-              onRetry={() => positions.refetch()}
+          {/* Summary cards */}
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+            <StatCard
+              label="P&L today"
+              icon={<TrendingUp />}
+              loading={positions.isLoading}
+              value={formatSignedINR(totalPnl)}
+              valueClassName={pnlColor(totalPnl)}
             />
-          ) : openCount === 0 ? (
-            <EmptyState
-              icon={<Inbox />}
-              title="No open positions"
-              description="When you have live positions they'll show up here in real time."
+            <StatCard
+              label="Margin available"
+              icon={<Wallet />}
+              loading={margins.isLoading}
+              value={formatINRWhole(totals.available)}
             />
-          ) : (
-            <PositionsTable positions={rows} />
-          )}
-        </CardContent>
-      </Card>
+            <StatCard
+              label="Margin used"
+              icon={<PiggyBank />}
+              loading={margins.isLoading}
+              value={formatINRWhole(totals.used)}
+            />
+            <StatCard
+              label="Cash available"
+              icon={<Wallet />}
+              loading={margins.isLoading}
+              value={formatINRWhole(totals.cash)}
+            />
+            <StatCard
+              label="Open positions"
+              icon={<Layers />}
+              loading={positions.isLoading}
+              value={formatNumber(openCount)}
+            />
+          </div>
+
+          {/* Positions */}
+          <Card>
+            <CardHeader className="flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-base">Open positions</CardTitle>
+              {openCount > 0 && (
+                <Button asChild variant="ghost" size="sm">
+                  <Link to="/app/positions">
+                    View all
+                    <ArrowRight />
+                  </Link>
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent className="p-0">
+              {positions.isLoading ? (
+                <TableSkeleton headers={POSITION_HEADERS} rows={5} />
+              ) : positions.isError ? (
+                <ErrorState
+                  title="Couldn't load positions"
+                  onRetry={() => positions.refetch()}
+                />
+              ) : openCount === 0 ? (
+                <EmptyState
+                  icon={<Inbox />}
+                  title="No open positions"
+                  description="When you have live positions they'll show up here in real time."
+                />
+              ) : (
+                <PositionsTable positions={rows} />
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

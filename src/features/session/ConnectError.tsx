@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Loader2, TriangleAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { brokerLabel } from "@/components/BrokerBadge";
@@ -17,6 +17,11 @@ type ConnectFailure = {
   brokerId: string | null;
   title: string;
   detail: string;
+  /**
+   * What the user can do about it. "retry" offers Connect again; "settings"
+   * sends them to the credentials screen — retrying would fail identically.
+   */
+  action: "retry" | "settings" | "none";
 };
 
 function describe(code: string): ConnectFailure | null {
@@ -25,9 +30,25 @@ function describe(code: string): ConnectFailure | null {
   if (code === "connect_expired") {
     return {
       brokerId: null,
+      action: "none",
       title: "The connect attempt timed out",
       detail:
         "Too much time passed between starting the connection and returning from the broker, so the attempt was discarded. Press Connect again to start over.",
+    };
+  }
+
+  // 3d: the credentials were removed between pressing Connect and the broker
+  // answering. Rare, but retrying cannot fix it, so this gets Settings instead.
+  const missing = code.endsWith("_not_configured")
+    ? code.slice(0, -"_not_configured".length)
+    : null;
+  if (missing && BROKER_CODES.has(missing)) {
+    return {
+      brokerId: missing,
+      action: "settings",
+      title: `${brokerLabel(missing)} has no credentials stored`,
+      detail:
+        "The API key and secret for this broker were removed while the connection was in progress, so it could not be completed. Add them again to connect.",
     };
   }
 
@@ -35,6 +56,7 @@ function describe(code: string): ConnectFailure | null {
 
   return {
     brokerId: code,
+    action: "retry",
     title: `Couldn't connect ${brokerLabel(code)}`,
     detail:
       "The broker didn't complete the connection, so no account was linked. This is usually transient — trying again normally works.",
@@ -93,7 +115,7 @@ export function ConnectError() {
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        {brokerId && (
+        {failure.action === "retry" && brokerId && (
           <Button
             size="sm"
             onClick={() => connect.mutate(brokerId)}
@@ -101,6 +123,11 @@ export function ConnectError() {
           >
             {pending ? <Loader2 className="animate-spin" /> : null}
             Try again
+          </Button>
+        )}
+        {failure.action === "settings" && (
+          <Button asChild size="sm">
+            <Link to="/app/settings">Add credentials</Link>
           </Button>
         )}
         <Button

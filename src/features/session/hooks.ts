@@ -16,10 +16,16 @@ export function useMe() {
 }
 
 /**
- * Connection state for every broker the backend knows about.
+ * Which broker accounts are linked, and which brokers could still be linked.
  *
- * The list comes from BrokerRegistry, so a new broker appears here with no
- * frontend change at all — which is the point of the 1f refactor.
+ * The broker list comes from BrokerRegistry, so a new broker appears here with
+ * no frontend change at all — which is the point of the 1f refactor.
+ *
+ * `connections` is per *account*, not per broker: someone with two Kite
+ * accounts gets two entries, distinguished by accountLabel. `disconnected` is
+ * derived rather than sent, because "a broker with no connection" is a question
+ * about the join between the two arrays and nothing the backend needs to
+ * pre-compute.
  */
 export function useBrokerStatus() {
   const q = useQuery({
@@ -30,12 +36,16 @@ export function useBrokerStatus() {
   });
 
   const brokers = q.data?.brokers ?? [];
+  const connections = q.data?.connections ?? [];
 
   return {
     ...q,
     brokers,
-    anyConnected: brokers.some((b) => b.connected),
-    disconnected: brokers.filter((b) => !b.connected),
+    connections,
+    anyConnected: connections.some((c) => c.connected),
+    disconnected: brokers.filter(
+      (id) => !connections.some((c) => c.brokerId === id && c.connected)
+    ),
   };
 }
 

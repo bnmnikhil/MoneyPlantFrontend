@@ -29,14 +29,37 @@ export interface BrokerConnection {
  * accounts at the same broker are two rows, which the old broker-keyed
  * `{id, connected}` shape could not express.
  *
- * `brokers` is every broker the backend knows about, which is what the Connect
- * buttons are built from: a broker with no connection has no row in the first
- * array. Do not read it as "brokers this user wants" — that distinction starts
- * mattering only when brokers become user-configured.
+ * `brokers` is what the Connect buttons are built from: a broker with no
+ * connection has no row in the first array.
+ *
+ * As of 3d it means "brokers this user has stored credentials for", not "every
+ * broker in the build". An empty array is the new-user state and means send them
+ * to Settings — a Connect button for a broker whose API key they have not
+ * supplied could only ever fail.
  */
 export interface SessionStatus {
   brokers: string[];
   connections: BrokerConnection[];
+}
+
+/**
+ * One broker's credential state on the settings screen.
+ *
+ * There is deliberately no secret field, in any form. The backend never returns
+ * one — not even masked, since a masked value would imply the real one is
+ * retrievable, and it is not. `configured` is what the UI renders instead.
+ */
+export interface BrokerCredential {
+  brokerId: string;
+  /** The key itself, so the user can confirm they pasted the right one. Null when unconfigured. */
+  apiKey: string | null;
+  configured: boolean;
+}
+
+/** Write-only: the secret goes up and is never read back. */
+export interface BrokerCredentialInput {
+  apiKey: string;
+  apiSecret: string;
 }
 export interface LoginUrl {
   url: string;
@@ -120,14 +143,22 @@ export interface Margins extends BrokerSourced {
  * Only the single-connection endpoints (payoff) can produce this — the
  * aggregate endpoints report per-broker failures as 200 + warnings.
  *
- * BROKER_SESSION_EXPIRED -> 409, reconnect this broker
- * BROKER_NOT_CONNECTED   -> 409, connect it for the first time
- * BROKER_CALL_FAILED     -> 502, upstream problem, retry may work
+ * BROKER_SESSION_EXPIRED      -> 409, reconnect this broker
+ * BROKER_NOT_CONNECTED        -> 409, connect it for the first time
+ * BROKER_CALL_FAILED          -> 502, upstream problem, retry may work
+ * BROKER_NOT_CONFIGURED       -> 409, no credentials stored: go to Settings
+ * BROKER_CREDENTIAL_UNREADABLE-> 409, stored secret will not decrypt, re-enter it
+ *
+ * The last two arrived with 3d. Both are 409 rather than 404 for the same reason
+ * as the first two: the request cannot proceed in the current state, and the fix
+ * is an action the user takes — the difference is only which screen it happens on.
  */
 export type BrokerErrorCode =
   | "BROKER_SESSION_EXPIRED"
   | "BROKER_NOT_CONNECTED"
-  | "BROKER_CALL_FAILED";
+  | "BROKER_CALL_FAILED"
+  | "BROKER_NOT_CONFIGURED"
+  | "BROKER_CREDENTIAL_UNREADABLE";
 
 export interface BrokerErrorBody {
   error: BrokerErrorCode;

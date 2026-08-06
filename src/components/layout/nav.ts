@@ -5,6 +5,7 @@ import {
   LineChart,
   ListTree,
   BellRing,
+  KeyRound,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,4 +25,7 @@ export const navItems: NavItem[] = [
   { label: "Option Payoff", to: "/app/payoff", icon: LineChart },
   { label: "Option Chain", to: "/app/option-chain", icon: ListTree, soon: true },
   { label: "Alerts", to: "/app/alerts", icon: BellRing, soon: true },
+  // Last, and after the "soon" placeholders on purpose: it is set up once and
+  // then rarely revisited, unlike everything above it.
+  { label: "Broker credentials", to: "/app/settings", icon: KeyRound },
 ];

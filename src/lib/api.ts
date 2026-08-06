@@ -1,5 +1,7 @@
 import type {
   BrokerAggregate,
+  BrokerCredential,
+  BrokerCredentialInput,
   BrokerErrorBody,
   BrokerErrorCode,
   Holding,
@@ -15,6 +17,8 @@ import type {
 export const BROKER_SESSION_EXPIRED = "BROKER_SESSION_EXPIRED";
 export const BROKER_NOT_CONNECTED = "BROKER_NOT_CONNECTED";
 export const BROKER_CALL_FAILED = "BROKER_CALL_FAILED";
+export const BROKER_NOT_CONFIGURED = "BROKER_NOT_CONFIGURED";
+export const BROKER_CREDENTIAL_UNREADABLE = "BROKER_CREDENTIAL_UNREADABLE";
 
 /** Event fired when a broker needs (re)authorising, so any listener can react. */
 export const BROKER_SESSION_LOST_EVENT = "moneyplant:broker-session-lost";
@@ -61,6 +65,21 @@ export function isBrokerSessionError(err: unknown): boolean {
 /** Upstream broker problem. Do NOT prompt to reconnect — it fixes nothing. */
 export function isBrokerCallFailed(err: unknown): boolean {
   return err instanceof ApiError && err.code === BROKER_CALL_FAILED;
+}
+
+/**
+ * No usable credentials for this broker — never stored, or stored and now
+ * undecryptable after a key rotation.
+ *
+ * Deliberately not folded into isBrokerSessionError: that one is fixed by
+ * pressing Connect, and this one cannot be. Offering Connect here sends the user
+ * through a broker round trip that fails at the last step.
+ */
+export function isBrokerNotConfigured(err: unknown): boolean {
+  return (
+    err instanceof ApiError &&
+    (err.code === BROKER_NOT_CONFIGURED || err.code === BROKER_CREDENTIAL_UNREADABLE)
+  );
 }
 
 export function brokerIdOf(err: unknown): string | null {
@@ -161,6 +180,19 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       throw new ApiError(res.status, parsed?.message ?? "Broker call failed", code, brokerId, parsed);
     }
 
+    // 3d. Deliberately does NOT fire the session-lost event: that event drives
+    // the reconnect banner, and reconnecting cannot fix a missing or
+    // undecryptable credential. The caller routes to Settings instead.
+    if (code === BROKER_NOT_CONFIGURED || code === BROKER_CREDENTIAL_UNREADABLE) {
+      throw new ApiError(
+        res.status,
+        parsed?.message ?? "Broker credentials are not configured",
+        code,
+        brokerId,
+        parsed
+      );
+    }
+
     throw new ApiError(res.status, `Request failed (${res.status})`, undefined, null, parsed);
   }
 
@@ -193,5 +225,17 @@ export const api = {
     request<PayoffResponse>(
       `/api/payoff/${encodeURIComponent(underlying)}?connectionId=${encodeURIComponent(connectionId)}`
     ),
+  // Per-user broker API credentials (3d). The GET never carries a secret; the
+  // PUT is the only direction one ever travels.
+  brokerCredentials: () => request<BrokerCredential[]>("/api/broker-credentials"),
+  saveBrokerCredential: (brokerId: string, body: BrokerCredentialInput) =>
+    request<void>(`/api/broker-credentials/${encodeURIComponent(brokerId)}`, {
+      method: "PUT",
+      body,
+    }),
+  deleteBrokerCredential: (brokerId: string) =>
+    request<void>(`/api/broker-credentials/${encodeURIComponent(brokerId)}`, {
+      method: "DELETE",
+    }),
   logout: () => request<void>("/api/logout", { method: "POST" }),
 };

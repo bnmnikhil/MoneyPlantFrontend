@@ -1,4 +1,5 @@
-import { Loader2 } from "lucide-react";
+import { Fragment } from "react";
+import { Loader2, Plus } from "lucide-react";
 import { brokerLabel } from "@/components/BrokerBadge";
 import { useBrokerStatus, useConnectBroker } from "@/features/session/hooks";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,41 @@ function ConnectChip({ brokerId }: { brokerId: string }) {
   );
 }
 
+/**
+ * Link a *second* account at a broker that already has one.
+ *
+ * Same flow as ConnectChip — one Kite Connect app authorises any of that user's
+ * logins, so nothing extra is needed beyond going through the login again and
+ * picking the other account. What makes it land as a new connection rather than
+ * replacing the first is on the backend: the connectionId is keyed by the client
+ * code the broker returns, not by a fixed `default`.
+ *
+ * Icon-only and muted deliberately. It sits immediately beside that broker's
+ * live chip, so repeating the name would read as a second account already being
+ * connected — which is the exact state it is offering to create.
+ */
+function AddAccountChip({ brokerId }: { brokerId: string }) {
+  const connect = useConnectBroker();
+  const pending = connect.isPending && connect.variables === brokerId;
+
+  return (
+    <button
+      type="button"
+      onClick={() => connect.mutate(brokerId)}
+      disabled={pending}
+      aria-label={`Add another ${brokerLabel(brokerId)} account`}
+      title={`Add another ${brokerLabel(brokerId)} account`}
+      className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60"
+    >
+      {pending ? (
+        <Loader2 className="size-3 animate-spin" />
+      ) : (
+        <Plus className="size-3" />
+      )}
+    </button>
+  );
+}
+
 export function BrokerStatusChips({ className }: { className?: string }) {
   const { connections, disconnected, isLoading } = useBrokerStatus();
 
@@ -68,17 +104,27 @@ export function BrokerStatusChips({ className }: { className?: string }) {
 
   return (
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
-      {connections.map((c) => (
-        <ConnectedChip
-          key={c.connectionId}
-          brokerId={c.brokerId}
-          suffix={
-            connections.filter((o) => o.brokerId === c.brokerId).length > 1
-              ? c.accountLabel
-              : undefined
-          }
-        />
-      ))}
+      {/*
+        Grouped by broker so each one's accounts stay together and its "add
+        another" sits at the end of its own run. /api/session/status already
+        sorts by brokerId then accountLabel, so the Set preserves that order and
+        nothing reorders between polls.
+      */}
+      {[...new Set(connections.map((c) => c.brokerId))].map((brokerId) => {
+        const accounts = connections.filter((c) => c.brokerId === brokerId);
+        return (
+          <Fragment key={brokerId}>
+            {accounts.map((c) => (
+              <ConnectedChip
+                key={c.connectionId}
+                brokerId={brokerId}
+                suffix={accounts.length > 1 ? c.accountLabel : undefined}
+              />
+            ))}
+            <AddAccountChip brokerId={brokerId} />
+          </Fragment>
+        );
+      })}
       {disconnected.map((id) => (
         <ConnectChip key={id} brokerId={id} />
       ))}

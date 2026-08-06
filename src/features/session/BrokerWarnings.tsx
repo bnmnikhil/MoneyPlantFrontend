@@ -26,7 +26,7 @@ function WarningRow({ warning }: { warning: BrokerWarning }) {
 
   // login-url takes a brokerId as of 1f, so Reconnect now works for any broker.
   const canReconnect = expired;
-  const pending = connect.isPending && connect.variables === warning.brokerId;
+  const pending = connect.isPending && connect.variables?.brokerId === warning.brokerId;
 
   return (
     <div className="flex flex-col items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -49,7 +49,7 @@ function WarningRow({ warning }: { warning: BrokerWarning }) {
       {canReconnect ? (
         <Button
           size="sm"
-          onClick={() => connect.mutate(warning.brokerId)}
+          onClick={() => connect.mutate({ brokerId: warning.brokerId })}
           disabled={pending}
           className="shrink-0"
         >

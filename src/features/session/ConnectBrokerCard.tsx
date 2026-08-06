@@ -44,13 +44,13 @@ export function ConnectBrokerCard({ className }: { className?: string }) {
 
         <div className="flex flex-wrap justify-center gap-2">
           {disconnected.map((id) => {
-            const pending = connect.isPending && connect.variables === id;
+            const pending = connect.isPending && connect.variables?.brokerId === id;
             return (
               <Button
                 key={id}
                 size="lg"
                 variant={id === "kite" ? "default" : "outline"}
-                onClick={() => connect.mutate(id)}
+                onClick={() => connect.mutate({ brokerId: id })}
                 disabled={pending}
               >
                 {pending ? <Loader2 className="animate-spin" /> : <Link2 />}

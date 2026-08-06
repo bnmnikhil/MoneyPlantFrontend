@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { brokerLabel } from "@/components/BrokerBadge";
 import { useBrokerStatus, useConnectBroker } from "@/features/session/hooks";
+import { useBrokerCredentials } from "@/features/credentials/hooks";
 import { cn } from "@/lib/utils";
 
 /**
@@ -28,17 +29,24 @@ function ConnectedChip({ brokerId, suffix }: { brokerId: string; suffix?: string
   );
 }
 
-function ConnectChip({ brokerId }: { brokerId: string }) {
+function ConnectChip({ brokerId, label }: { brokerId: string; label?: string }) {
   const connect = useConnectBroker();
-  const pending = connect.isPending && connect.variables === brokerId;
+  const pending =
+    connect.isPending &&
+    connect.variables?.brokerId === brokerId &&
+    connect.variables?.label === label;
 
   return (
     <button
       type="button"
-      onClick={() => connect.mutate(brokerId)}
+      onClick={() => connect.mutate({ brokerId, label })}
       disabled={pending}
       className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/20 disabled:opacity-60"
-      title={`Connect your ${brokerLabel(brokerId)} account`}
+      title={
+        label
+          ? `Connect ${brokerLabel(brokerId)} using your "${label}" registration`
+          : `Connect your ${brokerLabel(brokerId)} account`
+      }
     >
       {pending ? (
         <Loader2 className="size-3 animate-spin" />
@@ -46,6 +54,7 @@ function ConnectChip({ brokerId }: { brokerId: string }) {
         <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
       )}
       {brokerLabel(brokerId)}
+      {label && <span className="text-amber-300/70">· {label}</span>}
     </button>
   );
 }
@@ -63,30 +72,51 @@ function ConnectChip({ brokerId }: { brokerId: string }) {
  * live chip, so repeating the name would read as a second account already being
  * connected — which is the exact state it is offering to create.
  */
-function AddAccountChip({ brokerId }: { brokerId: string }) {
+function AddAccountChip({ brokerId, label }: { brokerId: string; label?: string }) {
   const connect = useConnectBroker();
-  const pending = connect.isPending && connect.variables === brokerId;
+  const pending =
+    connect.isPending &&
+    connect.variables?.brokerId === brokerId &&
+    connect.variables?.label === label;
+
+  const what = label
+    ? `Add another ${brokerLabel(brokerId)} account via your "${label}" registration`
+    : `Add another ${brokerLabel(brokerId)} account`;
 
   return (
     <button
       type="button"
-      onClick={() => connect.mutate(brokerId)}
+      onClick={() => connect.mutate({ brokerId, label })}
       disabled={pending}
-      aria-label={`Add another ${brokerLabel(brokerId)} account`}
-      title={`Add another ${brokerLabel(brokerId)} account`}
-      className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60"
+      aria-label={what}
+      title={what}
+      className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60"
     >
       {pending ? (
         <Loader2 className="size-3 animate-spin" />
       ) : (
         <Plus className="size-3" />
       )}
+      {/* Named only when there is a choice to make. */}
+      {label && <span>{label}</span>}
     </button>
   );
 }
 
 export function BrokerStatusChips({ className }: { className?: string }) {
   const { connections, disconnected, isLoading } = useBrokerStatus();
+
+  // Which registrations exist per broker. Only consulted to decide whether the
+  // user has a *choice* — with one registration the chips stay unlabelled and
+  // send no label, and the backend resolves `default`. Reuses the settings
+  // screen's query, so this costs no extra request on the dashboard.
+  const credentials = useBrokerCredentials();
+  const registrations = (brokerId: string): (string | undefined)[] => {
+    const labels = (credentials.data ?? [])
+      .filter((c) => c.brokerId === brokerId && c.configured)
+      .map((c) => c.label);
+    return labels.length > 1 ? labels : [undefined];
+  };
 
   if (isLoading) {
     return (
@@ -121,12 +151,18 @@ export function BrokerStatusChips({ className }: { className?: string }) {
                 suffix={accounts.length > 1 ? c.accountLabel : undefined}
               />
             ))}
-            <AddAccountChip brokerId={brokerId} />
+            {registrations(brokerId).map((label) => (
+              <AddAccountChip key={label ?? "-"} brokerId={brokerId} label={label} />
+            ))}
           </Fragment>
         );
       })}
       {disconnected.map((id) => (
-        <ConnectChip key={id} brokerId={id} />
+        <Fragment key={id}>
+          {registrations(id).map((label) => (
+            <ConnectChip key={label ?? "-"} brokerId={id} label={label} />
+          ))}
+        </Fragment>
       ))}
     </div>
   );

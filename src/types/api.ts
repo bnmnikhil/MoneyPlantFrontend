@@ -51,6 +51,12 @@ export interface SessionStatus {
  */
 export interface BrokerCredential {
   brokerId: string;
+  /**
+   * The user's name for this registration at this broker — *not* an account
+   * label. A credential is a developer app; a connection is a login that app
+   * authorised, and one registration can produce several connections.
+   */
+  label: string;
   /** The key itself, so the user can confirm they pasted the right one. Null when unconfigured. */
   apiKey: string | null;
   configured: boolean;

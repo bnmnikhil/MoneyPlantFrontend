@@ -209,11 +209,23 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 }
 
 /** Typed API surface. Every path matches the fixed backend contract. */
+/**
+ * A registration's path. The label is a path segment on the backend, which
+ * constrains it to letters, digits, spaces, hyphens and underscores — so the
+ * only thing needing encoding here is a space.
+ */
+function credentialPath(brokerId: string, label: string) {
+  return `/api/broker-credentials/${encodeURIComponent(brokerId)}/${encodeURIComponent(label)}`;
+}
+
 export const api = {
   me: () => request<Me>("/api/me"),
   sessionStatus: () => request<SessionStatus>("/api/session/status"),
-  loginUrl: (brokerId: string) =>
-    request<LoginUrl>(`/api/session/login-url?brokerId=${encodeURIComponent(brokerId)}`),
+  loginUrl: (brokerId: string, label?: string) =>
+    request<LoginUrl>(
+      `/api/session/login-url?brokerId=${encodeURIComponent(brokerId)}` +
+        (label ? `&label=${encodeURIComponent(label)}` : "")
+    ),
   // Aggregate endpoints: partial broker failures arrive as 200 + warnings.
   positions: () => request<BrokerAggregate<Position>>("/api/positions"),
   holdings: () => request<BrokerAggregate<Holding>>("/api/holdings"),
@@ -228,14 +240,9 @@ export const api = {
   // Per-user broker API credentials (3d). The GET never carries a secret; the
   // PUT is the only direction one ever travels.
   brokerCredentials: () => request<BrokerCredential[]>("/api/broker-credentials"),
-  saveBrokerCredential: (brokerId: string, body: BrokerCredentialInput) =>
-    request<void>(`/api/broker-credentials/${encodeURIComponent(brokerId)}`, {
-      method: "PUT",
-      body,
-    }),
-  deleteBrokerCredential: (brokerId: string) =>
-    request<void>(`/api/broker-credentials/${encodeURIComponent(brokerId)}`, {
-      method: "DELETE",
-    }),
+  saveBrokerCredential: (brokerId: string, label: string, body: BrokerCredentialInput) =>
+    request<void>(credentialPath(brokerId, label), { method: "PUT", body }),
+  deleteBrokerCredential: (brokerId: string, label: string) =>
+    request<void>(credentialPath(brokerId, label), { method: "DELETE" }),
   logout: () => request<void>("/api/logout", { method: "POST" }),
 };

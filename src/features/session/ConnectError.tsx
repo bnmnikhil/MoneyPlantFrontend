@@ -99,7 +99,7 @@ export function ConnectError() {
   if (!failure) return null;
 
   const { brokerId } = failure;
-  const pending = connect.isPending && connect.variables === brokerId;
+  const pending = connect.isPending && connect.variables?.brokerId === brokerId;
 
   return (
     <div
@@ -118,7 +118,7 @@ export function ConnectError() {
         {failure.action === "retry" && brokerId && (
           <Button
             size="sm"
-            onClick={() => connect.mutate(brokerId)}
+            onClick={() => connect.mutate({ brokerId })}
             disabled={pending}
           >
             {pending ? <Loader2 className="animate-spin" /> : null}

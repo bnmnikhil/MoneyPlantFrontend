@@ -53,13 +53,20 @@ export function useBrokerStatus() {
  * Start a broker's login flow: GET /api/session/login-url?brokerId= -> { url }
  * -> full-page redirect.
  *
- * The brokerId is the mutation variable rather than a hook argument, so one
+ * The target is the mutation variable rather than a hook argument, so one
  * instance can serve a list of brokers and `variables` tells you which one is
  * mid-flight for per-button spinners.
+ *
+ * `label` names which of the user's registrations at that broker to connect
+ * through. It is omitted when they have only one, and the backend then resolves
+ * the `default` registration — which is what every user has until they add a
+ * second, so the common path stays a single argument.
  */
+export type ConnectTarget = { brokerId: string; label?: string };
+
 export function useConnectBroker() {
   return useMutation({
-    mutationFn: (brokerId: string) => api.loginUrl(brokerId),
+    mutationFn: ({ brokerId, label }: ConnectTarget) => api.loginUrl(brokerId, label),
     onSuccess: ({ url }) => {
       window.location.assign(url);
     },

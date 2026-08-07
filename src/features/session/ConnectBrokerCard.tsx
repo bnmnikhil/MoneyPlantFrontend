@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { brokerLabel } from "@/components/BrokerBadge";
-import { useBrokerStatus, useConnectBroker } from "@/features/session/hooks";
+import { useConnectBroker } from "@/features/session/hooks";
+import { useBrokerConnectState } from "@/features/session/brokerConnectState";
 import { ErrorState } from "@/components/states";
 import { cn } from "@/lib/utils";
 
@@ -14,15 +15,23 @@ import { cn } from "@/lib/utils";
  * button per unconnected broker straight from /api/session/status.
  */
 export function ConnectBrokerCard({ className }: { className?: string }) {
-  const { brokers, disconnected } = useBrokerStatus();
+  const { state } = useBrokerConnectState();
   const connect = useConnectBroker();
 
   // No credentials at all: there is nothing to connect yet, and offering a
   // Connect button would start a broker round trip that fails at the last step.
-  // `brokers` became user-scoped in 3d, so an empty array means exactly this.
-  if (brokers.length === 0) {
+  // `brokers` became user-scoped in 3d, so an empty state means exactly this.
+  if (state.length === 0) {
     return <ConfigureBrokersCard className={className} />;
   }
+
+  // One button per registration with no account behind it. This card only shows
+  // when nothing at all is connected, so that is normally every registration the
+  // user has — but it is derived the same way as the status chips rather than
+  // assumed, so the two can never disagree.
+  const targets = state.flatMap(({ brokerId, pending, named }) =>
+    pending.map((label) => ({ brokerId, label, named }))
+  );
 
   return (
     <Card className={cn("mx-auto max-w-lg", className)}>
@@ -43,18 +52,23 @@ export function ConnectBrokerCard({ className }: { className?: string }) {
         </div>
 
         <div className="flex flex-wrap justify-center gap-2">
-          {disconnected.map((id) => {
-            const pending = connect.isPending && connect.variables === id;
+          {targets.map(({ brokerId, label, named }) => {
+            const busy =
+              connect.isPending &&
+              connect.variables?.brokerId === brokerId &&
+              connect.variables?.label === label;
             return (
               <Button
-                key={id}
+                key={`${brokerId}:${label}`}
                 size="lg"
-                variant={id === "kite" ? "default" : "outline"}
-                onClick={() => connect.mutate(id)}
-                disabled={pending}
+                variant={brokerId === "kite" ? "default" : "outline"}
+                onClick={() => connect.mutate({ brokerId, label })}
+                disabled={busy}
               >
-                {pending ? <Loader2 className="animate-spin" /> : <Link2 />}
-                {pending ? "Redirecting…" : `Connect ${brokerLabel(id)}`}
+                {busy ? <Loader2 className="animate-spin" /> : <Link2 />}
+                {busy
+                  ? "Redirecting…"
+                  : `Connect ${brokerLabel(brokerId)}${named ? ` · ${label}` : ""}`}
               </Button>
             );
           })}

@@ -19,6 +19,14 @@ export interface BrokerConnection {
    * Never blank — the backend normalises it on BrokerSession.
    */
   accountLabel: string;
+  /**
+   * Which of the user's registrations at this broker authorised this login —
+   * matches `BrokerCredential.label`, and is the join between the two. A
+   * different axis from `accountLabel`: one registration (a developer app) can
+   * authorise several accounts. Never blank; "default" where the user never
+   * named one.
+   */
+  credentialLabel: string;
   connected: boolean;
 }
 
@@ -51,6 +59,12 @@ export interface SessionStatus {
  */
 export interface BrokerCredential {
   brokerId: string;
+  /**
+   * The user's name for this registration at this broker — *not* an account
+   * label. A credential is a developer app; a connection is a login that app
+   * authorised, and one registration can produce several connections.
+   */
+  label: string;
   /** The key itself, so the user can confirm they pasted the right one. Null when unconfigured. */
   apiKey: string | null;
   configured: boolean;

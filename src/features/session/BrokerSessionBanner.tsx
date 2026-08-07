@@ -27,7 +27,7 @@ export function BrokerSessionBanner({
   // login-url needs a brokerId as of 1f. When the failure happened before a
   // broker was resolved we have none, so there is nothing to send them to.
   const canConnect = Boolean(brokerId);
-  const pending = connect.isPending && connect.variables === brokerId;
+  const pending = connect.isPending && connect.variables?.brokerId === brokerId;
 
   return (
     <div className="flex flex-col items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -48,7 +48,7 @@ export function BrokerSessionBanner({
       {canConnect ? (
         <Button
           size="sm"
-          onClick={() => connect.mutate(brokerId as string)}
+          onClick={() => connect.mutate({ brokerId: brokerId as string })}
           disabled={pending}
           className="shrink-0"
         >

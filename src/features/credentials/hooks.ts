@@ -33,8 +33,9 @@ export function useBrokerCredentials() {
 export function useSaveBrokerCredential() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ brokerId, ...body }: BrokerCredentialInput & { brokerId: string }) =>
-      api.saveBrokerCredential(brokerId, body),
+    mutationFn: ({ brokerId, label, ...body }:
+      BrokerCredentialInput & { brokerId: string; label: string }) =>
+      api.saveBrokerCredential(brokerId, label, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: credentialKeys.all });
       qc.invalidateQueries({ queryKey: sessionKeys.status });
@@ -45,7 +46,8 @@ export function useSaveBrokerCredential() {
 export function useDeleteBrokerCredential() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (brokerId: string) => api.deleteBrokerCredential(brokerId),
+    mutationFn: ({ brokerId, label }: { brokerId: string; label: string }) =>
+      api.deleteBrokerCredential(brokerId, label),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: credentialKeys.all });
       qc.invalidateQueries({ queryKey: sessionKeys.status });

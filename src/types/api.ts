@@ -19,6 +19,14 @@ export interface BrokerConnection {
    * Never blank — the backend normalises it on BrokerSession.
    */
   accountLabel: string;
+  /**
+   * Which of the user's registrations at this broker authorised this login —
+   * matches `BrokerCredential.label`, and is the join between the two. A
+   * different axis from `accountLabel`: one registration (a developer app) can
+   * authorise several accounts. Never blank; "default" where the user never
+   * named one.
+   */
+  credentialLabel: string;
   connected: boolean;
 }
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle2, Circle, Loader2, Trash2, X } from "lucide-react";
+import { CheckCircle2, Circle, Link2, Loader2, Trash2, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import {
   useDeleteBrokerCredential,
   useSaveBrokerCredential,
 } from "@/features/credentials/hooks";
+import { useBrokerStatus, useConnectBroker } from "@/features/session/hooks";
 import type { BrokerCredential } from "@/types/api";
 
 /** What each broker calls the two values, so the labels match their console. */
@@ -229,7 +230,68 @@ export function BrokerCredentialCard({
             )}
           </div>
         </form>
+
+        {!draft && configured && (
+          <RegistrationAccounts brokerId={brokerId} label={label} />
+        )}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Which accounts this registration has authorised, and the way to add another.
+ *
+ * This is where linking a second account lives. It used to be a "+" chip in the
+ * top bar, one per registration, which meant a fully connected user still saw a
+ * button per registration on every screen and read the row as duplicated status.
+ * Here the action is beside the registration it belongs to, next to the accounts
+ * it already authorised — so "another" is a claim the user can actually check.
+ *
+ * The button never disappears: one developer app can authorise any number of
+ * that user's logins at the broker, so there is no count at which the action
+ * stops being available.
+ */
+function RegistrationAccounts({ brokerId, label }: { brokerId: string; label: string }) {
+  const { connections } = useBrokerStatus();
+  const connect = useConnectBroker();
+
+  const accounts = connections.filter(
+    (c) => c.brokerId === brokerId && c.credentialLabel === label
+  );
+  const busy =
+    connect.isPending &&
+    connect.variables?.brokerId === brokerId &&
+    connect.variables?.label === label;
+
+  return (
+    <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+      <p className="text-sm text-muted-foreground">
+        {accounts.length === 0 ? (
+          "No account linked through this registration yet."
+        ) : (
+          <>
+            Linked{" "}
+            <span className="font-medium text-foreground">
+              {accounts.map((a) => a.accountLabel).join(", ")}
+            </span>
+          </>
+        )}
+      </p>
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => connect.mutate({ brokerId, label })}
+        disabled={busy}
+      >
+        {busy ? <Loader2 className="animate-spin" /> : <Link2 />}
+        {busy
+          ? "Redirecting…"
+          : accounts.length === 0
+            ? "Connect account"
+            : "Connect another account"}
+      </Button>
+    </div>
   );
 }

@@ -1,12 +1,12 @@
 import { Fragment } from "react";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { brokerLabel } from "@/components/BrokerBadge";
-import { useBrokerStatus, useConnectBroker } from "@/features/session/hooks";
-import { useBrokerCredentials } from "@/features/credentials/hooks";
+import { useConnectBroker } from "@/features/session/hooks";
+import { useBrokerConnectState } from "@/features/session/brokerConnectState";
 import { cn } from "@/lib/utils";
 
 /**
- * One chip per linked account, plus one per broker still to link.
+ * One chip per linked account, plus one per registration not yet connected.
  *
  * Replaces KiteStatusChip, which could only ever show Zerodha. The list is
  * driven by /api/session/status, so Alice Blue appears here on its own.
@@ -15,6 +15,13 @@ import { cn } from "@/lib/utils";
  * appended only when that broker has more than one connection, matching the
  * payoff selector's rule for the broker name — a lone account is unambiguous,
  * and "Zerodha · ZR4821" beside nothing else is just noise.
+ *
+ * This row is *status*, so an amber chip means "something is not connected" and
+ * nothing else. It used to also carry an add-another-account button per
+ * registration, which meant a fully connected user still saw a button per
+ * registration and read the row as duplicated. Linking a second account through
+ * a registration that already has one is a deliberate, rare act and now lives on
+ * the broker credentials page, where the registration it belongs to is visible.
  */
 function ConnectedChip({ brokerId, suffix }: { brokerId: string; suffix?: string }) {
   return (
@@ -29,7 +36,23 @@ function ConnectedChip({ brokerId, suffix }: { brokerId: string; suffix?: string
   );
 }
 
-function ConnectChip({ brokerId, label }: { brokerId: string; label?: string }) {
+/**
+ * A registration with no live account: the one thing on this row that is an
+ * action rather than a status.
+ *
+ * `label` is what gets sent; `showLabel` is whether it is worth reading. They
+ * are separate because a user with a single registration named "personal" still
+ * has to connect through it, but has no second one to tell it apart from.
+ */
+function ConnectChip({
+  brokerId,
+  label,
+  showLabel = false,
+}: {
+  brokerId: string;
+  label?: string;
+  showLabel?: boolean;
+}) {
   const connect = useConnectBroker();
   const pending =
     connect.isPending &&
@@ -43,7 +66,7 @@ function ConnectChip({ brokerId, label }: { brokerId: string; label?: string }) 
       disabled={pending}
       className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/20 disabled:opacity-60"
       title={
-        label
+        showLabel && label
           ? `Connect ${brokerLabel(brokerId)} using your "${label}" registration`
           : `Connect your ${brokerLabel(brokerId)} account`
       }
@@ -54,69 +77,13 @@ function ConnectChip({ brokerId, label }: { brokerId: string; label?: string }) 
         <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
       )}
       {brokerLabel(brokerId)}
-      {label && <span className="text-amber-300/70">· {label}</span>}
-    </button>
-  );
-}
-
-/**
- * Link a *second* account at a broker that already has one.
- *
- * Same flow as ConnectChip — one Kite Connect app authorises any of that user's
- * logins, so nothing extra is needed beyond going through the login again and
- * picking the other account. What makes it land as a new connection rather than
- * replacing the first is on the backend: the connectionId is keyed by the client
- * code the broker returns, not by a fixed `default`.
- *
- * Icon-only and muted deliberately. It sits immediately beside that broker's
- * live chip, so repeating the name would read as a second account already being
- * connected — which is the exact state it is offering to create.
- */
-function AddAccountChip({ brokerId, label }: { brokerId: string; label?: string }) {
-  const connect = useConnectBroker();
-  const pending =
-    connect.isPending &&
-    connect.variables?.brokerId === brokerId &&
-    connect.variables?.label === label;
-
-  const what = label
-    ? `Add another ${brokerLabel(brokerId)} account via your "${label}" registration`
-    : `Add another ${brokerLabel(brokerId)} account`;
-
-  return (
-    <button
-      type="button"
-      onClick={() => connect.mutate({ brokerId, label })}
-      disabled={pending}
-      aria-label={what}
-      title={what}
-      className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/40 px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-60"
-    >
-      {pending ? (
-        <Loader2 className="size-3 animate-spin" />
-      ) : (
-        <Plus className="size-3" />
-      )}
-      {/* Named only when there is a choice to make. */}
-      {label && <span>{label}</span>}
+      {showLabel && label && <span className="text-amber-300/70">· {label}</span>}
     </button>
   );
 }
 
 export function BrokerStatusChips({ className }: { className?: string }) {
-  const { connections, disconnected, isLoading } = useBrokerStatus();
-
-  // Which registrations exist per broker. Only consulted to decide whether the
-  // user has a *choice* — with one registration the chips stay unlabelled and
-  // send no label, and the backend resolves `default`. Reuses the settings
-  // screen's query, so this costs no extra request on the dashboard.
-  const credentials = useBrokerCredentials();
-  const registrations = (brokerId: string): (string | undefined)[] => {
-    const labels = (credentials.data ?? [])
-      .filter((c) => c.brokerId === brokerId && c.configured)
-      .map((c) => c.label);
-    return labels.length > 1 ? labels : [undefined];
-  };
+  const { state, isLoading } = useBrokerConnectState();
 
   if (isLoading) {
     return (
@@ -135,32 +102,31 @@ export function BrokerStatusChips({ className }: { className?: string }) {
   return (
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
       {/*
-        Grouped by broker so each one's accounts stay together and its "add
-        another" sits at the end of its own run. /api/session/status already
-        sorts by brokerId then accountLabel, so the Set preserves that order and
-        nothing reorders between polls.
+        Grouped by broker so each one's accounts stay together and anything left
+        to connect sits at the end of its own run. Both the broker order and the
+        account order come from the backend sorted, so nothing reorders between
+        polls.
       */}
-      {[...new Set(connections.map((c) => c.brokerId))].map((brokerId) => {
-        const accounts = connections.filter((c) => c.brokerId === brokerId);
-        return (
-          <Fragment key={brokerId}>
-            {accounts.map((c) => (
-              <ConnectedChip
-                key={c.connectionId}
-                brokerId={brokerId}
-                suffix={accounts.length > 1 ? c.accountLabel : undefined}
-              />
-            ))}
-            {registrations(brokerId).map((label) => (
-              <AddAccountChip key={label ?? "-"} brokerId={brokerId} label={label} />
-            ))}
-          </Fragment>
-        );
-      })}
-      {disconnected.map((id) => (
-        <Fragment key={id}>
-          {registrations(id).map((label) => (
-            <ConnectChip key={label ?? "-"} brokerId={id} label={label} />
+      {state.map(({ brokerId, accounts, pending, named }) => (
+        <Fragment key={brokerId}>
+          {accounts.map((c) => (
+            <ConnectedChip
+              key={c.connectionId}
+              brokerId={brokerId}
+              suffix={accounts.length > 1 ? c.accountLabel : undefined}
+            />
+          ))}
+          {pending.map((label) => (
+            <ConnectChip
+              key={label}
+              brokerId={brokerId}
+              // The registration is always sent, never inferred: a user whose
+              // only registration is named something other than "default" would
+              // otherwise start a flow the backend cannot resolve.
+              label={label}
+              // …but only shown when there is more than one to tell apart.
+              showLabel={named}
+            />
           ))}
         </Fragment>
       ))}

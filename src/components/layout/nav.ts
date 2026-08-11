@@ -4,6 +4,7 @@ import {
   Wallet,
   LineChart,
   ListTree,
+  ShieldAlert,
   BellRing,
   KeyRound,
   type LucideIcon,
@@ -23,6 +24,7 @@ export const navItems: NavItem[] = [
   { label: "Positions", to: "/app/positions", icon: Layers },
   { label: "Holdings", to: "/app/holdings", icon: Wallet },
   { label: "Option Payoff", to: "/app/payoff", icon: LineChart },
+  { label: "Risk Analytics", to: "/app/risk", icon: ShieldAlert },
   { label: "Option Chain", to: "/app/option-chain", icon: ListTree, soon: true },
   { label: "Alerts", to: "/app/alerts", icon: BellRing, soon: true },
   // Last, and after the "soon" placeholders on purpose: it is set up once and

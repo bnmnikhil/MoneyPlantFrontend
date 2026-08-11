@@ -48,19 +48,26 @@ export function groupPositions(positions: Position[]): BrokerGroup[] {
     const byUnderlying = new Map<string, Position[]>();
 
     for (const p of rows) {
+      // Group on the CANONICAL code, never the label. Three brokers spell the
+      // same underlying three ways; the code is what collapses them onto one
+      // group, and the label is only ever rendered.
+      //
       // An equity position has no underlying, and neither does a symbol the
       // contract master doesn't know. Falling back to the symbol gives it an
       // honest group of its own rather than dumping it in a vague "Other".
-      const label = p.underlying ?? p.symbol;
-      const list = byUnderlying.get(label);
+      const code = p.underlying ?? p.symbol;
+      const list = byUnderlying.get(code);
       if (list) list.push(p);
-      else byUnderlying.set(label, [p]);
+      else byUnderlying.set(code, [p]);
     }
 
     const groups: UnderlyingGroup[] = [...byUnderlying.entries()]
-      .map(([label, ps]) => ({
-        key: `${connectionId}:${label}`,
-        label,
+      .map(([code, ps]) => ({
+        key: `${connectionId}:${code}`,
+        // Every position in this group shares an underlying, so any row's label
+        // is the group's label. Falls back through the code to the symbol so a
+        // group always has something printable.
+        label: ps[0].underlyingLabel ?? code,
         positions: ps,
         pnl: sum(ps.map((p) => p.pnl)),
         dayChange: sum(ps.map((p) => p.dayChange)),

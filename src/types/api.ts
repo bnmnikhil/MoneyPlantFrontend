@@ -95,6 +95,8 @@ export interface BrokerWarning {
   message: string;
 }
 
+export type Freshness = "LIVE" | "SNAPSHOT" | "STALE" | "NONE";
+
 /**
  * Envelope returned by every multi-broker read endpoint.
  *
@@ -105,6 +107,9 @@ export interface BrokerWarning {
 export interface BrokerAggregate<T> {
   items: T[];
   warnings: BrokerWarning[];
+  asOf?: string | null;
+  freshness?: Freshness;
+  refreshing?: boolean;
 }
 
 /** Fields the backend fan-out stamps onto every aggregated row. */
@@ -116,12 +121,24 @@ export interface BrokerSourced {
 export interface Position extends BrokerSourced {
   symbol: string;
   /**
-   * BANKNIFTY, ITC — resolved server-side from the broker's contract master.
+   * Canonical code — BANKNIFTY, ITC, MM. Resolved server-side from the broker's
+   * contract master.
    *
    * Null for equity positions, and for any symbol the contract master doesn't
    * know. The UI groups on this, so it must tolerate null rather than assume it.
+   *
+   * **Group on this; never render it.** It is punctuation-stripped so that three
+   * brokers' spellings collapse to one key, which means Mahindra reads `MM`.
+   * Render `underlyingLabel`.
    */
   underlying: string | null;
+  /**
+   * The same underlying spelled for a human — `M&M`, `BANKNIFTY`.
+   *
+   * Null exactly when `underlying` is null; otherwise always present, falling
+   * back to the canonical code, so the UI never has to choose between them.
+   */
+  underlyingLabel: string | null;
   product: string;
   qty: number;
   avgPrice: number;
@@ -218,7 +235,10 @@ export interface Payoff {
 export interface CurveRef {
   connectionId: string;
   brokerId: string;
+  /** Canonical code. This is what `/api/payoff/{underlying}` expects. */
   underlying: string;
+  /** Display spelling. Show this on the selector button; never send it. */
+  underlyingLabel: string;
 }
 
 export interface PayoffResponse {
@@ -229,4 +249,33 @@ export interface PayoffResponse {
   legs: PayoffLeg[];
   payoff: Payoff;
   expiries: string[];
+}
+
+export interface ExposureReport {
+  netExposure: number;
+  grossExposure: number;
+  concentrationByUnderlying: Record<string, number>;
+  concentrationByType: Record<string, number>;
+}
+
+export interface ExpiryBucket {
+  label: string;
+  expiry: string | null;
+  netExposure: number;
+  positionCount: number;
+}
+
+export interface DecayPoint {
+  tradingDay: string;
+  totalOptionValue: number;
+  dayPnl: number;
+  status: 'CAPTURED' | 'NO_SESSION' | 'FAILED';
+}
+
+export interface RiskSummaryReport {
+  exposure: ExposureReport;
+  expiryBuckets: ExpiryBucket[];
+  decaySeries: DecayPoint[];
+  asOf: string | null;
+  freshness: Freshness;
 }

@@ -49,7 +49,10 @@ function CurveSelector({
               : "border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground"
           )}
         >
-          {c.underlying}
+          {/* Label, not the canonical code — `underlying` is punctuation-stripped
+              for grouping and reads MM for Mahindra. The code still keys the
+              button and is what gets sent to /api/payoff/{'{'}underlying{'}'}. */}
+          {c.underlyingLabel}
           {showBroker && (
             <span className="ml-1.5 font-normal opacity-70">· {brokerLabel(c.brokerId)}</span>
           )}

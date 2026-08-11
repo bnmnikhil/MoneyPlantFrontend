@@ -134,7 +134,10 @@ export interface Position extends BrokerSourced {
 
 export interface Holding extends BrokerSourced {
   symbol: string;
+  /** The whole holding, pledged shares included. currentValue and pnl use this. */
   qty: number;
+  /** How much of `qty` is pledged as collateral. A breakdown, never an addition. */
+  pledgedQty: number;
   avgCost: number;
   ltp: number;
   currentValue: number;

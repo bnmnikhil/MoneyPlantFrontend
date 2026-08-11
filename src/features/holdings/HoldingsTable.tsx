@@ -27,6 +27,26 @@ function rowKey(h: Holding) {
 
 const COLUMNS = 7;
 
+/**
+ * Pledged shares are part of `qty`, not extra to it.
+ *
+ * Worth showing because they behave differently from the rest of a holding: they
+ * are collateral against margin and cannot be sold without being unpledged
+ * first. Rendered under the quantity rather than beside it so the column stays
+ * numeric and scannable.
+ */
+function PledgedNote({ pledged }: { pledged: number }) {
+  if (pledged <= 0) return null;
+  return (
+    <span
+      className="tnum block text-xs font-normal text-muted-foreground"
+      title="Pledged as collateral. Included in the quantity, but not sellable until unpledged."
+    >
+      ({formatNumber(pledged)} pledged)
+    </span>
+  );
+}
+
 export function HoldingsTable({ holdings }: { holdings: Holding[] }) {
   const groups = groupHoldings(holdings);
 
@@ -104,7 +124,10 @@ export function HoldingsTable({ holdings }: { holdings: Holding[] }) {
                         <TableCell className={cn("font-medium", showBrokerLevel && "pl-9")}>
                           {h.symbol}
                         </TableCell>
-                        <TableCell className="tnum text-right">{formatNumber(h.qty)}</TableCell>
+                        <TableCell className="tnum text-right align-top">
+                          {formatNumber(h.qty)}
+                          <PledgedNote pledged={h.pledgedQty} />
+                        </TableCell>
                         <TableCell className="tnum text-right">{formatINR(h.avgCost)}</TableCell>
                         <TableCell className="tnum text-right">{formatINR(h.ltp)}</TableCell>
                         <TableCell className="tnum text-right">
@@ -164,7 +187,9 @@ export function HoldingsTable({ holdings }: { holdings: Holding[] }) {
                       <div className="min-w-0">
                         <p className="truncate font-medium">{h.symbol}</p>
                         <p className="tnum mt-1 text-xs text-muted-foreground">
-                          Qty {formatNumber(h.qty)} · {formatINR(h.currentValue)}
+                          Qty {formatNumber(h.qty)}
+                          {h.pledgedQty > 0 && ` (${formatNumber(h.pledgedQty)} pledged)`} ·{" "}
+                          {formatINR(h.currentValue)}
                         </p>
                       </div>
                       <div className="text-right">

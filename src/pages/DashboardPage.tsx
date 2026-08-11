@@ -1,24 +1,26 @@
-import { Link } from "react-router-dom";
 import {
   Wallet,
   TrendingUp,
-  Layers,
+  CalendarDays,
   PiggyBank,
-  ArrowRight,
+  Landmark,
   Inbox,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
+import { RefreshBar } from "@/components/RefreshBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/states";
 import { TableSkeleton } from "@/components/TableSkeleton";
-import { PositionsTable } from "@/features/positions/PositionsTable";
 import { ConnectBrokerCard } from "@/features/session/ConnectBrokerCard";
 import { ConnectError } from "@/features/session/ConnectError";
 import { BrokerWarnings } from "@/features/session/BrokerWarnings";
 import { useBrokerStatus } from "@/features/session/hooks";
 import { useMargins, usePositions } from "@/features/positions/hooks";
+import { useHoldings } from "@/features/holdings/hooks";
+import { buildBrokerRows } from "@/features/dashboard/aggregate";
+import { BrokerPnlTable } from "@/features/dashboard/BrokerPnlTable";
+import { BrokerFundsTable } from "@/features/dashboard/BrokerFundsTable";
 import type { BrokerWarning } from "@/types/api";
 import {
   formatINRWhole,
@@ -27,14 +29,19 @@ import {
   pnlColor,
 } from "@/lib/format";
 
-// Matches PositionsTable's columns. P&L and day change now share one column,
-// stacked, so the skeleton must not promise a "Day change" header that the
-// loaded table does not have.
-const POSITION_HEADERS = ["Symbol", "Product", "Qty", "Avg price", "LTP", "P&L"];
+const PNL_HEADERS = ["Broker", "Positions", "Holdings", "Total", "Day"];
+const FUNDS_HEADERS = [
+  "Broker",
+  "Available",
+  "Used",
+  "Total",
+  "Cash",
+  "Collateral",
+];
 
 /**
- * Positions and margins hit the same brokers, so one dead connection produces
- * the same warning twice. Show it once.
+ * Positions, holdings and margins hit the same brokers, so one dead connection
+ * produces the same warning three times. Show it once.
  */
 function mergeWarnings(...lists: (BrokerWarning[] | undefined)[]) {
   const seen = new Map<string, BrokerWarning>();
@@ -49,22 +56,42 @@ function mergeWarnings(...lists: (BrokerWarning[] | undefined)[]) {
 export function DashboardPage() {
   const status = useBrokerStatus();
   const positions = usePositions();
+  const holdings = useHoldings();
   const margins = useMargins();
 
   // No broker linked at all → prompt to connect, skip the dashboard body.
   const nothingConnected = Boolean(status.data && !status.anyConnected);
 
-  const rows = positions.data?.items ?? [];
-  const totalPnl = rows.reduce((sum, p) => sum + (p.pnl ?? 0), 0);
-  const openCount = rows.length;
-
-  // Summed across every connected broker; the per-broker rows stay in .items.
-  const totals = margins.totals;
+  const { rows, totals } = buildBrokerRows(
+    positions.data?.items ?? [],
+    holdings.data?.items ?? [],
+    margins.data?.items ?? []
+  );
 
   const warnings = mergeWarnings(
     positions.data?.warnings,
+    holdings.data?.warnings,
     margins.data?.warnings
   );
+
+  const pnlLoading = positions.isLoading || holdings.isLoading;
+  const pnlFailed = positions.isError || holdings.isError;
+
+  // The oldest of the three, so the stamp is never optimistic — the same rule
+  // BrokerAggregate applies to a mixed-age book.
+  const updatedAt = Math.min(
+    ...[positions.dataUpdatedAt, holdings.dataUpdatedAt, margins.dataUpdatedAt].filter(
+      (t) => t > 0
+    )
+  );
+  const isFetching =
+    positions.isFetching || holdings.isFetching || margins.isFetching;
+
+  const refreshAll = () => {
+    positions.refetch();
+    holdings.refetch();
+    margins.refetch();
+  };
 
   return (
     <div className="space-y-6">
@@ -82,7 +109,14 @@ export function DashboardPage() {
         <>
           <PageHeader
             title="Dashboard"
-            description="Your account at a glance."
+            description="Your capital and P&L, broker by broker."
+            actions={
+              <RefreshBar
+                updatedAt={Number.isFinite(updatedAt) ? updatedAt : 0}
+                isFetching={isFetching}
+                onRefresh={refreshAll}
+              />
+            }
           />
 
           <BrokerWarnings warnings={warnings} />
@@ -90,11 +124,20 @@ export function DashboardPage() {
           {/* Summary cards */}
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
             <StatCard
-              label="P&L today"
+              label="Total P&L"
               icon={<TrendingUp />}
+              loading={pnlLoading}
+              value={formatSignedINR(totals.totalPnl)}
+              valueClassName={pnlColor(totals.totalPnl)}
+              hint={`Since entry · ${formatNumber(totals.positionCount)} positions, ${formatNumber(totals.holdingCount)} holdings`}
+            />
+            <StatCard
+              label="Day P&L"
+              icon={<CalendarDays />}
               loading={positions.isLoading}
-              value={formatSignedINR(totalPnl)}
-              valueClassName={pnlColor(totalPnl)}
+              value={formatSignedINR(totals.dayPnl)}
+              valueClassName={pnlColor(totals.dayPnl)}
+              hint="Positions only — holdings have no day figure"
             />
             <StatCard
               label="Margin available"
@@ -107,50 +150,65 @@ export function DashboardPage() {
               icon={<PiggyBank />}
               loading={margins.isLoading}
               value={formatINRWhole(totals.used)}
+              hint={`${totals.utilisationPct.toFixed(0)}% of ${formatINRWhole(totals.total)} total`}
             />
             <StatCard
-              label="Cash available"
-              icon={<Wallet />}
+              label="Collateral"
+              icon={<Landmark />}
               loading={margins.isLoading}
-              value={formatINRWhole(totals.cash)}
-            />
-            <StatCard
-              label="Open positions"
-              icon={<Layers />}
-              loading={positions.isLoading}
-              value={formatNumber(openCount)}
+              value={formatINRWhole(totals.collateral)}
             />
           </div>
 
-          {/* Positions */}
+          {/* P&L by broker */}
           <Card>
-            <CardHeader className="flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-base">Open positions</CardTitle>
-              {openCount > 0 && (
-                <Button asChild variant="ghost" size="sm">
-                  <Link to="/app/positions">
-                    View all
-                    <ArrowRight />
-                  </Link>
-                </Button>
-              )}
+            <CardHeader>
+              <CardTitle className="text-base">P&amp;L by broker</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              {positions.isLoading ? (
-                <TableSkeleton headers={POSITION_HEADERS} rows={5} />
-              ) : positions.isError ? (
+              {pnlLoading ? (
+                <TableSkeleton headers={PNL_HEADERS} rows={3} />
+              ) : pnlFailed ? (
                 <ErrorState
-                  title="Couldn't load positions"
-                  onRetry={() => positions.refetch()}
+                  title="Couldn't load P&L"
+                  onRetry={() => {
+                    positions.refetch();
+                    holdings.refetch();
+                  }}
                 />
-              ) : openCount === 0 ? (
+              ) : rows.length === 0 ? (
                 <EmptyState
                   icon={<Inbox />}
-                  title="No open positions"
-                  description="When you have live positions they'll show up here in real time."
+                  title="Nothing to report yet"
+                  description="P&L appears here once a connected broker returns positions or holdings."
                 />
               ) : (
-                <PositionsTable positions={rows} />
+                <BrokerPnlTable rows={rows} totals={totals} />
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Funds by broker */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Funds by broker</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {margins.isLoading ? (
+                <TableSkeleton headers={FUNDS_HEADERS} rows={3} />
+              ) : margins.isError ? (
+                <ErrorState
+                  title="Couldn't load margins"
+                  onRetry={() => margins.refetch()}
+                />
+              ) : rows.length === 0 ? (
+                <EmptyState
+                  icon={<Inbox />}
+                  title="No funds to show"
+                  description="Margin and cash appear here once a broker is connected."
+                />
+              ) : (
+                <BrokerFundsTable rows={rows} totals={totals} />
               )}
             </CardContent>
           </Card>

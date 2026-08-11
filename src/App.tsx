@@ -7,6 +7,7 @@ import { DashboardPage } from "@/pages/DashboardPage";
 import { PositionsPage } from "@/pages/PositionsPage";
 import { HoldingsPage } from "@/pages/HoldingsPage";
 import { PayoffPage } from "@/pages/PayoffPage";
+import { RiskPage } from "@/pages/RiskPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/app/positions" element={<PositionsPage />} />
           <Route path="/app/holdings" element={<HoldingsPage />} />
           <Route path="/app/payoff" element={<PayoffPage />} />
+          <Route path="/app/risk" element={<RiskPage />} />
           <Route path="/app/settings" element={<SettingsPage />} />
         </Route>
       </Route>

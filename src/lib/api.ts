@@ -11,6 +11,7 @@ import type {
   CurveRef,
   PayoffResponse,
   Position,
+  RiskSummaryReport,
   SessionStatus,
 } from "@/types/api";
 
@@ -244,5 +245,6 @@ export const api = {
     request<void>(credentialPath(brokerId, label), { method: "PUT", body }),
   deleteBrokerCredential: (brokerId: string, label: string) =>
     request<void>(credentialPath(brokerId, label), { method: "DELETE" }),
+  riskSummary: () => request<RiskSummaryReport>("/api/risk/summary"),
   logout: () => request<void>("/api/logout", { method: "POST" }),
 };

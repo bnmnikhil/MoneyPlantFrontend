@@ -1,5 +1,14 @@
-import { ShieldAlert, TrendingUp, Calendar, Percent, AlertTriangle, Layers } from "lucide-react";
+import {
+  ShieldAlert,
+  TrendingUp,
+  Calendar,
+  Percent,
+  AlertTriangle,
+  Layers,
+  Activity,
+} from "lucide-react";
 import { InstrumentRiskTable } from "@/features/risk/InstrumentRiskTable";
+import { ScenarioLadders } from "@/features/risk/ScenarioLadder";
 import { PageHeader } from "@/components/PageHeader";
 import { RefreshBar } from "@/components/RefreshBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,6 +77,7 @@ export function RiskPage() {
 
   const exposure = data?.exposure;
   const instruments = data?.instruments ?? [];
+  const scenarios = data?.scenarios ?? [];
   const expiryBuckets = data?.expiryBuckets ?? [];
   const warnings = data?.warnings ?? [];
   const freshness = data?.freshness ?? "NONE";
@@ -215,6 +225,30 @@ export function RiskPage() {
                     valued together.
                   </p>
                 </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/*
+            Placed directly under the instrument table, because it answers the
+            question that table raises: the per-contract max loss is standalone
+            and overstates a spread, and this is where the legs are valued
+            together and the honest combined number appears.
+          */}
+          <Card className="md:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">If the underlying moves</CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="pt-4">
+              {scenarios.length === 0 ? (
+                <EmptyState
+                  icon={<Activity />}
+                  title="No scenarios to run"
+                  description="Dated F&O positions get a spot ladder here, one per expiry."
+                />
+              ) : (
+                <ScenarioLadders groups={scenarios} />
               )}
             </CardContent>
           </Card>

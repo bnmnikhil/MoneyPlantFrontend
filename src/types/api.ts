@@ -354,6 +354,54 @@ export interface InstrumentRiskRow {
 }
 
 /**
+ * What put a marker where it is.
+ *
+ * PERCENT rungs need only a spot and are always present when one is known.
+ * SIGMA rungs need an implied volatility, solved from the book's own
+ * nearest-the-money leg, and are absent when no leg could answer.
+ */
+export type ScenarioKind = 'PERCENT' | 'SIGMA';
+
+export interface ScenarioMarker {
+  kind: ScenarioKind;
+  /** Signed magnitude: -10 for -10%, -2 for -2 sigma, 0 for spot itself. */
+  scale: number;
+  spot: number;
+  /** Terminal P&L of the whole group at this spot. Exact, not sampled. */
+  pnl: number;
+}
+
+/**
+ * What one expiry of one underlying, in one account, does if the underlying
+ * moves — the honest substitute for greeks while there is no volatility feed.
+ *
+ * Grouped by expiry as well as underlying: the P&L is the *terminal* payoff, so
+ * legs expiring on different dates cannot share a curve.
+ */
+export interface ScenarioGroup {
+  connectionId: string;
+  brokerId: string;
+  underlying: string;
+  underlyingLabel: string;
+  expiry: string;
+  /** 0 when no spot was available — then `markers` is empty. */
+  spot: number;
+  /** Annualised, as a fraction. 0 when it could not be solved. */
+  iv: number;
+  /**
+   * Which strike the volatility came from, e.g. "24000 CE". Null when unsolved.
+   *
+   * Show this. The volatility surface is a smile, so a vol taken from an
+   * out-of-the-money leg is a real number about the wrong strike — usually
+   * higher, which widens the band and overstates the plausible move. The reader
+   * cannot judge the band without knowing which leg produced it.
+   */
+  ivSource: string | null;
+  markers: ScenarioMarker[];
+  rows: InstrumentRiskRow[];
+}
+
+/**
  * Nearest-first, which is also increasing order of risk-of-surprise.
  *
  * EXPIRED is its own tier: the backend used to compare a *signed* day count
@@ -394,6 +442,8 @@ export interface RiskSummaryReport {
   exposure: ExposureReport;
   /** One row per contract per account, biggest absolute market value first. */
   instruments: InstrumentRiskRow[];
+  /** Per (account, underlying, expiry), nearest expiry first. */
+  scenarios: ScenarioGroup[];
   expiryBuckets: ExpiryBucket[];
   /** Always empty for now: decay needs a snapshot series that has no writer yet. */
   decaySeries: DecayPoint[];

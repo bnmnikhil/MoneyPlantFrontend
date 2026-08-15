@@ -315,6 +315,19 @@ export interface InstrumentKey {
  */
 export type LossBound = 'BOUNDED' | 'UNBOUNDED' | 'UNKNOWN';
 
+/**
+ * Where a per-contract margin figure came from — and it always has to be shown,
+ * because margin is non-additive. A hedged book consumes far less than its legs
+ * separately, so there is no single true per-contract number. Both figures below
+ * are *allocated* from the account's real bill, so the column foots either way;
+ * what differs is where the share came from.
+ *
+ * BROKER_MODEL — the share came from the broker's own margin calculator.
+ * ESTIMATED    — our own split, by each leg's worst loss across the scenarios.
+ * UNAVAILABLE  — no basis to divide on. Not a zero charge.
+ */
+export type MarginBasis = 'BROKER_MODEL' | 'ESTIMATED' | 'UNAVAILABLE';
+
 /** One product bucket within an account — Kite holds NRML and MIS separately. */
 export interface ProductLeg {
   product: string;
@@ -350,6 +363,9 @@ export interface InstrumentRiskRow {
   maxLoss: number | null;
   pnl: number;
   dayChange: number;
+  /** Capital this contract ties up. Null when `marginBasis` is UNAVAILABLE. */
+  marginUsed: number | null;
+  marginBasis: MarginBasis;
   legs: ProductLeg[];
 }
 

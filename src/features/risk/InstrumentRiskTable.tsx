@@ -64,6 +64,46 @@ function MaxLoss({ row }: { row: InstrumentRiskRow }) {
   return <span className="tnum">{formatINRWhole(row.maxLoss ?? 0)}</span>;
 }
 
+/**
+ * Capital tied up, with its provenance.
+ *
+ * The dot is not decoration. Both figures are allocated from the account's real
+ * bill, so the column foots either way — but one share comes from the broker's
+ * own model and the other from our worst-case split, and those must not read as
+ * equally authoritative. A dash means no basis to divide on, never a zero charge.
+ */
+function Margin({ row }: { row: InstrumentRiskRow }) {
+  if (row.marginBasis === "UNAVAILABLE" || row.marginUsed === null) {
+    return (
+      <span
+        className="text-muted-foreground"
+        title="No basis to divide the account's margin on — no margin data for this account, or nothing this contract loses under any scenario considered."
+      >
+        —
+      </span>
+    );
+  }
+
+  const estimated = row.marginBasis === "ESTIMATED";
+  return (
+    <span
+      className="tnum inline-flex items-center gap-1.5"
+      title={
+        estimated
+          ? "Estimated: the account's real margin, split by how much each contract loses at its own worst scenario. The total is what the broker charges; the split is ours."
+          : "From the broker's own margin calculator."
+      }
+    >
+      {formatINRWhole(row.marginUsed)}
+      <span
+        className={`h-1.5 w-1.5 rounded-full ${
+          estimated ? "bg-muted-foreground/50" : "bg-primary"
+        }`}
+      />
+    </span>
+  );
+}
+
 function Qty({ row }: { row: InstrumentRiskRow }) {
   if (row.netQty === 0 && row.grossQty > 0) {
     return (
@@ -109,6 +149,7 @@ export function InstrumentRiskTable({ rows }: { rows: InstrumentRiskRow[] }) {
             <TableHead className="text-right">LTP</TableHead>
             <TableHead className="text-right">Market value</TableHead>
             <TableHead className="text-right">Max loss</TableHead>
+            <TableHead className="text-right">Margin</TableHead>
             <TableHead className="text-right">P&amp;L</TableHead>
           </TableRow>
         </TableHeader>
@@ -146,6 +187,9 @@ export function InstrumentRiskTable({ rows }: { rows: InstrumentRiskRow[] }) {
               <TableCell className="tnum text-right">{formatINRWhole(row.marketValue)}</TableCell>
               <TableCell className="text-right">
                 <MaxLoss row={row} />
+              </TableCell>
+              <TableCell className="text-right">
+                <Margin row={row} />
               </TableCell>
               <TableCell className={`tnum text-right ${pnlColor(row.pnl)}`}>
                 {formatSignedINR(row.pnl)}

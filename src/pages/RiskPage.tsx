@@ -227,6 +227,20 @@ export function RiskPage() {
                     and overstate a spread — the combined worst case needs the legs
                     valued together.
                   </p>
+                  {/*
+                    Margin is the mirror image of max loss: allocated from the
+                    account's real bill, so it DOES add up, and the dot says
+                    whether the split came from the broker or from us.
+                  */}
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    Margin is the opposite: allocated from what the broker actually
+                    charges, so the column totals to your real bill. A{" "}
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary align-middle" />{" "}
+                    marks a figure from the broker's own calculator; a{" "}
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground/50 align-middle" />{" "}
+                    marks our estimate, split by how much each contract loses at its
+                    own worst scenario.
+                  </p>
                 </>
               )}
             </CardContent>

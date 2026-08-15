@@ -1,4 +1,5 @@
-import { ShieldAlert, TrendingUp, Calendar, Percent, AlertTriangle } from "lucide-react";
+import { ShieldAlert, TrendingUp, Calendar, Percent, AlertTriangle, Layers } from "lucide-react";
+import { InstrumentRiskTable } from "@/features/risk/InstrumentRiskTable";
 import { PageHeader } from "@/components/PageHeader";
 import { RefreshBar } from "@/components/RefreshBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,6 +67,7 @@ export function RiskPage() {
     useRiskSummary();
 
   const exposure = data?.exposure;
+  const instruments = data?.instruments ?? [];
   const expiryBuckets = data?.expiryBuckets ?? [];
   const warnings = data?.warnings ?? [];
   const freshness = data?.freshness ?? "NONE";
@@ -170,6 +172,50 @@ export function RiskPage() {
                 </p>
                 <ConcentrationBars slices={exposure?.concentrationByInstrumentType ?? []} />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="md:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Risk by instrument</CardTitle>
+              <Layers className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="pt-4">
+              {instruments.length === 0 ? (
+                <EmptyState
+                  icon={<Layers />}
+                  title="No open positions"
+                  description="Each contract you hold will appear here, netted per account."
+                />
+              ) : (
+                <>
+                  <InstrumentRiskTable rows={instruments} />
+                  {/*
+                    Two things the column cannot say for itself.
+
+                    The netting unit, because the obvious reading of one contract
+                    appearing twice is that something is duplicated.
+
+                    And that max loss is STANDALONE. On the real HAL bear put
+                    spread in raw_capture, the short 4600 PE reads ₹685,717 on its
+                    own while the structure's true worst case is ₹34,462 — the long
+                    4350 PE caps it. Reading down this column, or totalling it,
+                    overstates any spread by an order of magnitude. The group
+                    figure needs the legs evaluated together.
+                  */}
+                  <p className="border-t mt-3 pt-3 text-xs text-muted-foreground">
+                    Netted per account, across product buckets (NRML/MIS) but never
+                    across brokers — a spread only earns margin benefit inside one
+                    account.{" "}
+                    <strong className="text-foreground">
+                      Max loss is per contract, standalone, held to expiry.
+                    </strong>{" "}
+                    Offsetting legs cap each other, so these figures do not add up
+                    and overstate a spread — the combined worst case needs the legs
+                    valued together.
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
 

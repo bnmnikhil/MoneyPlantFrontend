@@ -287,6 +287,72 @@ export interface ExposureReport {
   concentrationByInstrumentType: Concentration[];
 }
 
+export type InstrumentType = 'CE' | 'PE' | 'FUT' | 'EQ';
+
+/**
+ * Structural identity of a contract.
+ *
+ * The backend record also serialises five `isXxx()` helpers (`call`, `equity`,
+ * `future`, `option`, `put`) that are deliberately not declared here — see
+ * RiskSummaryJsonTest, which pins the full wire shape. Derive from `type`.
+ */
+export interface InstrumentKey {
+  underlying: string;
+  /** null for cash and equity. */
+  expiry: string | null;
+  /** 0 for futures and cash. */
+  strike: number;
+  type: InstrumentType;
+}
+
+/**
+ * How bad the worst case is — and whether we can say.
+ *
+ * UNBOUNDED and UNKNOWN are different facts and must render differently.
+ * "This can lose without limit" is a finding; "we could not work out what this
+ * can lose" is a gap. Collapsing both into a blank cell lets an unresolved
+ * Alice Blue row read as safe.
+ */
+export type LossBound = 'BOUNDED' | 'UNBOUNDED' | 'UNKNOWN';
+
+/** One product bucket within an account — Kite holds NRML and MIS separately. */
+export interface ProductLeg {
+  product: string;
+  qty: number;
+  avgPrice: number;
+}
+
+/**
+ * Everything held in one contract, in one account.
+ *
+ * Netted across the broker's own product buckets, never across connections: a
+ * spread only earns margin benefit inside one account, and a figure spanning
+ * two brokers is one neither could confirm. Rows arrive sorted by absolute
+ * market value, descending.
+ */
+export interface InstrumentRiskRow {
+  connectionId: string;
+  brokerId: string;
+  symbol: string;
+  /** null when the contract master could not resolve the symbol. */
+  key: InstrumentKey | null;
+  underlying: string | null;
+  underlyingLabel: string | null;
+  /** Signed. Negative is short. */
+  netQty: number;
+  /** Sum of absolute quantities. Exceeds |netQty| only when held both ways. */
+  grossQty: number;
+  avgEntry: number;
+  ltp: number;
+  marketValue: number;
+  lossBound: LossBound;
+  /** Positive magnitude. Null unless `lossBound === 'BOUNDED'`. */
+  maxLoss: number | null;
+  pnl: number;
+  dayChange: number;
+  legs: ProductLeg[];
+}
+
 /**
  * Nearest-first, which is also increasing order of risk-of-surprise.
  *
@@ -326,6 +392,8 @@ export interface DecayPoint {
 
 export interface RiskSummaryReport {
   exposure: ExposureReport;
+  /** One row per contract per account, biggest absolute market value first. */
+  instruments: InstrumentRiskRow[];
   expiryBuckets: ExpiryBucket[];
   /** Always empty for now: decay needs a snapshot series that has no writer yet. */
   decaySeries: DecayPoint[];

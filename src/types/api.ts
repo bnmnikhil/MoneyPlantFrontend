@@ -251,17 +251,69 @@ export interface PayoffResponse {
   expiries: string[];
 }
 
-export interface ExposureReport {
-  netExposure: number;
-  grossExposure: number;
-  concentrationByUnderlying: Record<string, number>;
-  concentrationByType: Record<string, number>;
+/**
+ * One slice of the book.
+ *
+ * An array rather than a `Record<string, number>`, mirroring the backend. A map
+ * lost `label`, so a punctuation-stripped "MM" was all the UI could print for
+ * M&M; and a map has no order, so the bars reshuffled between polls. These
+ * arrive sorted by `percent`, descending — render them in the order given.
+ */
+export interface Concentration {
+  /** Canonical grouping key, or "UNKNOWN". Never print this. */
+  code: string;
+  /** Vendor spelling. Print this. */
+  label: string;
+  marketValue: number;
+  /** Share of gross market value, 0-100. */
+  percent: number;
 }
 
+/**
+ * Portfolio size and where it is concentrated.
+ *
+ * `marketValue`, NOT "exposure". These are `qty x ltp` summed, which for an
+ * option is the premium value — what closing would cost or yield — and is not
+ * the risk. A short call and a long put with the same market value differ
+ * enormously: the put's is exactly its max loss, the call's is unbounded.
+ */
+export interface ExposureReport {
+  /** Signed. Longs and shorts cancel. */
+  netMarketValue: number;
+  /** Sum of absolute values. The size of the book. */
+  grossMarketValue: number;
+  concentrationByUnderlying: Concentration[];
+  /** Keyed on the option right (CE/PE/FUT/EQ), not on product (NRML/MIS). */
+  concentrationByInstrumentType: Concentration[];
+}
+
+/**
+ * Nearest-first, which is also increasing order of risk-of-surprise.
+ *
+ * EXPIRED is its own tier: the backend used to compare a *signed* day count
+ * against `days <= 7`, so already-expired contracts landed in THIS_WEEK and read
+ * as live near-term positions.
+ */
+export type ExpiryTier =
+  | 'EXPIRED'
+  | 'THIS_WEEK'
+  | 'NEXT_WEEK'
+  | 'THIS_MONTH'
+  | 'FAR'
+  | 'NO_EXPIRY';
+
+/**
+ * A tier and a date, not a pre-composed label — the frontend composes the
+ * string, same rule as `CurveRef`. Buckets arrive sorted nearest-first.
+ */
 export interface ExpiryBucket {
-  label: string;
+  tier: ExpiryTier;
+  /** null for cash, equity, and anything the contract master could not resolve. */
   expiry: string | null;
-  netExposure: number;
+  /** null when `expiry` is; negative when already expired. */
+  daysToExpiry: number | null;
+  netMarketValue: number;
+  grossMarketValue: number;
   positionCount: number;
 }
 
@@ -275,7 +327,14 @@ export interface DecayPoint {
 export interface RiskSummaryReport {
   exposure: ExposureReport;
   expiryBuckets: ExpiryBucket[];
+  /** Always empty for now: decay needs a snapshot series that has no writer yet. */
   decaySeries: DecayPoint[];
+  /**
+   * Per-broker failures. Non-empty means these numbers describe a *partial*
+   * book — a concentration percentage over two of three brokers is not merely
+   * inaccurate, it is unanswerable, so say so rather than rendering it plain.
+   */
+  warnings: BrokerWarning[];
   asOf: string | null;
   freshness: Freshness;
 }

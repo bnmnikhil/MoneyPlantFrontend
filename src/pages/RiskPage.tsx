@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { InstrumentRiskTable } from "@/features/risk/InstrumentRiskTable";
 import { ScenarioLadders } from "@/features/risk/ScenarioLadder";
+import { MarginUtilisationCard } from "@/features/risk/MarginUtilisationCard";
 import { PageHeader } from "@/components/PageHeader";
 import { RefreshBar } from "@/components/RefreshBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -163,6 +164,8 @@ export function RiskPage() {
               </p>
             </CardContent>
           </Card>
+
+          {data?.margin && <MarginUtilisationCard margin={data.margin} />}
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

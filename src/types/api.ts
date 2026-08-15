@@ -401,6 +401,47 @@ export interface ScenarioGroup {
   rows: InstrumentRiskRow[];
 }
 
+/** One connection's funding. Keyed on connectionId — two Kite accounts are two rows. */
+export interface AccountMargin {
+  connectionId: string;
+  brokerId: string;
+  available: number;
+  used: number;
+  /** available + used. A MoneyPlant convention; no vendor supplies it. */
+  total: number;
+  /**
+   * Per account only, and never summed. Alice Blue's is `openingCashLimit`, a
+   * start-of-day figure, while Kite's and Paytm's are live and both
+   * legitimately negative when a book is funded against collateral.
+   */
+  cash: number;
+  collateral: number;
+  utilisationPct: number;
+}
+
+/**
+ * How much of the book's capital is committed — D9's margin & capital
+ * utilisation, absent from the risk report until margin_snapshot got a writer.
+ *
+ * Note there is deliberately no top-level `cash`: see AccountMargin.cash.
+ */
+export interface MarginUtilisationReport {
+  available: number;
+  used: number;
+  total: number;
+  collateral: number;
+  /** used / total, 0-100. Same formula as aggregate.ts, so the two agree. */
+  utilisationPct: number;
+  accounts: AccountMargin[];
+  /**
+   * Margins carry their OWN asOf, distinct from the report's. They are migrated
+   * from different archive rows than positions and can be materially older —
+   * show this one next to the margin card, not the page-level stamp.
+   */
+  asOf: string | null;
+  freshness: Freshness;
+}
+
 /**
  * Nearest-first, which is also increasing order of risk-of-surprise.
  *
@@ -445,6 +486,8 @@ export interface RiskSummaryReport {
   /** Per (account, underlying, expiry), nearest expiry first. */
   scenarios: ScenarioGroup[];
   expiryBuckets: ExpiryBucket[];
+  /** Capital committed, per account and in total. Carries its own asOf. */
+  margin: MarginUtilisationReport;
   /** Always empty for now: decay needs a snapshot series that has no writer yet. */
   decaySeries: DecayPoint[];
   /**

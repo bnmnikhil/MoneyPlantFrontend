@@ -36,6 +36,13 @@ export function formatSignedINR(value: number): string {
   return `${sign}${inr.format(Math.abs(value))}`;
 }
 
+/** Signed, no paise — e.g. +₹52,300 / -₹1,238. For signed aggregates like premium. */
+export function formatSignedINRWhole(value: number): string {
+  if (!Number.isFinite(value)) return "—";
+  const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+  return `${sign}${inrCompact.format(Math.abs(value))}`;
+}
+
 /** 1,23,456 */
 export function formatNumber(value: number): string {
   if (!Number.isFinite(value)) return "—";

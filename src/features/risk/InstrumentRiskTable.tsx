@@ -8,7 +8,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { brokerLabel } from "@/components/BrokerBadge";
+import { MarginFigure } from "@/components/MarginFigure";
 import { accountLabel } from "@/features/dashboard/aggregate";
+import type { MarginProvenance } from "@/features/positions/margin";
 import { formatINRWhole, formatSignedINR, formatNumber, pnlColor } from "@/lib/format";
 import type { InstrumentRiskRow } from "@/types/api";
 
@@ -67,40 +69,22 @@ function MaxLoss({ row }: { row: InstrumentRiskRow }) {
 /**
  * Capital tied up, with its provenance.
  *
- * The dot is not decoration. Both figures are allocated from the account's real
- * bill, so the column foots either way — but one share comes from the broker's
- * own model and the other from our worst-case split, and those must not read as
- * equally authoritative. A dash means no basis to divide on, never a zero charge.
+ * Rendering lives in the shared {@link MarginFigure} so the positions table's
+ * per-underlying subtotal and this per-contract figure — both allocations of the
+ * same bill — cannot describe themselves differently.
  */
 function Margin({ row }: { row: InstrumentRiskRow }) {
-  if (row.marginBasis === "UNAVAILABLE" || row.marginUsed === null) {
-    return (
-      <span
-        className="text-muted-foreground"
-        title="No basis to divide the account's margin on — no margin data for this account, or nothing this contract loses under any scenario considered."
-      >
-        —
-      </span>
-    );
-  }
-
-  const estimated = row.marginBasis === "ESTIMATED";
+  const attributed = row.marginBasis !== "UNAVAILABLE" && row.marginUsed !== null;
+  // UNAVAILABLE has no provenance to report; the dash is rendered off `amount`,
+  // so anything is unused there. Narrowing explicitly keeps the union honest.
+  const provenance: MarginProvenance =
+    row.marginBasis === "BROKER_MODEL" ? "BROKER_MODEL" : "ESTIMATED";
   return (
-    <span
-      className="tnum inline-flex items-center gap-1.5"
-      title={
-        estimated
-          ? "Estimated: the account's real margin, split by how much each contract loses at its own worst scenario. The total is what the broker charges; the split is ours."
-          : "From the broker's own margin calculator."
-      }
-    >
-      {formatINRWhole(row.marginUsed)}
-      <span
-        className={`h-1.5 w-1.5 rounded-full ${
-          estimated ? "bg-muted-foreground/50" : "bg-primary"
-        }`}
-      />
-    </span>
+    <MarginFigure
+      amount={attributed ? row.marginUsed : null}
+      provenance={provenance}
+      emptyTitle="No basis to divide the account's margin on — no margin data for this account, or nothing this contract loses under any scenario considered."
+    />
   );
 }
 

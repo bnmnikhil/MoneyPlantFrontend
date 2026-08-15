@@ -139,6 +139,16 @@ export interface Position extends BrokerSourced {
    * back to the canonical code, so the UI never has to choose between them.
    */
   underlyingLabel: string | null;
+  /**
+   * The option right — CE, PE, FUT or EQ — resolved server-side from the same
+   * contract master as `underlying`, and null exactly when that lookup missed.
+   *
+   * Deriving it here would mean regex-parsing `HDFCBANK25AUG26P730` in the
+   * browser, which is what the note on `underlying` above rules out. Null means
+   * "we could not tell", never "not an option": a null must fall into its own
+   * bucket rather than being folded in with the calls.
+   */
+  instrumentType: InstrumentType | null;
   product: string;
   qty: number;
   avgPrice: number;
@@ -248,6 +258,81 @@ export interface PayoffResponse {
   spot: number;
   legs: PayoffLeg[];
   payoff: Payoff;
+  expiries: string[];
+}
+
+export interface SimulatedLeg {
+  underlying: string;
+  expiry: string;
+  strike: number;
+  type: "CE" | "PE" | "FUT" | "EQ";
+  qty: number;
+  price: number;
+}
+
+export interface StrategySimulationRequest {
+  underlying?: string;
+  spot?: number;
+  legs: SimulatedLeg[];
+}
+
+export interface LegBreakdown {
+  underlying: string;
+  expiry: string;
+  strike: number;
+  type: "CE" | "PE" | "FUT" | "EQ";
+  qty: number;
+  price: number;
+  standaloneMargin: number;
+  hedgedMargin: number;
+  hedgeBenefit: number;
+  span: number;
+  exposure: number;
+  premium: number;
+}
+
+export interface StrategyMetrics {
+  netPremium: number;
+  riskRewardRatio: string;
+  minStrike: number;
+  maxStrike: number;
+  totalLots: number;
+  totalFundsRequired: number;
+}
+
+export interface StrategySimulationResponse {
+  underlying: string;
+  spot: number;
+  payoff: Payoff;
+  margin: {
+    initialMargin: number;
+    withBenefitMargin: number;
+    hedgeBenefit: number;
+    legs: LegBreakdown[];
+  };
+  metrics: StrategyMetrics;
+  legs: LegBreakdown[];
+}
+
+export interface UnderlyingConfig {
+  code: string;
+  label: string;
+  isIndex: boolean;
+  lotSize: number;
+  strikeStep: number;
+  defaultSpot: number;
+}
+
+export interface TemplateSummary {
+  id: string;
+  label: string;
+  sentiment: string;
+  description: string;
+}
+
+export interface StrategyMetadata {
+  underlyings: UnderlyingConfig[];
+  templates: TemplateSummary[];
   expiries: string[];
 }
 

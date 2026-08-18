@@ -98,28 +98,23 @@ export function PositionsPage() {
       </Card>
 
       {/*
-        The margin column has THREE different ages in it and they must all be
-        stated, because the reassuring one is not the one that matters.
-        Measured 15 Aug 2026: the bill was hours old while the positions it was
-        divided across were four days old, so a caption naming only the bill
-        would have read as fresh while the split was stale. The split is the
-        weaker link, so it is named first.
+        Since margin became bottom-up (17 Aug 2026) it is computed from the
+        positions alone, so the bill's age no longer enters into it and only ONE
+        age is load-bearing: the positions the estimate was built from. That is
+        the one named. The old caption named the bill first and had to explain
+        three ages; the change removed two of them.
 
         One caption, in one place. Per-row badges would be noise.
       */}
-      {report && (report.freshness !== "LIVE" || report.margin.freshness !== "LIVE") && (
+      {report && report.freshness !== "LIVE" && (
         <p className="px-1 text-xs text-muted-foreground">
-          Margin is allocated from each account's real bill
-          {report.margin.asOf && (
-            <> (as of {new Date(report.margin.asOf).toLocaleString()})</>
-          )}
-          , split across the positions held{" "}
+          Margin is estimated per contract from the positions held{" "}
           <strong className="font-medium text-foreground">
             {report.asOf ? new Date(report.asOf).toLocaleString() : "at an unknown time"}
           </strong>{" "}
-          · {report.freshness}. The rows above are live, so the two can disagree
-          — and the &ldquo;% of margin&rdquo; hint divides a live premium by that
-          allocated bill.
+          · {report.freshness}. The rows above are live, so the two can disagree —
+          and the &ldquo;% of margin&rdquo; hint divides a live premium by that
+          estimate.
         </p>
       )}
     </div>

@@ -13,6 +13,9 @@ import type {
   Position,
   RiskSummaryReport,
   SessionStatus,
+  StrategyMetadata,
+  StrategySimulationRequest,
+  StrategySimulationResponse,
 } from "@/types/api";
 
 export const BROKER_SESSION_EXPIRED = "BROKER_SESSION_EXPIRED";
@@ -246,5 +249,8 @@ export const api = {
   deleteBrokerCredential: (brokerId: string, label: string) =>
     request<void>(credentialPath(brokerId, label), { method: "DELETE" }),
   riskSummary: () => request<RiskSummaryReport>("/api/risk/summary"),
+  strategyMetadata: () => request<StrategyMetadata>("/api/payoff/metadata"),
+  simulateStrategy: (body: StrategySimulationRequest) =>
+    request<StrategySimulationResponse>("/api/payoff/simulate", { method: "POST", body }),
   logout: () => request<void>("/api/logout", { method: "POST" }),
 };

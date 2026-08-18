@@ -355,9 +355,11 @@ export function PositionsTable({
                       />
                     </TableCell>
                     {/*
-                      The account's real bill, not an allocation — and every
-                      underlying subtotal beneath it is a share of exactly this
-                      number, which is what makes the column foot.
+                      The account's real bill, unaltered. Since 17 Aug 2026 the
+                      subtotals beneath it are bottom-up estimates rather than
+                      shares of it, so they no longer add up to this row — which
+                      makes the comparison between the two the useful thing on
+                      screen rather than a reconciliation error.
                     */}
                     <TableCell className="py-2.5 text-right text-sm">
                       <MarginFigure

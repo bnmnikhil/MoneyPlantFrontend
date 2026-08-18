@@ -8,6 +8,7 @@ export const payoffKeys = {
   // is two distinct curves and must not share a cache entry.
   detail: (connectionId: string, underlying: string) =>
     ["payoff", connectionId, underlying] as const,
+  metadata: ["payoff", "metadata"] as const,
 };
 
 /** Every (broker, underlying) pair that currently has plottable positions. */
@@ -29,3 +30,13 @@ export function usePayoff(curve: CurveRef | undefined) {
     refetchIntervalInBackground: false,
   });
 }
+
+/** Strategy Builder metadata (underlyings, strike steps, lot sizes, templates, expiries). */
+export function useStrategyMetadata() {
+  return useQuery({
+    queryKey: payoffKeys.metadata,
+    queryFn: api.strategyMetadata,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+

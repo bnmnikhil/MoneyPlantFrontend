@@ -5,14 +5,15 @@ import type { MarginProvenance } from "@/features/positions/margin";
  * A margin figure with its provenance attached.
  *
  * Shared by the risk table (per contract) and the positions table (per
- * underlying) so the two pages cannot describe the same number differently —
- * both are allocations of the same bill and must read as such.
+ * underlying) so the two pages cannot describe the same number differently.
  *
- * The dot is not decoration. Every figure here is *allocated* from the account's
- * real charge, so the column foots whichever way it was split; what differs is
- * whether the split came from the broker's own calculator or from our worst-loss
- * heuristic, and those must not read as equally authoritative. A dash means no
- * basis to divide on — never a zero charge, which would be a claim.
+ * The dot is not decoration: it says whether the figure came from the broker's
+ * own calculator or from our bottom-up estimate, and those must not read as
+ * equally authoritative. Since the estimate stopped being a division of the
+ * broker's bill (17 Aug 2026) the dot carries more weight, not less — the
+ * column no longer foots to anything the broker would confirm, so the method is
+ * the only thing telling the reader how far to trust it. A dash means nothing
+ * could be computed — never a zero charge, which would be a claim.
  */
 export function MarginFigure({
   amount,

@@ -1,19 +1,29 @@
 import { useEffect, useState } from "react";
-import { Inbox, TrendingUp, TrendingDown, Target, Crosshair } from "lucide-react";
+import {
+  Inbox,
+  TrendingUp,
+  TrendingDown,
+  Target,
+  Crosshair,
+  Wrench,
+  BookOpen,
+} from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/states";
 import { BrokerSessionBanner } from "@/features/session/BrokerSessionBanner";
 import { PayoffChart } from "@/features/payoff/PayoffChart";
 import { LegsTable } from "@/features/payoff/LegsTable";
+import { StrategyBuilderView } from "@/features/strategy-builder/StrategyBuilderView";
 import { usePayoff, usePayoffCurves } from "@/features/payoff/hooks";
 import { brokerLabel } from "@/components/BrokerBadge";
 import { brokerIdOf, isBrokerSessionError } from "@/lib/api";
 import { formatINRWhole } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { CurveRef } from "@/types/api";
+import type { CurveRef, PayoffLeg } from "@/types/api";
 
 const curveKey = (c: CurveRef) => `${c.connectionId}:${c.underlying}`;
 
@@ -80,8 +90,13 @@ function ModeToggle() {
 }
 
 export function PayoffPage() {
+  const [tab, setTab] = useState<"live" | "builder">("live");
   const underlyings = usePayoffCurves();
   const [selected, setSelected] = useState<CurveRef>();
+  const [builderPrefill, setBuilderPrefill] = useState<{
+    underlying: string;
+    legs: PayoffLeg[];
+  } | null>(null);
 
   // Auto-select the first curve once the list arrives, and keep the selection
   // valid: a broker disconnecting can remove the curve currently being viewed.
@@ -98,51 +113,130 @@ export function PayoffPage() {
   const data = payoff.data;
   const p = data?.payoff;
 
+  const handleOpenInBuilder = () => {
+    if (selected && data?.legs) {
+      setBuilderPrefill({
+        underlying: selected.underlying,
+        legs: data.legs,
+      });
+      setTab("builder");
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Option Payoff"
-        description="Expiry payoff curve for your open F&O positions."
-        actions={
-          underlyings.data && underlyings.data.length > 0 ? (
-            <CurveSelector
-              curves={underlyings.data}
-              selected={selected}
-              onSelect={setSelected}
-            />
-          ) : undefined
-        }
-      />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <PageHeader
+          title="Option Payoff & Strategy Builder"
+          description={
+            tab === "live"
+              ? "Expiry payoff curves for your open F&O positions across broker accounts."
+              : "Design, simulate, and calculate margin for custom multi-leg options strategies."
+          }
+        />
 
-      {/* Underlyings list failed */}
-      {underlyings.isError && (
-        <Card>
-          <CardContent className="p-0">
-            <ErrorState
-              title="Couldn't load payoff curves"
-              onRetry={() => underlyings.refetch()}
-            />
-          </CardContent>
-        </Card>
-      )}
+        {/* View Mode Tabs */}
+        <div className="inline-flex rounded-lg border border-border bg-card p-1 text-sm shrink-0 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setTab("live")}
+            className={cn(
+              "flex items-center gap-2 rounded-md px-3.5 py-1.5 font-medium transition-colors",
+              tab === "live"
+                ? "bg-primary/12 text-primary"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <BookOpen className="size-4" />
+            Live Positions
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("builder")}
+            className={cn(
+              "flex items-center gap-2 rounded-md px-3.5 py-1.5 font-medium transition-colors",
+              tab === "builder"
+                ? "bg-primary/12 text-primary"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Wrench className="size-4" />
+            Strategy Builder
+          </button>
+        </div>
+      </div>
 
-      {/* No positions to plot */}
-      {underlyings.data && underlyings.data.length === 0 && (
-        <Card>
-          <CardContent className="p-0">
-            <EmptyState
-              icon={<Inbox />}
-              title="No open F&O positions to plot."
-              description="Once you hold options positions, their payoff curve will appear here."
-            />
-          </CardContent>
-        </Card>
-      )}
+      {tab === "builder" ? (
+        <StrategyBuilderView
+          initialUnderlying={builderPrefill?.underlying}
+          initialLegs={builderPrefill?.legs}
+          onBackToLive={() => setTab("live")}
+        />
+      ) : (
+        <>
+          {underlyings.data && underlyings.data.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card/60 p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Held Curves:
+                </span>
+                <CurveSelector
+                  curves={underlyings.data}
+                  selected={selected}
+                  onSelect={setSelected}
+                />
+              </div>
 
-      {/* Broker needs authorising → nothing to plot */}
-      {isBrokerSessionError(payoff.error) && (
-        <BrokerSessionBanner brokerId={brokerIdOf(payoff.error)} />
-      )}
+              {data?.legs && data.legs.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOpenInBuilder}
+                  className="text-xs font-medium"
+                >
+                  <Wrench className="mr-1.5 size-3.5 text-primary" />
+                  Open in Strategy Builder
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Underlyings list failed */}
+          {underlyings.isError && (
+            <Card>
+              <CardContent className="p-0">
+                <ErrorState
+                  title="Couldn't load payoff curves"
+                  onRetry={() => underlyings.refetch()}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* No positions to plot */}
+          {underlyings.data && underlyings.data.length === 0 && (
+            <Card>
+              <CardContent className="p-6 text-center space-y-4">
+                <EmptyState
+                  icon={<Inbox />}
+                  title="No open F&O positions in connected accounts."
+                  description="You don't have open options positions right now. You can use the Strategy Builder to design and simulate hypothetical trades."
+                />
+                <Button
+                  onClick={() => setTab("builder")}
+                  className="gap-2"
+                >
+                  <Wrench className="size-4" />
+                  Launch Strategy Builder
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Broker needs authorising → nothing to plot */}
+          {isBrokerSessionError(payoff.error) && (
+            <BrokerSessionBanner brokerId={brokerIdOf(payoff.error)} />
+          )}
 
       {/* Main body: only when we have (or are loading) a selected underlying */}
       {selected && !isBrokerSessionError(payoff.error) && (
@@ -255,6 +349,8 @@ export function PayoffPage() {
             <StatCard key={i} label="" value="" loading />
           ))}
         </div>
+      )}
+      </>
       )}
     </div>
   );

@@ -5,18 +5,20 @@ import { groupKey } from "./grouping";
  * Capital tied up, rolled up from per-contract margin onto the positions table's
  * broker → underlying groups.
  *
- * **Why summing allocated margin is safe, when summing margin generally is not.**
- * Margin is non-additive: a hedged book consumes far less than its legs would
- * separately, so standalone per-contract figures sum to more than the real bill.
- * But every figure here is a *share of one bill* — `MarginAllocator` divides an
- * account's real `used` among that account's contracts. Adding the CE and PE legs
- * of one underlying back together is therefore exact arithmetic on fractions of a
- * known total, not a second heuristic stacked on the first. It is the one
- * aggregation of margin that foots.
+ * **What summing these figures does and does not give you.** Since 17 Aug 2026
+ * the backend computes margin bottom-up: exchange SPAN scanned once across each
+ * `(account, underlying, expiry)` group, then divided among that group's legs,
+ * plus exposure charged leg by leg. So the hedge benefit is already taken inside
+ * a group, and adding a group's CE and PE legs back together recovers exactly the
+ * figure the engine computed for it — safe, and the reason this roll-up is by
+ * `(connection, underlying)`, the same shape the engine groups by.
  *
- * That also fixes the ceiling: the shares for a connection sum to that
- * connection's `used`, so an underlying's subtotal can never exceed the account's
- * bill, and all of an account's subtotals add up to it exactly.
+ * **It does not foot to the broker's bill, and must not be presented as if it
+ * did.** The old allocator divided the account's real `used`, which guaranteed
+ * footing at the cost of every row moving when any other row changed. The
+ * estimate ran 8.6% over the bill on a real Zerodha account. The account's own
+ * `used` is shown beside these subtotals, unaltered, and the gap between them is
+ * information rather than an error to reconcile.
  *
  * The only runtime import is `groupKey`, from a module whose own imports are
  * type-only, so this file still compiles and runs standalone under node — the

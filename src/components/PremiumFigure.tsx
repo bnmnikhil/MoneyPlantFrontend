@@ -7,10 +7,10 @@ import { formatSignedINRWhole } from "@/lib/format";
  * Sibling of `MarginFigure`, and shaped like it on purpose — the two sit in
  * adjacent columns and the whole point of the pair is that they be compared.
  * What they are is opposite, though, and the code should not blur it: a margin
- * figure is *allocated* from a bill and carries a provenance dot because there
- * is no single true per-contract number; a premium figure is plain arithmetic on
- * the row's own qty and LTP, exact at every level, so it needs no provenance and
- * appears on the legs too.
+ * figure is *modelled* and carries a provenance dot because there is no single
+ * true per-contract number; a premium figure is plain arithmetic on the row's
+ * own qty and LTP, exact at every level, so it needs no provenance and appears
+ * on the legs too.
  *
  * **Never coloured by sign.** A negative premium is a net debit, not a loss, and
  * `pnlColor` would assert otherwise. P&L is the next column along and already
@@ -64,7 +64,7 @@ export function PremiumFigure({
       {showRatio && (
         <span
           className="tnum text-xs text-muted-foreground"
-          title="Premium left as a share of the margin allocated to this group. A live premium over an allocated bill — see the note under the table."
+          title="Premium left as a share of the margin estimated for this group. A live premium over a modelled charge — see the note under the table."
         >
           {Math.round((premiumLeft / marginUsed) * 100)}% of margin
         </span>

@@ -23,10 +23,10 @@ import type { InstrumentType, Position } from "@/types/api";
  * negative debit: what you would recover by closing, and what you lose if it
  * expires worthless.
  *
- * **Unlike margin, this is additive at every level.** Margin is allocated from a
- * bill and only its shares may be summed; premium is plain arithmetic on the
- * rows themselves, which is why it appears on the leg rows where margin is
- * deliberately blank.
+ * **Unlike margin, this is additive at every level.** Margin is modelled per
+ * expiry group and only within-group figures may be summed; premium is plain
+ * arithmetic on the rows themselves, which is why it appears on the leg rows
+ * where margin is deliberately blank.
  */
 export const premiumLeft = (p: Position) => -(p.qty * p.ltp);
 

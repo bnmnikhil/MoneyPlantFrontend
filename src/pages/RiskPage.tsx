@@ -228,18 +228,24 @@ export function RiskPage() {
                     valued together.
                   </p>
                   {/*
-                    Margin is the mirror image of max loss: allocated from the
-                    account's real bill, so it DOES add up, and the dot says
-                    whether the split came from the broker or from us.
+                    Margin stopped being a division of the bill on 17 Aug 2026.
+                    It is now computed per contract — SEBI SPAN scanned across
+                    the expiry group, plus exposure per leg — so it no longer
+                    totals to what the broker charges, and the caption must say
+                    so rather than let the old promise stand. Measured 8.6% over
+                    a real Zerodha bill; see KiteMarginCalibrationTest.
                   */}
                   <p className="mt-1.5 text-xs text-muted-foreground">
-                    Margin is the opposite: allocated from what the broker actually
-                    charges, so the column totals to your real bill. A{" "}
+                    Margin is estimated per contract — exchange SPAN scanned across
+                    each expiry, plus exposure on every short leg — so it does{" "}
+                    <strong className="text-foreground">not</strong> total to your
+                    broker&rsquo;s bill, which is shown unaltered under Capital. It
+                    runs a few percent over on a real account, and it holds still
+                    when the rest of the book changes. A{" "}
                     <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary align-middle" />{" "}
-                    marks a figure from the broker's own calculator; a{" "}
+                    marks a figure from the broker&rsquo;s own calculator; a{" "}
                     <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground/50 align-middle" />{" "}
-                    marks our estimate, split by how much each contract loses at its
-                    own worst scenario.
+                    marks our estimate.
                   </p>
                 </>
               )}

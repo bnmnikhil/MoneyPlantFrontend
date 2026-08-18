@@ -403,13 +403,15 @@ export type LossBound = 'BOUNDED' | 'UNBOUNDED' | 'UNKNOWN';
 /**
  * Where a per-contract margin figure came from — and it always has to be shown,
  * because margin is non-additive. A hedged book consumes far less than its legs
- * separately, so there is no single true per-contract number. Both figures below
- * are *allocated* from the account's real bill, so the column foots either way;
- * what differs is where the share came from.
+ * separately, so there is no single true per-contract number, and a figure with
+ * no stated method is a figure that cannot be checked.
  *
- * BROKER_MODEL — the share came from the broker's own margin calculator.
- * ESTIMATED    — our own split, by each leg's worst loss across the scenarios.
- * UNAVAILABLE  — no basis to divide on. Not a zero charge.
+ * BROKER_MODEL — the broker's own margin calculator answered.
+ * ESTIMATED    — our bottom-up engine: exchange SPAN scanned across the expiry
+ *                group and divided among its legs, plus exposure per leg. Does
+ *                not total to the account's bill; measured 8.6% over on a real
+ *                Zerodha account, 15 Aug 2026.
+ * UNAVAILABLE  — nothing to compute from. Not a zero charge.
  */
 export type MarginBasis = 'BROKER_MODEL' | 'ESTIMATED' | 'UNAVAILABLE';
 

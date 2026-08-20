@@ -18,6 +18,7 @@ import type { Position } from "@/types/api";
 import {
   groupPositions,
   premiumLeft,
+  premiumIsKnown,
   type BrokerGroup,
   type OptionRight,
   type RightGroup,
@@ -117,7 +118,7 @@ function LegRow({ p, indent }: { p: Position; indent: string }) {
         allocation. No `of …` line: the avg price is already two columns away.
       */}
       <TableCell className="text-right text-sm">
-        <PremiumFigure premiumLeft={premiumLeft(p)} />
+        <PremiumFigure premiumLeft={premiumIsKnown(p) ? premiumLeft(p) : null} />
       </TableCell>
       {/*
         Margin is deliberately blank per leg. Every figure is an allocation, and
@@ -158,6 +159,7 @@ function RightRows({ right }: { right: RightGroup }) {
           <PremiumFigure
             premiumLeft={right.premiumLeft}
             atEntry={right.premiumAtEntry}
+            unpricedLegs={right.unpricedLegs}
           />
         </TableCell>
         {/* Margin is not split by right: the allocation divides a bill per
@@ -224,6 +226,7 @@ function UnderlyingRows({
             premiumLeft={group.premiumLeft}
             atEntry={group.premiumAtEntry}
             marginUsed={attributed}
+            unpricedLegs={group.unpricedLegs}
           />
         </TableCell>
         <TableCell className="py-2.5 text-right text-sm">
@@ -352,6 +355,7 @@ export function PositionsTable({
                         premiumLeft={b.premiumLeft}
                         atEntry={b.premiumAtEntry}
                         marginUsed={connectionMargin?.get(b.connectionId) ?? null}
+                        unpricedLegs={b.unpricedLegs}
                       />
                     </TableCell>
                     {/*
@@ -457,7 +461,11 @@ export function PositionsTable({
                       )}
                     </span>
                     <span className="flex flex-col items-end leading-tight">
-                      <PremiumFigure premiumLeft={g.premiumLeft} marginUsed={attributed} />
+                      <PremiumFigure
+                        premiumLeft={g.premiumLeft}
+                        marginUsed={attributed}
+                        unpricedLegs={g.unpricedLegs}
+                      />
                       <Money pnl={g.pnl} dayChange={g.dayChange} />
                     </span>
                   </button>
@@ -486,7 +494,7 @@ export function PositionsTable({
                           <span className="tnum text-right">{formatINR(p.ltp)}</span>
                           <span className="text-muted-foreground">Premium left</span>
                           <span className="tnum text-right">
-                            {formatSignedINRWhole(premiumLeft(p))}
+                            {premiumIsKnown(p) ? formatSignedINRWhole(premiumLeft(p)) : "—"}
                           </span>
                         </div>
                       </div>

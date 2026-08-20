@@ -29,9 +29,15 @@ export function PremiumFigure({
   premiumLeft,
   atEntry,
   marginUsed,
+  unpricedLegs = 0,
 }: {
-  /** Positive is a net credit: what you keep if every leg expires worthless. */
-  premiumLeft: number;
+  /**
+   * Positive is a net credit: what you keep if every leg expires worthless.
+   *
+   * Null when nothing could quote this row. Renders a dash — never a zero,
+   * which would claim the leg is worthless rather than admit it is unknown.
+   */
+  premiumLeft: number | null;
   /** The same figure at entry. Omit on leg rows — the avg price is already there. */
   atEntry?: number;
   /**
@@ -40,7 +46,26 @@ export function PremiumFigure({
    * without a denominator, which is not the same as it being nothing.
    */
   marginUsed?: number | null;
+  /**
+   * Legs inside this total that nothing could quote.
+   *
+   * Non-zero makes the total a floor and says so, rather than letting unpriced
+   * legs contribute a silent zero to a figure that looks complete. Same marker
+   * and same reasoning as `MarginFigure`'s unattributed legs.
+   */
+  unpricedLegs?: number;
 }) {
+  if (premiumLeft === null) {
+    return (
+      <span
+        className="text-muted-foreground"
+        title="Nothing could quote this leg, so there is no mark to value the premium at. Not a premium of zero — an unanswered question."
+      >
+        —
+      </span>
+    );
+  }
+
   const showEntry = atEntry !== undefined && Math.round(atEntry) !== Math.round(premiumLeft);
   const showRatio = marginUsed !== undefined && marginUsed !== null && marginUsed > 0;
 
@@ -53,7 +78,17 @@ export function PremiumFigure({
           : "Net debit: what closing these legs would return to you, and what you lose if they expire worthless. Sum of -(qty × LTP)."
       }
     >
-      <span className="tnum font-medium">{formatSignedINRWhole(premiumLeft)}</span>
+      <span className="tnum inline-flex items-center gap-1.5 font-medium">
+        {formatSignedINRWhole(premiumLeft)}
+        {unpricedLegs > 0 && (
+          <span
+            className="text-xs font-normal text-muted-foreground"
+            title={`${unpricedLegs} leg${unpricedLegs === 1 ? "" : "s"} here could not be quoted and contribute nothing, so this is a floor rather than the whole premium.`}
+          >
+            +?
+          </span>
+        )}
+      </span>
 
       {showEntry && (
         <span className="tnum text-xs text-muted-foreground">

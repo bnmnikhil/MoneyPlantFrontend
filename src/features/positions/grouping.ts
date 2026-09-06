@@ -31,6 +31,23 @@ import type { InstrumentType, Position } from "@/types/api";
 export const premiumLeft = (p: Position) => -(p.qty * p.ltp);
 
 /**
+ * Whether {@link premiumLeft} means anything for this row.
+ *
+ * False when the broker could not be made to quote the leg — Paytm prices its
+ * positions from a separate market-data call that can come back empty, leaving
+ * `ltp` at 0. The arithmetic still yields a number, and that number is a lie of
+ * a particular kind: it reads as "this leg is worth nothing", which is a claim
+ * nobody measured, on a leg that may be worth a great deal.
+ *
+ * A row where this is false renders a dash, and a group containing one shows its
+ * total as a floor — the same rule the margin column already follows, for the
+ * same reason.
+ */
+export const premiumIsKnown = (p: Position) => p.priceKnown;
+
+const unpriced = (ps: Position[]) => ps.filter((p) => !p.priceKnown).length;
+
+/**
  * The same figure at entry: what was originally collected (positive) or paid
  * (negative). The gap between this and {@link premiumLeft} is exactly the
  * position's lifetime P&L, so the two are shown as a pair and never summed
@@ -58,6 +75,8 @@ export interface RightGroup {
   positions: Position[];
   premiumLeft: number;
   premiumAtEntry: number;
+  /** Legs here nothing could quote. Non-zero makes the premium a floor. */
+  unpricedLegs: number;
   pnl: number;
   dayChange: number;
 }
@@ -77,6 +96,8 @@ export interface UnderlyingGroup {
   rights: RightGroup[];
   premiumLeft: number;
   premiumAtEntry: number;
+  /** Legs here nothing could quote. Non-zero makes the premium a floor. */
+  unpricedLegs: number;
   pnl: number;
   dayChange: number;
 }
@@ -88,6 +109,8 @@ export interface BrokerGroup {
   groups: UnderlyingGroup[];
   premiumLeft: number;
   premiumAtEntry: number;
+  /** Legs here nothing could quote. Non-zero makes the premium a floor. */
+  unpricedLegs: number;
   pnl: number;
   dayChange: number;
 }
@@ -115,6 +138,7 @@ function byRight(positions: Position[], groupKey: string): RightGroup[] {
       positions: ps,
       premiumLeft: sum(ps.map(premiumLeft)),
       premiumAtEntry: sum(ps.map(premiumAtEntry)),
+      unpricedLegs: unpriced(ps),
       pnl: sum(ps.map((p) => p.pnl)),
       dayChange: sum(ps.map((p) => p.dayChange)),
     };
@@ -181,6 +205,7 @@ export function groupPositions(positions: Position[]): BrokerGroup[] {
           rights: byRight(ps, key),
           premiumLeft: sum(ps.map(premiumLeft)),
           premiumAtEntry: sum(ps.map(premiumAtEntry)),
+          unpricedLegs: unpriced(ps),
           pnl: sum(ps.map((p) => p.pnl)),
           dayChange: sum(ps.map((p) => p.dayChange)),
         };
@@ -194,6 +219,7 @@ export function groupPositions(positions: Position[]): BrokerGroup[] {
       groups,
       premiumLeft: sum(groups.map((g) => g.premiumLeft)),
       premiumAtEntry: sum(groups.map((g) => g.premiumAtEntry)),
+      unpricedLegs: sum(groups.map((g) => g.unpricedLegs)),
       pnl: sum(groups.map((g) => g.pnl)),
       dayChange: sum(groups.map((g) => g.dayChange)),
     });

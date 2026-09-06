@@ -149,14 +149,58 @@ export interface Position extends BrokerSourced {
    * bucket rather than being folded in with the calls.
    */
   instrumentType: InstrumentType | null;
+  /**
+   * Strike, expiry and lot size, from the same contract master lookup as
+   * `underlying` and `instrumentType` — null exactly when that lookup missed.
+   *
+   * Here because anything reasoning about a position as a **structure** rather
+   * than as a mark needs them: splitting a premium into intrinsic and extrinsic
+   * needs the strike, and locating a group on its own payoff curve needs the
+   * strike of every leg. The alternative was parsing the vendor symbol in the
+   * browser, which the note on `underlying` above rules out.
+   *
+   * One nullable object rather than three nullable fields, so the question
+   * "did the contract master resolve this row?" is asked once.
+   */
+  contract: PositionContract | null;
   product: string;
   qty: number;
   avgPrice: number;
   ltp: number;
+  /**
+   * False when nothing could quote this row — **not** the same as it being
+   * worth zero.
+   *
+   * Paytm prices its positions from a separate market-data call that can come
+   * back empty, leaving `ltp` at 0. Any figure derived from the mark — market
+   * value, premium left — must render a dash rather than ₹0 when this is false,
+   * on the same rule as an unavailable margin basis: a zero is a claim, and
+   * printing one nobody measured is worse than printing nothing.
+   */
+  priceKnown: boolean;
   /** Lifetime, since entry, in rupees. */
   pnl: number;
+  /**
+   * The realised half of `pnl`, booked on quantity no longer open — and already
+   * included in it.
+   *
+   * `qty × (ltp − avgPrice)` is the *unrealised* half only, so anything pairing
+   * a mark against an entry basis — premium left beside premium at entry —
+   * differs from `pnl` by exactly this. It is 0 across every live book captured
+   * so far, which is why treating the pair as the lifetime P&L has held.
+   */
+  realisedPnl: number;
   /** Today's movement, in rupees — not a per-unit price delta. */
   dayChange: number;
+}
+
+/** What the broker's contract master knows about an instrument beyond its name. */
+export interface PositionContract {
+  /** 0 for futures and equity, matching the server's InstrumentKey. */
+  strike: number;
+  /** ISO date. Null for equity. */
+  expiry: string | null;
+  lotSize: number;
 }
 
 export interface Holding extends BrokerSourced {

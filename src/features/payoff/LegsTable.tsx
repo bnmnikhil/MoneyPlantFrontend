@@ -40,14 +40,14 @@ export function LegsTable({ legs }: { legs: PayoffLeg[] }) {
                 <TableCell className="font-medium">{leg.symbol}</TableCell>
                 <TableCell>
                   <Badge
-                    variant={leg.type === "CE" ? "success" : "destructive"}
+                    variant={leg.type === "CE" ? "success" : leg.type === "PE" ? "destructive" : "secondary"}
                     className="font-normal"
                   >
-                    {leg.type}
+                    {leg.type === "EQ" ? "Shares" : leg.type}
                   </Badge>
                 </TableCell>
                 <TableCell className="tnum text-right">
-                  {formatINR(leg.strike)}
+                  {leg.type === "EQ" || leg.type === "FUT" ? "—" : formatINR(leg.strike)}
                 </TableCell>
                 <TableCell className="text-right">
                   <DirTag qty={leg.qty} />
@@ -68,10 +68,10 @@ export function LegsTable({ legs }: { legs: PayoffLeg[] }) {
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Badge
-                  variant={leg.type === "CE" ? "success" : "destructive"}
+                  variant={leg.type === "CE" ? "success" : leg.type === "PE" ? "destructive" : "secondary"}
                   className="font-normal"
                 >
-                  {leg.type}
+                  {leg.type === "EQ" ? "Shares" : leg.type}
                 </Badge>
                 <span className="font-medium">{leg.symbol}</span>
               </div>
@@ -79,7 +79,7 @@ export function LegsTable({ legs }: { legs: PayoffLeg[] }) {
             </div>
             <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
               <span className="text-muted-foreground">Strike</span>
-              <span className="tnum text-right">{formatINR(leg.strike)}</span>
+              <span className="tnum text-right">{leg.type === "EQ" || leg.type === "FUT" ? "—" : formatINR(leg.strike)}</span>
               <span className="text-muted-foreground">Avg price</span>
               <span className="tnum text-right">{formatINR(leg.avgPrice)}</span>
             </div>

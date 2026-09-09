@@ -237,9 +237,9 @@ export const api = {
   // Payoff is per connection, not global: the same underlying can be held at
   // two brokers and each gets its own curve, so the connectionId is required.
   payoffCurves: () => request<CurveRef[]>("/api/payoff"),
-  payoff: (connectionId: string, underlying: string) =>
+  payoff: (connectionId: string, underlying: string, includeHoldings = false, holdingQty?: number) =>
     request<PayoffResponse>(
-      `/api/payoff/${encodeURIComponent(underlying)}?connectionId=${encodeURIComponent(connectionId)}`
+      `/api/payoff/${encodeURIComponent(underlying)}?connectionId=${encodeURIComponent(connectionId)}&includeHoldings=${includeHoldings}${holdingQty === undefined ? "" : `&holdingQty=${holdingQty}`}`
     ),
   // Per-user broker API credentials (3d). The GET never carries a secret; the
   // PUT is the only direction one ever travels.

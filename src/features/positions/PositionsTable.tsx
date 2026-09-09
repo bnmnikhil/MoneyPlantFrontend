@@ -18,7 +18,6 @@ import type { Position } from "@/types/api";
 import {
   groupPositions,
   premiumLeft,
-  premiumIsKnown,
   type BrokerGroup,
   type OptionRight,
   type RightGroup,
@@ -110,7 +109,7 @@ function LegRow({ p, indent }: { p: Position; indent: string }) {
       </TableCell>
       <TableCell className="tnum text-right">{formatNumber(p.qty)}</TableCell>
       <TableCell className="tnum text-right">{formatINR(p.avgPrice)}</TableCell>
-      <TableCell className="tnum text-right">{formatINR(p.ltp)}</TableCell>
+      <TableCell className="tnum text-right">{p.priceKnown ? formatINR(p.ltp) : "—"}</TableCell>
       {/*
         Premium IS shown per leg, unlike margin. It is exact here — qty × LTP off
         this very row, which the reader can check against the two cells to the
@@ -118,7 +117,7 @@ function LegRow({ p, indent }: { p: Position; indent: string }) {
         allocation. No `of …` line: the avg price is already two columns away.
       */}
       <TableCell className="text-right text-sm">
-        <PremiumFigure premiumLeft={premiumIsKnown(p) ? premiumLeft(p) : null} />
+        <PremiumFigure premiumLeft={premiumLeft(p)} />
       </TableCell>
       {/*
         Margin is deliberately blank per leg. Every figure is an allocation, and
@@ -454,7 +453,7 @@ export function PositionsTable({
                           {g.rights
                             .map(
                               (r) =>
-                                `${RIGHT_LABEL[r.right]} ${formatSignedINRWhole(r.premiumLeft)}`
+                                `${RIGHT_LABEL[r.right]} ${r.premiumLeft === null ? "—" : formatSignedINRWhole(r.premiumLeft)}${r.unpricedLegs > 0 && r.premiumLeft !== null ? " ?" : ""}`
                             )
                             .join(" · ")}
                         </span>
@@ -491,10 +490,10 @@ export function PositionsTable({
                           <span className="text-muted-foreground">Avg price</span>
                           <span className="tnum text-right">{formatINR(p.avgPrice)}</span>
                           <span className="text-muted-foreground">LTP</span>
-                          <span className="tnum text-right">{formatINR(p.ltp)}</span>
+                          <span className="tnum text-right">{p.priceKnown ? formatINR(p.ltp) : "—"}</span>
                           <span className="text-muted-foreground">Premium left</span>
                           <span className="tnum text-right">
-                            {premiumIsKnown(p) ? formatSignedINRWhole(premiumLeft(p)) : "—"}
+                            <PremiumFigure premiumLeft={premiumLeft(p)} />
                           </span>
                         </div>
                       </div>

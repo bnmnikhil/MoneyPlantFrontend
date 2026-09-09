@@ -18,6 +18,7 @@ import { useStrategyMetadata } from "@/features/payoff/hooks";
 import { api } from "@/lib/api";
 import { formatINR, formatINRWhole, formatNumber, formatSignedINR } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { legPnlAtSpot, quantityStep } from "./payoffMath";
 import type {
   SimulatedLeg,
   StrategySimulationResponse,
@@ -70,6 +71,7 @@ export function StrategyBuilderView({
   const [selectedExpiry, setSelectedExpiry] = useState<string>("");
   const [activeTemplate, setActiveTemplate] = useState<string>("BULL_CALL_SPREAD");
   const [legs, setLegs] = useState<EditableLeg[]>([]);
+  const hasEquity = legs.some((leg) => leg.enabled && leg.type === "EQ");
   const [simulation, setSimulation] = useState<StrategySimulationResponse | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [targetSpot, setTargetSpot] = useState<number | null>(null);
@@ -479,6 +481,7 @@ export function StrategyBuilderView({
         const toAtm = Math.round(toSpot / to.strikeStep) * to.strikeStep;
 
         return prev.map((l) => {
+          if (l.type === "EQ") return { ...l, underlying: to.code, strike: 0, price: toSpot };
           const offsetSteps = Math.round((l.strike - fromAtm) / from.strikeStep);
           const strike = toAtm + offsetSteps * to.strikeStep;
           const lots = Math.max(1, Math.round(Math.abs(l.qty) / from.lotSize));
@@ -665,9 +668,10 @@ export function StrategyBuilderView({
     const leg = legs.find((l) => l.id === id);
     if (!leg) return;
     const isShort = leg.qty < 0;
-    const currentLots = Math.max(1, Math.round(Math.abs(leg.qty) / currentConfig.lotSize));
+    const step = quantityStep(leg.type, currentConfig.lotSize);
+    const currentLots = Math.max(1, Math.round(Math.abs(leg.qty) / step));
     const newLots = Math.max(1, currentLots + deltaLots);
-    const newQty = (isShort ? -1 : 1) * (newLots * currentConfig.lotSize);
+    const newQty = (isShort ? -1 : 1) * (newLots * step);
     handleUpdateLeg(id, { qty: newQty });
   };
 
@@ -682,15 +686,7 @@ export function StrategyBuilderView({
     if (!simulation || targetSpot === null || targetSpot <= 0) return 0;
     let totalPnl = 0;
     for (const leg of legs.filter((l) => l.enabled)) {
-      let intrinsic = 0;
-      if (leg.type === "CE") {
-        intrinsic = Math.max(0, targetSpot - leg.strike);
-      } else if (leg.type === "PE") {
-        intrinsic = Math.max(0, leg.strike - targetSpot);
-      } else if (leg.type === "FUT") {
-        intrinsic = targetSpot - leg.strike;
-      }
-      totalPnl += (intrinsic - leg.price) * leg.qty;
+      totalPnl += legPnlAtSpot(leg, targetSpot);
     }
     return Math.round(totalPnl);
   }, [simulation, targetSpot, legs]);
@@ -840,7 +836,7 @@ export function StrategyBuilderView({
                     const isShort = leg.qty < 0;
                     const lots = Math.max(
                       1,
-                      Math.round(Math.abs(leg.qty) / currentConfig.lotSize)
+                      Math.round(Math.abs(leg.qty) / quantityStep(leg.type, currentConfig.lotSize))
                     );
                     const breakdown = simulation?.margin?.legs?.[idx];
 
@@ -878,7 +874,7 @@ export function StrategyBuilderView({
                             </button>
 
                             {/* Option Right (CE / PE) */}
-                            <div className="inline-flex rounded-md border border-border bg-background p-0.5 text-xs font-medium">
+                            {leg.type === "EQ" || leg.type === "FUT" ? <Badge>{leg.type === "EQ" ? "Shares" : "FUT"}</Badge> : <div className="inline-flex rounded-md border border-border bg-background p-0.5 text-xs font-medium">
                               <button
                                 type="button"
                                 onClick={() => handleUpdateLeg(leg.id, { type: "CE" })}
@@ -903,11 +899,11 @@ export function StrategyBuilderView({
                               >
                                 PE
                               </button>
-                            </div>
+                            </div>}
                           </div>
 
                           {/* Strike Stepper */}
-                          <div className="flex items-center gap-1.5">
+                          {(leg.type === "CE" || leg.type === "PE") && <div className="flex items-center gap-1.5">
                             <span className="text-xs text-muted-foreground">Strike:</span>
                             <div className="flex items-center rounded-md border border-border bg-background px-1">
                               <button
@@ -928,11 +924,11 @@ export function StrategyBuilderView({
                                 +
                               </button>
                             </div>
-                          </div>
+                          </div>}
 
                           {/* Lots Stepper */}
                           <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-muted-foreground">Lots:</span>
+                            <span className="text-xs text-muted-foreground">{leg.type === "EQ" ? "Shares:" : "Lots:"}</span>
                             <div className="flex items-center rounded-md border border-border bg-background px-1">
                               <button
                                 type="button"
@@ -982,7 +978,7 @@ export function StrategyBuilderView({
                         </div>
 
                         {/* Leg Margin Breakdown Footer */}
-                        {breakdown && breakdown.standaloneMargin > 0 && (
+                        {!hasEquity && breakdown && breakdown.standaloneMargin > 0 && (
                           <div className="flex flex-wrap items-center justify-between text-[11px] text-muted-foreground/80 bg-accent/20 px-2.5 py-1 rounded">
                             <span>
                               Standalone Margin:{" "}
@@ -1013,7 +1009,8 @@ export function StrategyBuilderView({
           </Card>
 
           {/* Capital & Margin Requirements Card */}
-          {simulation?.margin && (
+          {hasEquity && <p className="text-sm text-muted-foreground">Shares are included in payoff at their entry cost. Margin and capital estimates for strategies containing holdings are not available.</p>}
+          {!hasEquity && simulation?.margin && (
             <Card className="border-border bg-card">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center justify-between text-sm font-semibold">
@@ -1124,7 +1121,8 @@ export function StrategyBuilderView({
             </CardHeader>
             <CardContent className="p-2 pt-0">
               {simulation?.payoff ? (
-                <PayoffChart payoff={simulation.payoff} spot={spotVal} />
+                <PayoffChart key={simulation.underlying} payoff={simulation.payoff} spot={spotVal}
+                  legs={simulation.legs.map((leg) => ({ ...leg, avgPrice: leg.price }))} isIndex={simulation.isIndex} />
               ) : (
                 <div className="flex h-[320px] items-center justify-center text-xs text-muted-foreground">
                   Add or enable legs to visualize the strategy payoff curve.

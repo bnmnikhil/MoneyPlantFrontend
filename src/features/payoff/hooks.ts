@@ -6,8 +6,8 @@ export const payoffKeys = {
   curves: ["payoff", "curves"] as const,
   // Keyed by connection AND underlying: the same underlying held at two brokers
   // is two distinct curves and must not share a cache entry.
-  detail: (connectionId: string, underlying: string) =>
-    ["payoff", connectionId, underlying] as const,
+  detail: (connectionId: string, underlying: string, includeHoldings = false, holdingQty?: number) =>
+    ["payoff", connectionId, underlying, includeHoldings, holdingQty] as const,
   metadata: ["payoff", "metadata"] as const,
 };
 
@@ -21,10 +21,10 @@ export function usePayoffCurves() {
 }
 
 /** Payoff curve for one reference. Disabled until one is selected. */
-export function usePayoff(curve: CurveRef | undefined) {
+export function usePayoff(curve: CurveRef | undefined, includeHoldings = false, holdingQty?: number) {
   return useQuery({
-    queryKey: payoffKeys.detail(curve?.connectionId ?? "", curve?.underlying ?? ""),
-    queryFn: () => api.payoff(curve!.connectionId, curve!.underlying),
+    queryKey: payoffKeys.detail(curve?.connectionId ?? "", curve?.underlying ?? "", includeHoldings, holdingQty),
+    queryFn: () => api.payoff(curve!.connectionId, curve!.underlying, includeHoldings, holdingQty),
     enabled: !!curve,
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,

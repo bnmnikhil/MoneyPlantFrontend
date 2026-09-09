@@ -18,6 +18,7 @@ npm install
 npm run dev        # http://localhost:5173, /api etc. proxied to :8080
 npm run build      # type-check + bundle to dist/
 npm run preview    # serve the production build locally
+npm test           # premium, payoff-range and holdings regressions (Node 24)
 ```
 
 The dev server proxies `/api`, `/oauth2`, `/login/oauth2` and `/kite` to

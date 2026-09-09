@@ -34,12 +34,11 @@ export function PremiumFigure({
   /**
    * Positive is a net credit: what you keep if every leg expires worthless.
    *
-   * Null when nothing could quote this row. Renders a dash — never a zero,
-   * which would claim the leg is worthless rather than admit it is unknown.
+   * Null when there are no valued options. Non-options also render a dash.
    */
   premiumLeft: number | null;
   /** The same figure at entry. Omit on leg rows — the avg price is already there. */
-  atEntry?: number;
+  atEntry?: number | null;
   /**
    * Allocated margin for this group, for the reward-on-capital line. Null or
    * omitted renders no line rather than a zero: the ratio is unanswerable
@@ -47,11 +46,8 @@ export function PremiumFigure({
    */
   marginUsed?: number | null;
   /**
-   * Legs inside this total that nothing could quote.
-   *
-   * Non-zero makes the total a floor and says so, rather than letting unpriced
-   * legs contribute a silent zero to a figure that looks complete. Same marker
-   * and same reasoning as `MarginFigure`'s unattributed legs.
+   * Open legs with an unresolved instrument type or a missing option quote.
+   * Missing longs subtract and missing shorts add, so this is not a floor.
    */
   unpricedLegs?: number;
 }) {
@@ -59,23 +55,24 @@ export function PremiumFigure({
     return (
       <span
         className="text-muted-foreground"
-        title="Nothing could quote this leg, so there is no mark to value the premium at. Not a premium of zero — an unanswered question."
+        title="No valued options. Premium requires an option instrument and a known quote; futures and equity do not contribute."
       >
         —
       </span>
     );
   }
 
-  const showEntry = atEntry !== undefined && Math.round(atEntry) !== Math.round(premiumLeft);
-  const showRatio = marginUsed !== undefined && marginUsed !== null && marginUsed > 0;
+  const complete = unpricedLegs === 0;
+  const showEntry = complete && atEntry != null && Math.round(atEntry) !== Math.round(premiumLeft);
+  const showRatio = complete && marginUsed != null && marginUsed > 0;
 
   return (
     <span
       className="inline-flex flex-col items-end leading-tight"
       title={
         premiumLeft >= 0
-          ? "Net credit still outstanding: what you keep if every leg here expires worthless. Sum of -(qty × LTP), so a short leg adds and a long leg subtracts."
-          : "Net debit: what closing these legs would return to you, and what you lose if they expire worthless. Sum of -(qty × LTP)."
+          ? "Net option premium at current marks: short option value minus long option value. Includes intrinsic and time value; not guaranteed remaining profit."
+          : "Net option debit at current marks: long option value exceeds short option value. Includes intrinsic and time value; not a realised loss."
       }
     >
       <span className="tnum inline-flex items-center gap-1.5 font-medium">
@@ -83,15 +80,15 @@ export function PremiumFigure({
         {unpricedLegs > 0 && (
           <span
             className="text-xs font-normal text-muted-foreground"
-            title={`${unpricedLegs} leg${unpricedLegs === 1 ? "" : "s"} here could not be quoted and contribute nothing, so this is a floor rather than the whole premium.`}
+            title={`${unpricedLegs} open leg${unpricedLegs === 1 ? " is" : "s are"} excluded because the instrument type or option price is unknown. This subtotal is incomplete; the missing value can increase or decrease it.`}
           >
-            +?
+            ?
           </span>
         )}
       </span>
 
       {showEntry && (
-        <span className="tnum text-xs text-muted-foreground">
+        <span className="tnum text-xs text-muted-foreground" title="Entry premium for the option quantity still open. Entry minus current premium is unrealised P&L; realised P&L is separate.">
           of {formatSignedINRWhole(atEntry)}
         </span>
       )}

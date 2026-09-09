@@ -259,7 +259,7 @@ export interface PayoffLeg {
   symbol: string;
   strike: number;
   /** Backend InstrumentType includes FUT, so a futures position is representable. */
-  type: "CE" | "PE" | "FUT";
+  type: "CE" | "PE" | "FUT" | "EQ";
   qty: number;
   avgPrice: number;
 }
@@ -296,6 +296,8 @@ export interface CurveRef {
 }
 
 export interface PayoffResponse {
+  isIndex: boolean;
+  holding: { availableQty: number; avgCost: number; includedQty: number; warning: string | null };
   underlying: string;
   brokerId: string;
   connectionId: string;
@@ -345,6 +347,7 @@ export interface StrategyMetrics {
 }
 
 export interface StrategySimulationResponse {
+  isIndex: boolean;
   underlying: string;
   spot: number;
   payoff: Payoff;

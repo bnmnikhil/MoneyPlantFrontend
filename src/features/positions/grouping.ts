@@ -13,8 +13,10 @@ import type { InstrumentType, Position } from "@/types/api";
  * the risk.
  */
 
+const isOption = (p: Position) => p.instrumentType === "CE" || p.instrumentType === "PE";
+
 /**
- * Premium still on the table, in rupees. Positive is a net credit.
+ * Current net option premium, in rupees. Positive is a net credit.
  *
  * `qty` is signed and already includes the lot — a two-lot short of a 75-lot
  * contract arrives as -150, so multiplying by a lot size again would overstate
@@ -26,34 +28,37 @@ import type { InstrumentType, Position } from "@/types/api";
  * **Unlike margin, this is additive at every level.** Margin is modelled per
  * expiry group and only within-group figures may be summed; premium is plain
  * arithmetic on the rows themselves, which is why it appears on the leg rows
- * where margin is deliberately blank.
+ * where margin is deliberately blank. Futures and equity have no option
+ * premium. An unknown instrument type or missing quote returns null.
  */
-export const premiumLeft = (p: Position) => -(p.qty * p.ltp);
+export function premiumLeft(p: Position): number | null {
+  if (!isOption(p)) return null;
+  if (p.qty === 0) return 0;
+  if (!p.priceKnown || !Number.isFinite(p.ltp) || p.ltp < 0) return null;
+  return -(p.qty * p.ltp);
+}
 
-/**
- * Whether {@link premiumLeft} means anything for this row.
- *
- * False when the broker could not be made to quote the leg — Paytm prices its
- * positions from a separate market-data call that can come back empty, leaving
- * `ltp` at 0. The arithmetic still yields a number, and that number is a lie of
- * a particular kind: it reads as "this leg is worth nothing", which is a claim
- * nobody measured, on a leg that may be worth a great deal.
- *
- * A row where this is false renders a dash, and a group containing one shows its
- * total as a floor — the same rule the margin column already follows, for the
- * same reason.
- */
-export const premiumIsKnown = (p: Position) => p.priceKnown;
-
-const unpriced = (ps: Position[]) => ps.filter((p) => !p.priceKnown).length;
+const unpriced = (ps: Position[]) => ps.filter((p) =>
+  p.qty !== 0 && (p.instrumentType == null || (isOption(p) && premiumLeft(p) === null))
+).length;
 
 /**
  * The same figure at entry: what was originally collected (positive) or paid
- * (negative). The gap between this and {@link premiumLeft} is exactly the
- * position's lifetime P&L, so the two are shown as a pair and never summed
- * together.
+ * (negative) for the quantity still open. Entry minus {@link premiumLeft} is
+ * unrealised P&L; realised P&L from closed quantity is separate.
  */
-export const premiumAtEntry = (p: Position) => -(p.qty * p.avgPrice);
+export function premiumAtEntry(p: Position): number | null {
+  if (!isOption(p)) return null;
+  return p.qty === 0 ? 0 : -(p.qty * p.avgPrice);
+}
+
+interface PremiumTotals {
+  /** Sum of known option values; null when none can be valued. */
+  premiumLeft: number | null;
+  premiumAtEntry: number | null;
+  /** Open legs with an unknown type or option price. The subtotal can move either way. */
+  unpricedLegs: number;
+}
 
 /** The option right, with a bucket for rows the contract master could not resolve. */
 export type OptionRight = InstrumentType | "OTHER";
@@ -69,19 +74,15 @@ const RIGHT_ORDER: OptionRight[] = ["CE", "PE", "FUT", "EQ", "OTHER"];
  * "how much of this group's credit is on the call side" is the question a
  * strangle raises, and it cannot be answered by reading legs one at a time.
  */
-export interface RightGroup {
+export interface RightGroup extends PremiumTotals {
   key: string;
   right: OptionRight;
   positions: Position[];
-  premiumLeft: number;
-  premiumAtEntry: number;
-  /** Legs here nothing could quote. Non-zero makes the premium a floor. */
-  unpricedLegs: number;
   pnl: number;
   dayChange: number;
 }
 
-export interface UnderlyingGroup {
+export interface UnderlyingGroup extends PremiumTotals {
   key: string;
   /** Underlying if the contract master resolved one, else the raw symbol. */
   label: string;
@@ -94,28 +95,33 @@ export interface UnderlyingGroup {
    * that costs scrolling and says nothing.
    */
   rights: RightGroup[];
-  premiumLeft: number;
-  premiumAtEntry: number;
-  /** Legs here nothing could quote. Non-zero makes the premium a floor. */
-  unpricedLegs: number;
   pnl: number;
   dayChange: number;
 }
 
-export interface BrokerGroup {
+export interface BrokerGroup extends PremiumTotals {
   key: string;
   brokerId: string;
   connectionId: string;
   groups: UnderlyingGroup[];
-  premiumLeft: number;
-  premiumAtEntry: number;
-  /** Legs here nothing could quote. Non-zero makes the premium a floor. */
-  unpricedLegs: number;
   pnl: number;
   dayChange: number;
 }
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+
+function sumKnown(xs: (number | null)[]): number | null {
+  const known = xs.filter((value): value is number => value !== null);
+  return known.length > 0 ? sum(known) : null;
+}
+
+function premiumTotals(positions: Position[]): PremiumTotals {
+  return {
+    premiumLeft: sumKnown(positions.map(premiumLeft)),
+    premiumAtEntry: sumKnown(positions.map(premiumAtEntry)),
+    unpricedLegs: unpriced(positions),
+  };
+}
 
 function byRight(positions: Position[], groupKey: string): RightGroup[] {
   const buckets = new Map<OptionRight, Position[]>();
@@ -136,9 +142,7 @@ function byRight(positions: Position[], groupKey: string): RightGroup[] {
       key: `${groupKey}:${right}`,
       right,
       positions: ps,
-      premiumLeft: sum(ps.map(premiumLeft)),
-      premiumAtEntry: sum(ps.map(premiumAtEntry)),
-      unpricedLegs: unpriced(ps),
+      ...premiumTotals(ps),
       pnl: sum(ps.map((p) => p.pnl)),
       dayChange: sum(ps.map((p) => p.dayChange)),
     };
@@ -203,9 +207,7 @@ export function groupPositions(positions: Position[]): BrokerGroup[] {
           label: ps[0].underlyingLabel ?? code,
           positions: ps,
           rights: byRight(ps, key),
-          premiumLeft: sum(ps.map(premiumLeft)),
-          premiumAtEntry: sum(ps.map(premiumAtEntry)),
-          unpricedLegs: unpriced(ps),
+          ...premiumTotals(ps),
           pnl: sum(ps.map((p) => p.pnl)),
           dayChange: sum(ps.map((p) => p.dayChange)),
         };
@@ -217,9 +219,7 @@ export function groupPositions(positions: Position[]): BrokerGroup[] {
       connectionId,
       brokerId: rows[0].broker,
       groups,
-      premiumLeft: sum(groups.map((g) => g.premiumLeft)),
-      premiumAtEntry: sum(groups.map((g) => g.premiumAtEntry)),
-      unpricedLegs: sum(groups.map((g) => g.unpricedLegs)),
+      ...premiumTotals(rows),
       pnl: sum(groups.map((g) => g.pnl)),
       dayChange: sum(groups.map((g) => g.dayChange)),
     });

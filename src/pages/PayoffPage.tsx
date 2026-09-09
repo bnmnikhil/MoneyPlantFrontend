@@ -17,6 +17,7 @@ import { EmptyState, ErrorState } from "@/components/states";
 import { BrokerSessionBanner } from "@/features/session/BrokerSessionBanner";
 import { PayoffChart } from "@/features/payoff/PayoffChart";
 import { LegsTable } from "@/features/payoff/LegsTable";
+import { holdingView } from "@/features/payoff/holdingView";
 import { StrategyBuilderView } from "@/features/strategy-builder/StrategyBuilderView";
 import { usePayoff, usePayoffCurves } from "@/features/payoff/hooks";
 import { brokerLabel } from "@/components/BrokerBadge";
@@ -72,11 +73,11 @@ function CurveSelector({
   );
 }
 
-function ModeToggle() {
+function ModeToggle({ mixedExpiries }: { mixedExpiries: boolean }) {
   return (
     <div className="inline-flex rounded-lg border border-border bg-card p-1 text-sm">
       <span className="rounded-md bg-primary/12 px-3 py-1 font-medium text-primary">
-        At Expiry
+        {mixedExpiries ? "Expiry scenario" : "At Expiry"}
       </span>
       <span
         className="cursor-not-allowed px-3 py-1 font-medium text-muted-foreground/50"
@@ -109,9 +110,15 @@ export function PayoffPage() {
     });
   }, [underlyings.data]);
 
-  const payoff = usePayoff(selected);
-  const data = payoff.data;
+  const [holdingChoice, setHoldingChoice] = useState<{ key: string; qty?: number } | null>(null);
+  const includeHoldings = !!selected && holdingChoice?.key === curveKey(selected);
+  const positionsPayoff = usePayoff(selected);
+  const combinedPayoff = usePayoff(includeHoldings ? selected : undefined, true, holdingChoice?.qty);
+  const payoff = includeHoldings ? combinedPayoff : positionsPayoff;
+  const data = payoff.isError ? undefined : payoff.data;
+  const holding = holdingView(includeHoldings, positionsPayoff.data?.holding, data?.holding);
   const p = data?.payoff;
+  const mixedExpiries = (data?.expiries.length ?? 0) > 1;
 
   const handleOpenInBuilder = () => {
     if (selected && data?.legs) {
@@ -130,7 +137,7 @@ export function PayoffPage() {
           title="Option Payoff & Strategy Builder"
           description={
             tab === "live"
-              ? "Expiry payoff curves for your open F&O positions across broker accounts."
+              ? "Expiry payoff curves for your positions, with optional stock holdings from the same account."
               : "Design, simulate, and calculate margin for custom multi-leg options strategies."
           }
         />
@@ -201,6 +208,37 @@ export function PayoffPage() {
             </div>
           )}
 
+          {selected && (
+            <div className="space-y-2 rounded-xl border border-border bg-card p-4 text-sm">
+              <label className="flex items-center gap-2 font-medium">
+                <input type="checkbox" checked={includeHoldings}
+                  disabled={!includeHoldings && (!holding?.availableQty || !!holding.warning)}
+                  onChange={(e) => setHoldingChoice(e.target.checked ? { key: curveKey(selected) } : null)} />
+                Include holdings
+              </label>
+              {holding?.warning ? (
+                <p role="status">{holding.warning} <button className="underline" onClick={() => positionsPayoff.refetch()}>Retry</button></p>
+              ) : holding?.availableQty ? (
+                <p className="text-muted-foreground">{holding.availableQty} shares available · Average cost {formatINRWhole(holding.avgCost)} · Same account</p>
+              ) : <p className="text-muted-foreground">{positionsPayoff.isLoading ? "Checking holdings…" : positionsPayoff.isError ? "Could not check holdings. Retry loading the payoff." : "No matching holdings available."}</p>}
+              {includeHoldings && holding && (
+                <>
+                  <label className="flex items-center gap-2">Shares to include
+                    <input type="number" min={1} max={holding.availableQty} step={1}
+                      value={holdingChoice?.qty ?? (data && includeHoldings ? holding.includedQty : holding.availableQty)}
+                      onChange={(e) => {
+                        const qty = Number(e.target.value);
+                        if (Number.isInteger(qty) && qty >= 1 && qty <= holding.availableQty)
+                          setHoldingChoice({ key: curveKey(selected), qty });
+                      }} className="w-24 rounded border border-border bg-background px-2 py-1" />
+                  </label>
+                  <p className="text-xs text-muted-foreground">Combined P&amp;L uses purchase cost and assumes these shares remain held until expiry. Pledged shares are included once; this graph does not determine delivery eligibility or margin benefit.</p>
+                  {combinedPayoff.isError && <p role="alert" className="text-loss">Could not include holdings. Check the available quantity and retry, or turn off holdings.</p>}
+                </>
+              )}
+            </div>
+          )}
+
           {/* Underlyings list failed */}
           {underlyings.isError && (
             <Card>
@@ -241,6 +279,17 @@ export function PayoffPage() {
       {/* Main body: only when we have (or are loading) a selected underlying */}
       {selected && !isBrokerSessionError(payoff.error) && (
         <>
+          {mixedExpiries && data && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm" role="note">
+              <p className="font-medium">These positions have different expiries</p>
+              <p className="mt-1 text-muted-foreground">
+                {data.expiries.map((expiry) => new Date(`${expiry}T00:00:00`).toLocaleDateString("en-IN", {
+                  day: "numeric", month: "short", year: "numeric",
+                })).join(" / ")}. This curve assumes the same underlying price at each expiry.
+                It does not value later contracts at the first expiry, so the scenario loss is not a guaranteed cap across these dates.
+              </p>
+            </div>
+          )}
           {/* Summary cards */}
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {/*
@@ -255,18 +304,18 @@ export function PayoffPage() {
               value={data && data.spot > 0 ? formatINRWhole(data.spot) : "—"}
             />
             <StatCard
-              label="Max profit"
+              label={mixedExpiries ? "Scenario max profit" : "Max profit"}
               icon={<TrendingUp />}
               loading={payoff.isLoading}
               valueClassName="text-profit"
-              value={p?.unboundedProfit ? "Unlimited" : formatINRWhole(p?.maxProfit ?? 0)}
+              value={p?.unboundedProfit ? "Unlimited" : p ? formatINRWhole(p.maxProfit) : "—"}
             />
             <StatCard
-              label="Max loss"
+              label={mixedExpiries ? "Scenario max loss" : "Max loss"}
               icon={<TrendingDown />}
               loading={payoff.isLoading}
               valueClassName="text-loss"
-              value={p?.unboundedLoss ? "Unlimited" : formatINRWhole(p?.maxLoss ?? 0)}
+              value={p?.unboundedLoss ? "Unlimited" : p ? formatINRWhole(p.maxLoss) : "—"}
             />
             <StatCard
               label="Breakevens"
@@ -284,8 +333,10 @@ export function PayoffPage() {
           {/* Chart */}
           <Card>
             <CardHeader className="flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-base">Payoff at expiry</CardTitle>
-              <ModeToggle />
+              <CardTitle className="text-base">
+                {mixedExpiries ? "Combined expiry scenario" : "Payoff at expiry"}
+              </CardTitle>
+              <ModeToggle mixedExpiries={mixedExpiries} />
             </CardHeader>
             <CardContent>
               {payoff.isLoading ? (
@@ -297,7 +348,7 @@ export function PayoffPage() {
                 />
               ) : p && data ? (
                 <>
-                  <PayoffChart payoff={p} spot={data.spot} />
+                  <PayoffChart key={`${data.connectionId}:${data.underlying}`} payoff={p} spot={data.spot} legs={data.legs} isIndex={data.isIndex} />
                   {(p.unboundedLoss || p.unboundedProfit) && (
                     <p className="mt-2 text-xs text-muted-foreground">
                       {p.unboundedLoss && (

@@ -117,6 +117,7 @@ export function StrategyBuilderView({ initialBaseline, onBackToLive, active = tr
     sourceConnectionId || undefined, positionConnectionId, active, strikeCount);
   const spot = context?.baselineResponse?.spot && context.baselineResponse.spot > 0
     ? context.baselineResponse.spot : chain.data?.spot ?? null;
+  const showChain = Boolean(chain.data || chain.isLoading || chain.error);
 
   const updateDrafts = useCallback((change: (current: ScenarioLeg[]) => ScenarioLeg[]) => {
     if (!activeKey) return;
@@ -306,22 +307,71 @@ export function StrategyBuilderView({ initialBaseline, onBackToLive, active = tr
           </div>
           {!availableSources.length && <p role="status" className="text-sm text-amber-600">Option data unavailable. Imported positions and manual assumptions remain available; connect an Alice Blue source for chain quotes.</p>}
 
-          {chain.data || chain.isLoading || chain.error ? (
-            <Card><CardContent className="p-4">
-              <OptionChainPicker chain={chain.data} isLoading={chain.isLoading || chain.isFetching} error={chain.error}
-                onRetry={() => chain.refetch()} onExpand={() => setStrikeCount((value) => Math.min(50, value + 10))}
-                onAdd={addFromChain} quantityFor={quantityFor} />
-            </CardContent></Card>
-          ) : null}
+          {/* Chain and payoff sit side by side: the graph has to answer while
+              legs are being picked, not two full-width cards further down. */}
+          <div className={showChain ? "grid gap-4 xl:grid-cols-12" : "space-y-4"}>
+            {showChain && (
+              <Card className="xl:col-span-5">
+                <CardContent className="space-y-3 p-4">
+                  <OptionChainPicker chain={chain.data} isLoading={chain.isLoading || chain.isFetching} error={chain.error}
+                    onRetry={() => chain.refetch()} onExpand={() => setStrikeCount((value) => Math.min(50, value + 10))}
+                    onAdd={addFromChain} quantityFor={quantityFor} />
+                  {chain.data && metadata.data?.templates.length ? (
+                    <div className="border-t border-border pt-3">
+                      <p className="text-xs text-muted-foreground">Recipes from actual chain rows</p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {metadata.data.templates.map((template) => <button key={template.id} type="button" title={template.description}
+                          onClick={() => addRecipe(template.id)} className="rounded-full border border-border px-2.5 py-1 text-xs hover:border-primary hover:text-primary">{template.label}</button>)}
+                      </div>
+                      {recipeMessage && <p role="status" className="mt-2 text-xs text-muted-foreground">{recipeMessage}</p>}
+                    </div>
+                  ) : null}
+                </CardContent>
+              </Card>
+            )}
 
-          {chain.data && metadata.data?.templates.length ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-muted-foreground">Recipes from actual chain rows:</span>
-              {metadata.data.templates.map((template) => <button key={template.id} type="button" title={template.description}
-                onClick={() => addRecipe(template.id)} className="rounded-full border border-border px-3 py-1 text-xs hover:border-primary hover:text-primary">{template.label}</button>)}
-              {recipeMessage && <span role="status" className="text-xs text-muted-foreground">{recipeMessage}</span>}
+            <div className={showChain ? "space-y-4 xl:col-span-7" : "space-y-4"}>
+              <Card>
+                <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle className="text-base">Payoff comparison</CardTitle>{isComparing && <span className="text-xs text-muted-foreground">Updating…</span>}</CardHeader>
+                <CardContent>
+                  {compareError && <p role="alert" className="mb-3 text-sm text-loss">{compareError}</p>}
+                  {comparison ? <PayoffChart payoff={comparison.combined} spot={comparison.spot ?? 0}
+                    legs={enabledCombined.map(chartLeg)} isIndex={selection.isIndex}
+                    baseline={baseline.length ? { payoff: comparison.baseline, legs: baseline.map(chartLeg) } : undefined} />
+                    : <div className="p-12 text-center text-sm text-muted-foreground">Add a priced option leg to calculate the expiry payoff.</div>}
+                </CardContent>
+              </Card>
+
+              {comparison && <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <StatCard label="Max profit" icon={<TrendingUp />} value={comparison.combined.unboundedProfit ? "Unlimited" : formatSignedINR(comparison.combined.maxProfit)} valueClassName="text-profit" />
+                <StatCard label="Max loss" icon={<TrendingDown />} value={comparison.combined.unboundedLoss ? "Unlimited" : formatSignedINR(comparison.combined.maxLoss)} valueClassName="text-loss" />
+                <StatCard label="Breakevens" icon={<Target />} value={comparison.combined.breakevens.length ? comparison.combined.breakevens.map(formatINRWhole).join(" / ") : "—"} />
+                <StatCard label="New premium" icon={<Crosshair />} value={formatSignedINR(comparison.adjustmentCashflow)} />
+              </div>}
+
+              {comparison && <div className="grid gap-3 sm:grid-cols-2">
+                <Card><CardContent className="space-y-3 p-4 text-sm">
+                  <label className="block text-xs text-muted-foreground">Target underlying price
+                    <input type="number" min={0} step="any" value={target ?? ""} onChange={(event) => setTargetSpot(event.target.value === "" ? null : Number(event.target.value))}
+                      className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-sm text-foreground" />
+                  </label>
+                  {targetMetrics && <div className="space-y-1 rounded bg-muted/40 p-3 tabular-nums">
+                    <p>Existing <strong className="float-right">{formatSignedINR(targetMetrics.existing)}</strong></p>
+                    <p>After adjustments <strong className="float-right">{formatSignedINR(targetMetrics.combined)}</strong></p>
+                    <p>Change <strong className="float-right">{formatSignedINR(targetMetrics.change)}</strong></p>
+                  </div>}
+                </CardContent></Card>
+                <Card><CardContent className="space-y-2 p-4 text-sm">
+                  <p className="flex items-center gap-2 font-semibold"><ShieldCheck className="size-4 text-primary" /> Heuristic margin estimate</p>
+                  {comparison.margin.status === "AVAILABLE" && comparison.margin.combined ? <>
+                    <p>Existing <strong className="float-right">{formatINRWhole(comparison.margin.baseline?.withBenefitMargin ?? 0)}</strong></p>
+                    <p>After adjustments <strong className="float-right">{formatINRWhole(comparison.margin.combined.withBenefitMargin)}</strong></p>
+                    <p className="text-xs text-muted-foreground">Uses current known marks; new premium is shown separately.</p>
+                  </> : <p className="text-xs text-muted-foreground">Unavailable: {comparison.margin.status.replace(/_/g, " ").toLowerCase()}.</p>}
+                </CardContent></Card>
+              </div>}
             </div>
-          ) : null}
+          </div>
 
           <Card>
             <CardHeader className="flex-row items-center justify-between space-y-0">
@@ -340,45 +390,6 @@ export function StrategyBuilderView({ initialBaseline, onBackToLive, active = tr
                 onClose={(leg) => updateDrafts((current) => [...current, closeDraft(leg, leg.currentMark?.value ?? null)])} />
             </CardContent>
           </Card>
-
-          <div className="grid gap-4 lg:grid-cols-12">
-            <Card className="lg:col-span-8">
-              <CardHeader className="flex-row items-center justify-between space-y-0"><CardTitle className="text-base">Payoff comparison</CardTitle>{isComparing && <span className="text-xs text-muted-foreground">Updating…</span>}</CardHeader>
-              <CardContent>
-                {compareError && <p role="alert" className="mb-3 text-sm text-loss">{compareError}</p>}
-                {comparison ? <PayoffChart payoff={comparison.combined} spot={comparison.spot ?? 0}
-                  legs={enabledCombined.map(chartLeg)} isIndex={selection.isIndex}
-                  baseline={baseline.length ? { payoff: comparison.baseline, legs: baseline.map(chartLeg) } : undefined} />
-                  : <div className="p-12 text-center text-sm text-muted-foreground">Add a priced option leg to calculate the expiry payoff.</div>}
-              </CardContent>
-            </Card>
-            <div className="space-y-4 lg:col-span-4">
-              {comparison && <div className="grid grid-cols-2 gap-3">
-                <StatCard label="Max profit" icon={<TrendingUp />} value={comparison.combined.unboundedProfit ? "Unlimited" : formatSignedINR(comparison.combined.maxProfit)} valueClassName="text-profit" />
-                <StatCard label="Max loss" icon={<TrendingDown />} value={comparison.combined.unboundedLoss ? "Unlimited" : formatSignedINR(comparison.combined.maxLoss)} valueClassName="text-loss" />
-                <StatCard label="Breakevens" icon={<Target />} value={comparison.combined.breakevens.length ? comparison.combined.breakevens.map(formatINRWhole).join(" / ") : "—"} />
-                <StatCard label="New premium" icon={<Crosshair />} value={formatSignedINR(comparison.adjustmentCashflow)} />
-              </div>}
-              {comparison && <Card><CardContent className="space-y-3 p-4 text-sm">
-                <label className="block text-xs text-muted-foreground">Target underlying price
-                  <input type="number" min={0} step="any" value={target ?? ""} onChange={(event) => setTargetSpot(event.target.value === "" ? null : Number(event.target.value))}
-                    className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-sm text-foreground" />
-                </label>
-                {targetMetrics && <div className="space-y-1 rounded bg-muted/40 p-3 tabular-nums">
-                  <p>Existing <strong className="float-right">{formatSignedINR(targetMetrics.existing)}</strong></p>
-                  <p>After adjustments <strong className="float-right">{formatSignedINR(targetMetrics.combined)}</strong></p>
-                  <p>Change <strong className="float-right">{formatSignedINR(targetMetrics.change)}</strong></p>
-                </div>}
-              </CardContent></Card>}
-              {comparison?.margin.status === "AVAILABLE" && comparison.margin.combined && <Card><CardContent className="space-y-2 p-4 text-sm">
-                <p className="flex items-center gap-2 font-semibold"><ShieldCheck className="size-4 text-primary" /> Heuristic margin estimate</p>
-                <p>Existing <strong className="float-right">{formatINRWhole(comparison.margin.baseline?.withBenefitMargin ?? 0)}</strong></p>
-                <p>After adjustments <strong className="float-right">{formatINRWhole(comparison.margin.combined.withBenefitMargin)}</strong></p>
-                <p className="text-xs text-muted-foreground">Uses current known marks; new premium is shown separately.</p>
-              </CardContent></Card>}
-              {comparison?.margin.status !== "AVAILABLE" && comparison && <p className="text-xs text-muted-foreground">Margin estimate unavailable: {comparison.margin.status.replace(/_/g, " ").toLowerCase()}.</p>}
-            </div>
-          </div>
 
           {comparison?.expiries.length && comparison.expiries.length > 1 ? <p role="note" className="rounded border border-amber-500/30 bg-amber-500/5 p-3 text-sm">Expiry scenario: {comparison.expiries.join(" / ")}. A single terminal price is applied to every expiry; later-contract time value is not modelled at the first expiry.</p> : null}
           {comparison?.warnings.map((warning) => <p key={warning} role="status" className="text-xs text-amber-600">{warning}</p>)}

@@ -17,7 +17,7 @@ import { EmptyState, ErrorState } from "@/components/states";
 import { BrokerSessionBanner } from "@/features/session/BrokerSessionBanner";
 import { PayoffChart } from "@/features/payoff/PayoffChart";
 import { LegsTable } from "@/features/payoff/LegsTable";
-import { holdingView } from "@/features/payoff/holdingView";
+import { holdingView, type HoldingView } from "@/features/payoff/holdingView";
 import { StrategyBuilderView } from "@/features/strategy-builder/StrategyBuilderView";
 import { usePayoff, usePayoffCurves } from "@/features/payoff/hooks";
 import { brokerLabel } from "@/components/BrokerBadge";
@@ -45,6 +45,7 @@ function CurveSelector({
   onSelect: (c: CurveRef) => void;
 }) {
   const showBroker = new Set(curves.map((c) => c.brokerId)).size > 1;
+  const showAccount = new Set(curves.map((c) => c.connectionId)).size > 1;
 
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -67,6 +68,9 @@ function CurveSelector({
           {showBroker && (
             <span className="ml-1.5 font-normal opacity-70">· {brokerLabel(c.brokerId)}</span>
           )}
+          {showAccount && (
+            <span className="ml-1.5 font-normal opacity-70">· {c.accountLabel}</span>
+          )}
         </button>
       ))}
     </div>
@@ -86,6 +90,105 @@ function ModeToggle({ mixedExpiries }: { mixedExpiries: boolean }) {
         T+0
         <span className="ml-1.5 text-[10px] uppercase tracking-wide">Soon</span>
       </span>
+    </div>
+  );
+}
+
+/**
+ * Holdings sit in the chart header beside the mode toggle, not in a panel of
+ * their own: the control changes the curve, so it belongs next to it, and the
+ * only facts needed to decide are the share count and what they cost. The
+ * fuller wording lives in the tooltip and in the footnote under the chart.
+ */
+function HoldingsToggle({
+  holding,
+  included,
+  qty,
+  loading,
+  errored,
+  onToggle,
+  onQty,
+  onRetry,
+}: {
+  holding: HoldingView | undefined;
+  included: boolean;
+  qty: number | undefined;
+  loading: boolean;
+  errored: boolean;
+  onToggle: (on: boolean) => void;
+  onQty: (qty: number) => void;
+  onRetry: () => void;
+}) {
+  const available = holding?.availableQty ?? 0;
+  const blocked = !!holding?.warning || !available;
+
+  const detail = holding?.warning
+    ? holding.warning
+    : available
+      ? `${available} sh @ ${formatINRWhole(holding!.avgCost)}`
+      : loading
+        ? "Checking…"
+        : errored
+          ? "Couldn't check"
+          : "None available";
+
+  const title = holding?.warning
+    ? holding.warning
+    : available
+      ? `${available} shares held in the same account, average cost ${formatINRWhole(holding!.avgCost)}`
+      : undefined;
+
+  return (
+    <div
+      className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-2.5 py-1 text-sm"
+      title={title}
+    >
+      <label
+        className={cn(
+          "flex items-center gap-1.5 font-medium",
+          !included && blocked && "text-muted-foreground/60"
+        )}
+      >
+        <input
+          type="checkbox"
+          checked={included}
+          disabled={!included && blocked}
+          onChange={(e) => onToggle(e.target.checked)}
+        />
+        Holdings
+      </label>
+      {included && holding ? (
+        <>
+          <input
+            type="number"
+            aria-label="Shares to include"
+            min={1}
+            max={available}
+            step={1}
+            value={qty ?? holding.includedQty}
+            onChange={(e) => {
+              const n = Number(e.target.value);
+              if (Number.isInteger(n) && n >= 1 && n <= available) onQty(n);
+            }}
+            className="w-16 rounded border border-border bg-background px-1.5 py-0.5 text-xs"
+          />
+          <span className="text-xs text-muted-foreground">
+            of {available} @ {formatINRWhole(holding.avgCost)}
+          </span>
+        </>
+      ) : (
+        <span
+          className="text-xs text-muted-foreground"
+          role={holding?.warning ? "status" : undefined}
+        >
+          {detail}
+        </span>
+      )}
+      {holding?.warning && (
+        <button type="button" className="text-xs underline" onClick={onRetry}>
+          Retry
+        </button>
+      )}
     </div>
   );
 }
@@ -203,37 +306,6 @@ export function PayoffPage() {
             </div>
           )}
 
-          {selected && (
-            <div className="space-y-2 rounded-xl border border-border bg-card p-4 text-sm">
-              <label className="flex items-center gap-2 font-medium">
-                <input type="checkbox" checked={includeHoldings}
-                  disabled={!includeHoldings && (!holding?.availableQty || !!holding.warning)}
-                  onChange={(e) => setHoldingChoice(e.target.checked ? { key: curveKey(selected) } : null)} />
-                Include holdings
-              </label>
-              {holding?.warning ? (
-                <p role="status">{holding.warning} <button className="underline" onClick={() => positionsPayoff.refetch()}>Retry</button></p>
-              ) : holding?.availableQty ? (
-                <p className="text-muted-foreground">{holding.availableQty} shares available · Average cost {formatINRWhole(holding.avgCost)} · Same account</p>
-              ) : <p className="text-muted-foreground">{positionsPayoff.isLoading ? "Checking holdings…" : positionsPayoff.isError ? "Could not check holdings. Retry loading the payoff." : "No matching holdings available."}</p>}
-              {includeHoldings && holding && (
-                <>
-                  <label className="flex items-center gap-2">Shares to include
-                    <input type="number" min={1} max={holding.availableQty} step={1}
-                      value={holdingChoice?.qty ?? (data && includeHoldings ? holding.includedQty : holding.availableQty)}
-                      onChange={(e) => {
-                        const qty = Number(e.target.value);
-                        if (Number.isInteger(qty) && qty >= 1 && qty <= holding.availableQty)
-                          setHoldingChoice({ key: curveKey(selected), qty });
-                      }} className="w-24 rounded border border-border bg-background px-2 py-1" />
-                  </label>
-                  <p className="text-xs text-muted-foreground">Combined P&amp;L uses purchase cost and assumes these shares remain held until expiry. Pledged shares are included once; this graph does not determine delivery eligibility or margin benefit.</p>
-                  {combinedPayoff.isError && <p role="alert" className="text-loss">Could not include holdings. Check the available quantity and retry, or turn off holdings.</p>}
-                </>
-              )}
-            </div>
-          )}
-
           {/* Underlyings list failed */}
           {underlyings.isError && (
             <Card>
@@ -331,7 +403,21 @@ export function PayoffPage() {
               <CardTitle className="text-base">
                 {mixedExpiries ? "Combined expiry scenario" : "Payoff at expiry"}
               </CardTitle>
-              <ModeToggle mixedExpiries={mixedExpiries} />
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <HoldingsToggle
+                  holding={holding}
+                  included={includeHoldings}
+                  qty={holdingChoice?.qty}
+                  loading={positionsPayoff.isLoading}
+                  errored={positionsPayoff.isError}
+                  onToggle={(on) =>
+                    setHoldingChoice(on && selected ? { key: curveKey(selected) } : null)
+                  }
+                  onQty={(qty) => selected && setHoldingChoice({ key: curveKey(selected), qty })}
+                  onRetry={() => positionsPayoff.refetch()}
+                />
+                <ModeToggle mixedExpiries={mixedExpiries} />
+              </div>
             </CardHeader>
             <CardContent>
               {payoff.isLoading ? (
@@ -344,6 +430,19 @@ export function PayoffPage() {
               ) : p && data ? (
                 <>
                   <PayoffChart key={`${data.connectionId}:${data.underlying}`} payoff={p} spot={data.spot} legs={data.legs} isIndex={data.isIndex} />
+                  {includeHoldings && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Combined P&amp;L uses purchase cost and assumes these shares remain
+                      held until expiry. Pledged shares are included once; this graph does
+                      not determine delivery eligibility or margin benefit.
+                    </p>
+                  )}
+                  {combinedPayoff.isError && (
+                    <p role="alert" className="mt-2 text-xs text-loss">
+                      Could not include holdings. Check the available quantity and retry, or
+                      turn off holdings.
+                    </p>
+                  )}
                   {(p.unboundedLoss || p.unboundedProfit) && (
                     <p className="mt-2 text-xs text-muted-foreground">
                       {p.unboundedLoss && (

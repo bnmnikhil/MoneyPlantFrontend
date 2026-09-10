@@ -387,7 +387,16 @@ export function StrategyBuilderView({ initialBaseline, onBackToLive, active = tr
                 onPrice={(id, price) => updateDraft(id, (leg) => withManualPrice(leg, price))}
                 onLatest={(id) => updateDraft(id, (leg) => useLatestPrice(leg, leg.currentMark))}
                 onExpiry={setLegExpiry} onContract={setContract}
-                onClose={(leg) => updateDrafts((current) => [...current, closeDraft(leg, leg.currentMark?.value ?? null)])} />
+                onClose={(leg) => updateDrafts((current) => {
+                  // Only what is still open: closing twice would otherwise
+                  // propose a long position the user never held.
+                  const closing = current
+                    .filter((draft) => draft.enabled && draft.closesLegId === leg.id)
+                    .reduce((sum, draft) => sum + Math.abs(draft.qty), 0);
+                  const remaining = Math.abs(leg.qty) - closing;
+                  if (remaining <= 0) return current;
+                  return [...current, closeDraft(leg, leg.currentMark?.value ?? null, remaining)];
+                })} />
             </CardContent>
           </Card>
 

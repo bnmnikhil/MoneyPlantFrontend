@@ -92,4 +92,11 @@ test('closing is an opposite trade and retains its link to the immutable leg', (
   assert.equal(close.entryPrice, 7);
   assert.equal(close.closesLegId, 'existing');
   assert.equal(existing.qty, -1600);
+
+  // A second close may only take what the first left open.
+  const remaining = Math.abs(existing.qty) - Math.abs(close.qty);
+  assert.equal(remaining, 0);
+  const partial = closeDraft(existing, 7, 600);
+  assert.equal(partial.qty, 600);
+  assert.equal(Math.sign(partial.qty), -Math.sign(existing.qty));
 });

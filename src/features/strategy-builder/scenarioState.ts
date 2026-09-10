@@ -92,11 +92,23 @@ export function changeDraftContract(
   };
 }
 
-export function closeDraft(existing: ScenarioLeg, assumedPrice: number | null): ScenarioLeg {
+/**
+ * Closing `units` of an existing leg, as an opposite trade.
+ *
+ * `units` defaults to the whole position but is capped by the caller to what is
+ * still open, because two full closes of one leg would leave the user long a
+ * position they never held — the server refuses that, and a draft it refuses is
+ * worse than one that was never offered.
+ */
+export function closeDraft(
+  existing: ScenarioLeg,
+  assumedPrice: number | null,
+  units: number = Math.abs(existing.qty)
+): ScenarioLeg {
   return {
     ...existing,
     id: crypto.randomUUID(),
-    qty: -existing.qty,
+    qty: -Math.sign(existing.qty) * Math.abs(units),
     entryPrice: assumedPrice,
     priceBasis: assumedPrice === existing.currentMark?.value ? "QUOTE_SNAPSHOT" : "MANUAL",
     entryQuote: assumedPrice === existing.currentMark?.value ? existing.currentMark : null,

@@ -256,12 +256,20 @@ export interface BrokerErrorBody {
 }
 
 export interface PayoffLeg {
+  legId: string;
   symbol: string;
+  underlying: string;
+  exchange: string;
   strike: number;
   /** Backend InstrumentType includes FUT, so a futures position is representable. */
   type: "CE" | "PE" | "FUT" | "EQ";
   qty: number;
   avgPrice: number;
+  expiry: string | null;
+  lotSize: number | null;
+  origin: "EXISTING_POSITION" | "EXISTING_HOLDING";
+  currentMark: number | null;
+  currentMarkKnown: boolean;
 }
 
 export interface PayoffPoint {
@@ -305,6 +313,150 @@ export interface PayoffResponse {
   legs: PayoffLeg[];
   payoff: Payoff;
   expiries: string[];
+  retrievedAt: string;
+  complete: boolean;
+  warnings: string[];
+}
+
+export interface UnderlyingSearchItem {
+  code: string;
+  symbol: string;
+  name: string;
+  exchange: string;
+  isIndex: boolean;
+  hasOptions: boolean | null;
+  aliases: string[];
+}
+
+export interface UnderlyingSearchResponse {
+  items: UnderlyingSearchItem[];
+  nextCursor: string | null;
+  version: string;
+  asOf: string | null;
+  warnings: string[];
+}
+
+export interface OptionSource {
+  connectionId: string;
+  brokerId: string;
+  accountLabel: string;
+  available: boolean;
+  policyRestricted: boolean;
+  message: string | null;
+}
+
+export interface OptionSourcesResponse {
+  underlying: string;
+  exchange: string;
+  sources: OptionSource[];
+}
+
+export interface OptionExpiriesResponse {
+  underlying: string;
+  exchange: string;
+  sourceConnectionId: string;
+  expiries: string[];
+  status: "AVAILABLE" | "UNAVAILABLE";
+}
+
+export interface OptionContract {
+  key: InstrumentKey;
+  exchange: string;
+  lotSize: number;
+  tickSize: number | null;
+  sourceSymbol: string;
+}
+
+export interface OptionContractsResponse {
+  underlying: string;
+  expiry: string;
+  sourceConnectionId: string;
+  contracts: OptionContract[];
+  status: "AVAILABLE" | "UNAVAILABLE";
+}
+
+export interface PriceObservation {
+  value: number | null;
+  priceKnown: boolean;
+  fetchedAt: string;
+  quotedAt: string | null;
+  sourceConnectionId: string;
+  status: "AVAILABLE" | "STALE" | "UNAVAILABLE";
+  openInterest?: number | null;
+}
+
+export interface OptionChainRow {
+  strike: number;
+  lotSize: number | null;
+  tickSize: number | null;
+  metadataConflict: boolean;
+  call: PriceObservation;
+  put: PriceObservation;
+  callSymbol: string | null;
+  putSymbol: string | null;
+}
+
+export interface OptionChainResponse {
+  underlying: string;
+  expiry: string;
+  exchange: string;
+  sourceConnectionId: string;
+  sourceBrokerId: string;
+  sourceLabel: string;
+  spot: number | null;
+  fetchedAt: string;
+  quotedAt: string | null;
+  availability: "AVAILABLE" | "STALE";
+  rows: OptionChainRow[];
+  warnings: string[];
+}
+
+export type ScenarioPriceBasis = "POSITION_AVERAGE" | "QUOTE_SNAPSHOT" | "MANUAL";
+export type ScenarioOrigin = "EXISTING_POSITION" | "EXISTING_HOLDING" | "DRAFT_TRADE";
+
+export interface ScenarioLeg {
+  id: string;
+  contract: InstrumentKey;
+  exchange: string;
+  lotSize: number | null;
+  qty: number;
+  entryPrice: number | null;
+  priceBasis: ScenarioPriceBasis;
+  entryQuote: PriceObservation | null;
+  currentMark: PriceObservation | null;
+  origin: ScenarioOrigin;
+  enabled: boolean;
+  closesLegId?: string | null;
+}
+
+export interface PayoffComparisonRequest {
+  revision: number;
+  context: {
+    underlying: string;
+    exchange: string;
+    positionConnectionId: string | null;
+    baselineImportedAt: string | null;
+    baselineComplete: boolean;
+  };
+  spot: number | null;
+  baselineLegs: ScenarioLeg[];
+  draftTradeLegs: ScenarioLeg[];
+}
+
+export interface PayoffComparisonResponse {
+  revision: number;
+  spot: number | null;
+  expiries: string[];
+  assumptions: string[];
+  baseline: Payoff;
+  combined: Payoff;
+  adjustmentCashflow: number;
+  margin: {
+    status: "AVAILABLE" | "UNAVAILABLE_SPOT" | "UNAVAILABLE_MARKS" | "UNSUPPORTED_HOLDINGS";
+    baseline: { initialMargin: number; withBenefitMargin: number; hedgeBenefit: number } | null;
+    combined: { initialMargin: number; withBenefitMargin: number; hedgeBenefit: number } | null;
+  };
+  warnings: string[];
 }
 
 export interface SimulatedLeg {
@@ -375,6 +527,7 @@ export interface TemplateSummary {
   label: string;
   sentiment: string;
   description: string;
+  legs: Array<{ strikeOffset: number; type: "CE" | "PE"; quantityLots: number }>;
 }
 
 export interface StrategyMetadata {

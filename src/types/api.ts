@@ -297,6 +297,8 @@ export interface Payoff {
 export interface CurveRef {
   connectionId: string;
   brokerId: string;
+  /** Human-readable account/client label for account-specific imports. */
+  accountLabel: string;
   /** Canonical code. This is what `/api/payoff/{underlying}` expects. */
   underlying: string;
   /** Display spelling. Show this on the selector button; never send it. */

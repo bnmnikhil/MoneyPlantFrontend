@@ -4,12 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/StatCard";
+import { brokerLabel } from "@/components/BrokerBadge";
 import { PayoffChart } from "@/features/payoff/PayoffChart";
-import { useStrategyMetadata } from "@/features/payoff/hooks";
+import { usePayoffCurves, useStrategyMetadata } from "@/features/payoff/hooks";
 import { api, ApiError } from "@/lib/api";
 import { formatINR, formatINRWhole, formatSignedINR } from "@/lib/format";
 import type {
   OptionChainRow,
+  CurveRef,
   PayoffComparisonResponse,
   PayoffResponse,
   ScenarioLeg,
@@ -47,8 +49,11 @@ interface DraftContext {
   drafts: ScenarioLeg[];
 }
 
+const curveKey = (curve: CurveRef) => `${curve.connectionId}:${curve.underlying}`;
+
 export function StrategyBuilderView({ initialBaseline, onBackToLive, active = true }: StrategyBuilderProps) {
   const metadata = useStrategyMetadata();
+  const positionCurves = usePayoffCurves();
   const [contexts, setContexts] = useState<Record<string, DraftContext>>({});
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [sourceConnectionId, setSourceConnectionId] = useState("");
@@ -59,6 +64,10 @@ export function StrategyBuilderView({ initialBaseline, onBackToLive, active = tr
   const [isComparing, setIsComparing] = useState(false);
   const [targetSpot, setTargetSpot] = useState<number | null>(null);
   const [recipeMessage, setRecipeMessage] = useState<string | null>(null);
+  const [importCurveKey, setImportCurveKey] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
   const revision = useRef(0);
   const importedRevision = useRef<string | null>(null);
 
@@ -67,19 +76,17 @@ export function StrategyBuilderView({ initialBaseline, onBackToLive, active = tr
   const baseline = context?.baseline ?? [];
   const drafts = context?.drafts ?? [];
   const positionConnectionId = context?.positionConnectionId ?? null;
+  const positionCurve = positionCurves.data?.find((curve) =>
+    curve.connectionId === positionConnectionId && curve.underlying === selection?.code);
 
-  useEffect(() => {
-    if (!initialBaseline) return;
-    const importId = `${initialBaseline.connectionId}:${initialBaseline.underlying}:${initialBaseline.retrievedAt}`;
-    if (importedRevision.current === importId) return;
-    importedRevision.current = importId;
-    const key = draftKey(initialBaseline.underlying, initialBaseline.connectionId);
+  const importBaseline = useCallback((response: PayoffResponse) => {
+    const key = draftKey(response.underlying, response.connectionId);
     const importedSelection: UnderlyingSearchItem = {
-      code: initialBaseline.underlying,
-      symbol: initialBaseline.underlying,
-      name: initialBaseline.underlying,
-      exchange: initialBaseline.legs[0]?.exchange ?? "NSE",
-      isIndex: initialBaseline.isIndex,
+      code: response.underlying,
+      symbol: response.underlying,
+      name: response.underlying,
+      exchange: response.legs[0]?.exchange ?? "NSE",
+      isIndex: response.isIndex,
       hasOptions: true,
       aliases: [],
     };
@@ -87,14 +94,48 @@ export function StrategyBuilderView({ initialBaseline, onBackToLive, active = tr
       ...current,
       [key]: {
         selection: importedSelection,
-        baseline: baselineFromPayoff(initialBaseline),
-        baselineResponse: initialBaseline,
-        positionConnectionId: initialBaseline.connectionId,
+        baseline: baselineFromPayoff(response),
+        baselineResponse: response,
+        positionConnectionId: response.connectionId,
         drafts: current[key]?.drafts ?? [],
       },
     }));
     setActiveKey(key);
-  }, [initialBaseline]);
+    setStrikeCount(10);
+    setRecipeMessage(null);
+    setTargetSpot(response.spot > 0 ? response.spot : null);
+  }, []);
+
+  useEffect(() => {
+    if (!initialBaseline) return;
+    const importId = `${initialBaseline.connectionId}:${initialBaseline.underlying}:${initialBaseline.retrievedAt}`;
+    if (importedRevision.current === importId) return;
+    importedRevision.current = importId;
+    importBaseline(initialBaseline);
+  }, [initialBaseline, importBaseline]);
+
+  useEffect(() => {
+    const curves = positionCurves.data ?? [];
+    setImportCurveKey((current) => curves.some((curve) => curveKey(curve) === current)
+      ? current : curves[0] ? curveKey(curves[0]) : "");
+  }, [positionCurves.data]);
+
+  const importExistingPositions = async () => {
+    const curve = positionCurves.data?.find((candidate) => curveKey(candidate) === importCurveKey);
+    if (!curve) return;
+    setIsImporting(true);
+    setImportError(null);
+    setImportMessage(null);
+    try {
+      const response = await api.payoff(curve.connectionId, curve.underlying);
+      importBaseline(response);
+      setImportMessage(`Loaded ${curve.underlyingLabel} positions from ${brokerLabel(curve.brokerId)} · ${curve.accountLabel}. Existing draft adjustments for this account were kept.`);
+    } catch (error) {
+      setImportError(error instanceof ApiError ? error.message : "Could not load those existing positions.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   const sources = useOptionSources(selection?.hasOptions === false ? undefined : selection?.code,
     selection?.exchange, positionConnectionId);
@@ -183,6 +224,8 @@ export function StrategyBuilderView({ initialBaseline, onBackToLive, active = tr
     setStrikeCount(10);
     setRecipeMessage(null);
     setTargetSpot(null);
+    setImportError(null);
+    setImportMessage(null);
   };
 
   const addFromChain = (row: OptionChainRow, type: "CE" | "PE", direction: "BUY" | "SELL") => {
@@ -269,6 +312,31 @@ export function StrategyBuilderView({ initialBaseline, onBackToLive, active = tr
           <Button variant="outline" onClick={() => { setActiveKey(null); setComparison(null); }}>New strategy</Button>
           {onBackToLive && <Button variant="outline" onClick={onBackToLive}>Back to live</Button>}
         </div>
+        <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-border pt-4">
+          <label className="min-w-[260px] flex-1 text-xs font-medium text-muted-foreground">
+            Add existing positions
+            <select value={importCurveKey} disabled={positionCurves.isLoading || isImporting}
+              onChange={(event) => setImportCurveKey(event.target.value)}
+              className="mt-1 block w-full rounded border border-border bg-background px-3 py-2 text-sm text-foreground disabled:opacity-50">
+              {!positionCurves.data?.length && <option value="">No open position set available</option>}
+              {positionCurves.data?.map((curve) => <option key={curveKey(curve)} value={curveKey(curve)}>
+                {curve.underlyingLabel} · {brokerLabel(curve.brokerId)} · {curve.accountLabel}
+              </option>)}
+            </select>
+          </label>
+          <Button type="button" variant="outline" disabled={!importCurveKey || isImporting}
+            onClick={importExistingPositions}>
+            {isImporting ? "Loading positions…" : "Load as baseline"}
+          </Button>
+          <span className="basis-full text-xs text-muted-foreground">
+            Existing units and entry costs stay immutable; adjustments remain hypothetical draft trades.
+          </span>
+          {positionCurves.isError && <p role="alert" className="basis-full text-xs text-loss">
+            Could not list existing positions. <button type="button" className="underline" onClick={() => positionCurves.refetch()}>Retry</button>
+          </p>}
+          {importError && <p role="alert" className="basis-full text-xs text-loss">{importError}</p>}
+          {importMessage && <p role="status" className="basis-full text-xs text-muted-foreground">{importMessage}</p>}
+        </div>
         {Object.keys(contexts).length > 1 && (
           <div className="mt-3 flex flex-wrap gap-2 text-xs">
             <span className="text-muted-foreground">Page-session drafts:</span>
@@ -280,17 +348,17 @@ export function StrategyBuilderView({ initialBaseline, onBackToLive, active = tr
         )}
       </div>
 
-      {!selection && <Card><CardContent className="p-10 text-center text-sm text-muted-foreground">Search the exchange catalogue to start a strategy, or choose Adjust strategy from a live payoff.</CardContent></Card>}
+      {!selection && <Card><CardContent className="p-10 text-center text-sm text-muted-foreground">Search the exchange catalogue to start a strategy, or load existing positions above.</CardContent></Card>}
       {selection?.hasOptions === false && <Card><CardContent className="p-6"><strong>No listed options</strong><p className="mt-1 text-sm text-muted-foreground">{selection.name} remains selectable, but the current catalogue has no listed option contracts.</p></CardContent></Card>}
 
       {selection && selection.hasOptions !== false && (
         <>
           <div className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
-            <label className="text-xs text-muted-foreground">Quote source
+            <label className="text-xs text-muted-foreground">Market data source
               <select value={sourceConnectionId} onChange={(event) => setSourceConnectionId(event.target.value)} className="mt-1 block rounded border border-border bg-background px-3 py-2 text-sm text-foreground">
                 {!availableSources.length && <option value="">No usable source</option>}
                 {sources.data?.sources.map((source) => <option key={source.connectionId} value={source.connectionId} disabled={!source.available}>
-                  {source.brokerId} · {source.accountLabel}{source.policyRestricted ? " (restricted)" : ""}
+                  {brokerLabel(source.brokerId)} · {source.accountLabel}{source.policyRestricted ? " (restricted)" : ""}
                 </option>)}
               </select>
             </label>
@@ -303,9 +371,16 @@ export function StrategyBuilderView({ initialBaseline, onBackToLive, active = tr
             <div className="rounded bg-muted/40 px-3 py-2 text-xs">
               <span className="text-muted-foreground">Spot </span><strong>{spot !== null ? formatINR(spot) : "Unavailable"}</strong>
             </div>
+            {context?.baselineResponse && <Badge variant="outline">
+              Positions · {brokerLabel(context.baselineResponse.brokerId)}
+              {positionCurve ? ` · ${positionCurve.accountLabel}` : ""}
+            </Badge>}
             <Badge variant="outline">Hypothetical · no orders</Badge>
+            <p className="basis-full text-xs text-muted-foreground">
+              Option-chain quotes may come from a different connected broker. Existing positions and margin remain tied to their original account.
+            </p>
           </div>
-          {!availableSources.length && <p role="status" className="text-sm text-amber-600">Option data unavailable. Imported positions and manual assumptions remain available; connect an Alice Blue source for chain quotes.</p>}
+          {!availableSources.length && <p role="status" className="text-sm text-amber-600">Option data unavailable. Connect a market-data-capable broker (currently Alice Blue) for chain quotes.</p>}
 
           {/* Chain and payoff sit side by side: the graph has to answer while
               legs are being picked, not two full-width cards further down. */}

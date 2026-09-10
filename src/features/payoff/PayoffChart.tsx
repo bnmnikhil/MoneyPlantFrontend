@@ -1,6 +1,7 @@
 import {
   Area,
   ComposedChart,
+  Line,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -20,7 +21,11 @@ const AMBER = "#f5b34a";
 
 function PayoffTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
-  const { spot, pnl } = payload[0].payload as { spot: number; pnl: number };
+  const { spot, pnl, baselinePnl } = payload[0].payload as {
+    spot: number;
+    pnl: number;
+    baselinePnl?: number;
+  };
   return (
     <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-lg">
       <p className="font-medium text-foreground">Spot {formatINRWhole(spot)}</p>
@@ -31,6 +36,16 @@ function PayoffTooltip({ active, payload }: any) {
         P&amp;L {pnl >= 0 ? "+" : ""}
         {formatINRWhole(pnl)}
       </p>
+      {baselinePnl !== undefined && (
+        <>
+          <p className="tabular-nums text-muted-foreground">
+            Existing {baselinePnl >= 0 ? "+" : ""}{formatINRWhole(baselinePnl)}
+          </p>
+          <p className="tabular-nums font-medium">
+            Change {pnl - baselinePnl >= 0 ? "+" : ""}{formatINRWhole(pnl - baselinePnl)}
+          </p>
+        </>
+      )}
     </div>
   );
 }
@@ -40,27 +55,36 @@ export function PayoffChart({
   spot,
   legs,
   isIndex,
+  baseline,
 }: {
   payoff: Payoff;
   spot: number;
   legs: ChartLeg[];
   isIndex: boolean;
+  baseline?: { payoff: Payoff; legs: ChartLeg[] };
 }) {
   const [mode, setMode] = useState<"auto" | "custom" | number>("auto");
   const [custom, setCustom] = useState<PriceRange | null>(null);
   const [draftLow, setDraftLow] = useState("");
   const [draftHigh, setDraftHigh] = useState("");
   const [editing, setEditing] = useState(false);
-  const anchor = rangeAnchor(spot, legs);
-  const auto = defaultRange(spot, isIndex, legs, payoff.breakevens);
+  const rangeLegs = baseline ? [...baseline.legs, ...legs] : legs;
+  const anchor = rangeAnchor(spot, rangeLegs);
+  const auto = defaultRange(spot, isIndex, rangeLegs,
+    baseline ? [...payoff.breakevens, ...baseline.payoff.breakevens] : payoff.breakevens);
   const [xMin, xMax] = mode === "custom" && custom ? custom
     : typeof mode === "number" ? [anchor * (1 - mode), anchor * (1 + mode)] : auto;
-  const points = chartPoints(legs, [xMin, xMax], [...payoff.breakevens, spot]);
+  const points = chartPoints(legs, [xMin, xMax], [
+    ...payoff.breakevens,
+    ...(baseline?.payoff.breakevens ?? []),
+    spot,
+  ]).map((point) => baseline ? { ...point, baselinePnl: pnlAtSpot(baseline.legs, point.spot) } : point);
   const id = useId().replace(/:/g, "");
   const fillId = `payoffFill${id}`, strokeId = `payoffStroke${id}`;
   const draftValid = draftLow.trim() !== "" && draftHigh.trim() !== "" && validRange(Number(draftLow), Number(draftHigh));
 
-  const pnls = points.map((p) => p.pnl);
+  const pnls = points.flatMap((point) => [point.pnl,
+    "baselinePnl" in point ? point.baselinePnl : point.pnl]);
   const maxPnl = Math.max(...pnls, 0);
   const minPnl = Math.min(...pnls, 0);
 
@@ -93,6 +117,12 @@ export function PayoffChart({
         {!draftValid && <span role="status">Enter a nonnegative minimum and a larger maximum.</span>}
       </form>}
       <p className="text-xs text-muted-foreground">{formatINRWhole(xMin)} – {formatINRWhole(xMax)}. {spot > 0 ? "" : "Spot unavailable; range centred on strategy prices. "}Zoom changes the view only; profit/loss limits remain unchanged.</p>
+      {baseline && (
+        <div className="flex gap-4 text-xs">
+          <span className="text-muted-foreground">- - Existing positions</span>
+          <span className="font-medium text-primary">— After adjustments</span>
+        </div>
+      )}
     <div className="h-[380px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
@@ -147,6 +177,10 @@ export function PayoffChart({
             activeDot={{ r: 3 }}
             isAnimationActive={false}
           />
+          {baseline && (
+            <Line type="linear" dataKey="baselinePnl" stroke={MUTED} strokeWidth={1.75}
+              strokeDasharray="6 4" dot={false} activeDot={false} isAnimationActive={false} />
+          )}
 
           {/* P&L baseline */}
           <ReferenceLine y={0} stroke={MUTED} strokeWidth={1.25} />
@@ -195,4 +229,12 @@ export function PayoffChart({
     </div>
     </div>
   );
+}
+
+function pnlAtSpot(legs: ChartLeg[], spot: number) {
+  return Math.round(100 * legs.reduce((sum, leg) => {
+    const value = leg.type === "CE" ? Math.max(spot - leg.strike, 0)
+      : leg.type === "PE" ? Math.max(leg.strike - spot, 0) : spot;
+    return sum + (value - leg.avgPrice) * leg.qty;
+  }, 0)) / 100;
 }

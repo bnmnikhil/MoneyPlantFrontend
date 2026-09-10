@@ -10,6 +10,13 @@ import type {
   Me,
   CurveRef,
   PayoffResponse,
+  PayoffComparisonRequest,
+  PayoffComparisonResponse,
+  UnderlyingSearchResponse,
+  OptionSourcesResponse,
+  OptionExpiriesResponse,
+  OptionContractsResponse,
+  OptionChainResponse,
   Position,
   RiskSummaryReport,
   SessionStatus,
@@ -241,6 +248,35 @@ export const api = {
     request<PayoffResponse>(
       `/api/payoff/${encodeURIComponent(underlying)}?connectionId=${encodeURIComponent(connectionId)}&includeHoldings=${includeHoldings}${holdingQty === undefined ? "" : `&holdingQty=${holdingQty}`}`
     ),
+  searchUnderlyings: (query: string, signal?: AbortSignal, cursor?: string) =>
+    request<UnderlyingSearchResponse>(
+      `/api/instruments/underlyings?q=${encodeURIComponent(query)}&limit=20${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+      { signal }
+    ),
+  optionSources: (underlying: string, exchange: string, positionConnectionId?: string | null, signal?: AbortSignal) =>
+    request<OptionSourcesResponse>(
+      `/api/market-data/option-sources?underlying=${encodeURIComponent(underlying)}&exchange=${encodeURIComponent(exchange)}` +
+        (positionConnectionId ? `&positionConnectionId=${encodeURIComponent(positionConnectionId)}` : ""),
+      { signal }
+    ),
+  optionExpiries: (underlying: string, exchange: string, sourceConnectionId: string, signal?: AbortSignal) =>
+    request<OptionExpiriesResponse>(
+      `/api/market-data/option-expiries?underlying=${encodeURIComponent(underlying)}&exchange=${encodeURIComponent(exchange)}&sourceConnectionId=${encodeURIComponent(sourceConnectionId)}`,
+      { signal }
+    ),
+  optionContracts: (underlying: string, expiry: string, exchange: string, sourceConnectionId?: string, positionConnectionId?: string | null, signal?: AbortSignal) =>
+    request<OptionContractsResponse>(
+      `/api/instruments/option-contracts?underlying=${encodeURIComponent(underlying)}&expiry=${encodeURIComponent(expiry)}&exchange=${encodeURIComponent(exchange)}` +
+        (sourceConnectionId ? `&sourceConnectionId=${encodeURIComponent(sourceConnectionId)}` : "") +
+        (positionConnectionId ? `&positionConnectionId=${encodeURIComponent(positionConnectionId)}` : ""),
+      { signal }
+    ),
+  optionChain: (underlying: string, expiry: string, exchange: string, sourceConnectionId: string, positionConnectionId?: string | null, strikeCount = 10, signal?: AbortSignal) =>
+    request<OptionChainResponse>(
+      `/api/market-data/option-chain?underlying=${encodeURIComponent(underlying)}&expiry=${encodeURIComponent(expiry)}&exchange=${encodeURIComponent(exchange)}&sourceConnectionId=${encodeURIComponent(sourceConnectionId)}&strikeCount=${strikeCount}` +
+        (positionConnectionId ? `&positionConnectionId=${encodeURIComponent(positionConnectionId)}` : ""),
+      { signal }
+    ),
   // Per-user broker API credentials (3d). The GET never carries a secret; the
   // PUT is the only direction one ever travels.
   brokerCredentials: () => request<BrokerCredential[]>("/api/broker-credentials"),
@@ -252,5 +288,7 @@ export const api = {
   strategyMetadata: () => request<StrategyMetadata>("/api/payoff/metadata"),
   simulateStrategy: (body: StrategySimulationRequest) =>
     request<StrategySimulationResponse>("/api/payoff/simulate", { method: "POST", body }),
+  comparePayoff: (body: PayoffComparisonRequest, signal?: AbortSignal) =>
+    request<PayoffComparisonResponse>("/api/payoff/compare", { method: "POST", body, signal }),
   logout: () => request<void>("/api/logout", { method: "POST" }),
 };

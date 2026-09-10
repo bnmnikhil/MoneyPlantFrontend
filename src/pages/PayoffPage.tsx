@@ -24,7 +24,7 @@ import { brokerLabel } from "@/components/BrokerBadge";
 import { brokerIdOf, isBrokerSessionError } from "@/lib/api";
 import { formatINRWhole } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { CurveRef, PayoffLeg } from "@/types/api";
+import type { CurveRef, PayoffResponse } from "@/types/api";
 
 const curveKey = (c: CurveRef) => `${c.connectionId}:${c.underlying}`;
 
@@ -94,10 +94,7 @@ export function PayoffPage() {
   const [tab, setTab] = useState<"live" | "builder">("live");
   const underlyings = usePayoffCurves();
   const [selected, setSelected] = useState<CurveRef>();
-  const [builderPrefill, setBuilderPrefill] = useState<{
-    underlying: string;
-    legs: PayoffLeg[];
-  } | null>(null);
+  const [builderPrefill, setBuilderPrefill] = useState<PayoffResponse | null>(null);
 
   // Auto-select the first curve once the list arrives, and keep the selection
   // valid: a broker disconnecting can remove the curve currently being viewed.
@@ -122,10 +119,7 @@ export function PayoffPage() {
 
   const handleOpenInBuilder = () => {
     if (selected && data?.legs) {
-      setBuilderPrefill({
-        underlying: selected.underlying,
-        legs: data.legs,
-      });
+      setBuilderPrefill(data);
       setTab("builder");
     }
   };
@@ -173,13 +167,14 @@ export function PayoffPage() {
         </div>
       </div>
 
-      {tab === "builder" ? (
+      <div className={tab === "builder" ? "block" : "hidden"}>
         <StrategyBuilderView
-          initialUnderlying={builderPrefill?.underlying}
-          initialLegs={builderPrefill?.legs}
+          initialBaseline={builderPrefill}
           onBackToLive={() => setTab("live")}
+          active={tab === "builder"}
         />
-      ) : (
+      </div>
+      <div className={tab === "live" ? "block" : "hidden"}>
         <>
           {underlyings.data && underlyings.data.length > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card/60 p-4">
@@ -202,7 +197,7 @@ export function PayoffPage() {
                   className="text-xs font-medium"
                 >
                   <Wrench className="mr-1.5 size-3.5 text-primary" />
-                  Open in Strategy Builder
+                  Adjust strategy
                 </Button>
               )}
             </div>
@@ -402,7 +397,7 @@ export function PayoffPage() {
         </div>
       )}
       </>
-      )}
+      </div>
     </div>
   );
 }

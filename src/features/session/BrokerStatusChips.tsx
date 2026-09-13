@@ -4,6 +4,7 @@ import { brokerLabel } from "@/components/BrokerBadge";
 import { useConnectBroker } from "@/features/session/hooks";
 import { useBrokerConnectState } from "@/features/session/brokerConnectState";
 import { cn } from "@/lib/utils";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 /**
  * One chip per linked account, plus one per registration not yet connected.
@@ -48,10 +49,12 @@ function ConnectChip({
   brokerId,
   label,
   showLabel = false,
+  menu = false,
 }: {
   brokerId: string;
   label?: string;
   showLabel?: boolean;
+  menu?: boolean;
 }) {
   const connect = useConnectBroker();
   const pending =
@@ -59,7 +62,7 @@ function ConnectChip({
     connect.variables?.brokerId === brokerId &&
     connect.variables?.label === label;
 
-  return (
+  const button = (
     <button
       type="button"
       onClick={() => connect.mutate({ brokerId, label })}
@@ -80,9 +83,15 @@ function ConnectChip({
       {showLabel && label && <span className="text-amber-300/70">· {label}</span>}
     </button>
   );
+
+  return menu ? (
+    <DropdownMenuItem asChild disabled={pending} onSelect={(event) => event.preventDefault()}>
+      {button}
+    </DropdownMenuItem>
+  ) : button;
 }
 
-export function BrokerStatusChips({ className }: { className?: string }) {
+export function BrokerStatusChips({ className, menu = false }: { className?: string; menu?: boolean }) {
   const { state, isLoading } = useBrokerConnectState();
 
   if (isLoading) {
@@ -119,6 +128,7 @@ export function BrokerStatusChips({ className }: { className?: string }) {
           {pending.map((label) => (
             <ConnectChip
               key={label}
+              menu={menu}
               brokerId={brokerId}
               // The registration is always sent, never inferred: a user whose
               // only registration is named something other than "default" would

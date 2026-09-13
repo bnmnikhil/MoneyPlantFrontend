@@ -30,6 +30,7 @@ export function PremiumFigure({
   atEntry,
   marginUsed,
   unpricedLegs = 0,
+  compact = false,
 }: {
   /**
    * Positive is a net credit: what you keep if every leg expires worthless.
@@ -50,6 +51,8 @@ export function PremiumFigure({
    * Missing longs subtract and missing shorts add, so this is not a floor.
    */
   unpricedLegs?: number;
+  /** Single-line display for the mockup tables; supplementary facts stay in the tooltip. */
+  compact?: boolean;
 }) {
   if (premiumLeft === null) {
     return (
@@ -68,11 +71,13 @@ export function PremiumFigure({
 
   return (
     <span
-      className="inline-flex flex-col items-end leading-tight"
+      className={`inline-flex flex-col items-end leading-tight ${compact ? "text-primary" : ""}`}
       title={
-        premiumLeft >= 0
+        (premiumLeft >= 0
           ? "Net option premium at current marks: short option value minus long option value. Includes intrinsic and time value; not guaranteed remaining profit."
-          : "Net option debit at current marks: long option value exceeds short option value. Includes intrinsic and time value; not a realised loss."
+          : "Net option debit at current marks: long option value exceeds short option value. Includes intrinsic and time value; not a realised loss.") +
+        (compact && showEntry ? ` Entry premium: ${formatSignedINRWhole(atEntry)}.` : "") +
+        (compact && showRatio ? ` ${Math.round((premiumLeft / marginUsed) * 100)}% of margin.` : "")
       }
     >
       <span className="tnum inline-flex items-center gap-1.5 font-medium">
@@ -87,13 +92,13 @@ export function PremiumFigure({
         )}
       </span>
 
-      {showEntry && (
+      {!compact && showEntry && (
         <span className="tnum text-xs text-muted-foreground" title="Entry premium for the option quantity still open. Entry minus current premium is unrealised P&L; realised P&L is separate.">
           of {formatSignedINRWhole(atEntry)}
         </span>
       )}
 
-      {showRatio && (
+      {!compact && showRatio && (
         <span
           className="tnum text-xs text-muted-foreground"
           title="Premium left as a share of the margin estimated for this group. A live premium over a modelled charge — see the note under the table."

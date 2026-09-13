@@ -20,6 +20,7 @@ export function MarginFigure({
   provenance,
   unattributed = 0,
   emptyTitle,
+  sourceTitle,
 }: {
   /** Null when nothing could be attributed. Renders a dash. */
   amount: number | null;
@@ -27,6 +28,8 @@ export function MarginFigure({
   /** Legs with no basis. Non-zero makes `amount` a floor, and says so. */
   unattributed?: number;
   emptyTitle?: string;
+  /** More specific wording when the value is an account bill rather than a model. */
+  sourceTitle?: string;
 }) {
   if (amount === null) {
     return (
@@ -43,11 +46,11 @@ export function MarginFigure({
   }
 
   const label =
-    provenance === "BROKER_MODEL"
+    sourceTitle ?? (provenance === "BROKER_MODEL"
       ? "From the broker's own margin calculator."
       : provenance === "MIXED"
-        ? "Mixed basis: some legs priced by the broker's calculator, some by our worst-scenario split."
-        : "Estimated: the account's real margin, split by how much each contract loses at its own worst scenario. The total is what the broker charges; the split is ours.";
+        ? "Mixed basis: some legs priced by the broker's calculator and some estimated."
+        : "Estimated per underlying from the margin model. Estimates can differ from the broker's account bill.");
 
   return (
     <span className="tnum inline-flex items-center gap-1.5" title={label}>

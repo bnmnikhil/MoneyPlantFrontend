@@ -1,5 +1,6 @@
 import {
   Area,
+  CartesianGrid,
   ComposedChart,
   Line,
   ReferenceLine,
@@ -12,7 +13,7 @@ import type { Payoff } from "@/types/api";
 import { useState, useId } from "react";
 import { chartPoints, defaultRange, rangeAnchor, validRange } from "./chartRange";
 import type { ChartLeg, PriceRange } from "./chartRange";
-import { formatINRWhole } from "@/lib/format";
+import { formatINRWhole, formatNumber } from "@/lib/format";
 
 const GREEN = "#199e70";
 const RED = "#e34948";
@@ -56,13 +57,16 @@ export function PayoffChart({
   legs,
   isIndex,
   baseline,
+  variant = "default",
 }: {
   payoff: Payoff;
   spot: number;
   legs: ChartLeg[];
   isIndex: boolean;
   baseline?: { payoff: Payoff; legs: ChartLeg[] };
+  variant?: "default" | "live" | "builder";
 }) {
+  const styled = variant !== "default";
   const [mode, setMode] = useState<"auto" | "custom" | number>("auto");
   const [custom, setCustom] = useState<PriceRange | null>(null);
   const [draftLow, setDraftLow] = useState("");
@@ -93,8 +97,10 @@ export function PayoffChart({
     maxPnl <= 0 ? 0 : minPnl >= 0 ? 1 : maxPnl / (maxPnl - minPnl);
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 text-xs">
+    <div className={styled ? `payoff-chart-live ${variant === "builder" ? "builder-chart" : ""}` : "space-y-3"}>
+      <details open={variant === "builder" ? undefined : true} className={variant === "builder" ? "builder-range-menu" : "contents"}>
+      <summary className={variant === "builder" ? "" : "hidden"}>Price range · {formatINRWhole(xMin)} – {formatINRWhole(xMax)}</summary>
+      <div className={styled ? "payoff-range-controls" : "flex flex-wrap items-center gap-2 text-xs"}>
         <span className="text-muted-foreground">Price range</span>
         {[0.05, 0.10, 0.15].map((percent) => (
           <button key={percent} type="button" aria-pressed={mode === percent} disabled={anchor <= 0}
@@ -116,14 +122,16 @@ export function PayoffChart({
         <button type="submit" disabled={!draftValid} className="rounded border border-border p-1.5 disabled:opacity-40">Apply</button>
         {!draftValid && <span role="status">Enter a nonnegative minimum and a larger maximum.</span>}
       </form>}
-      <p className="text-xs text-muted-foreground">{formatINRWhole(xMin)} – {formatINRWhole(xMax)}. {spot > 0 ? "" : "Spot unavailable; range centred on strategy prices. "}Zoom changes the view only; profit/loss limits remain unchanged.</p>
+      <p className={styled ? "payoff-range-caption" : "text-xs text-muted-foreground"}>{formatINRWhole(xMin)} – {formatINRWhole(xMax)}. {spot > 0 ? "" : "Spot unavailable; range centred on strategy prices. "}Zoom changes the view only; profit/loss limits remain unchanged.</p>
+      </details>
       {baseline && (
         <div className="flex gap-4 text-xs">
           <span className="text-muted-foreground">- - Existing positions</span>
           <span className="font-medium text-primary">— After adjustments</span>
         </div>
       )}
-    <div className="h-[380px] w-full">
+    {styled && <p className="px-5 pt-2 text-sm text-muted-foreground">P&amp;L (₹)</p>}
+    <div className={styled ? "payoff-chart-canvas" : "h-[380px] w-full"}>
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={points}
@@ -131,23 +139,25 @@ export function PayoffChart({
         >
           <defs>
             <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset={0} stopColor={GREEN} stopOpacity={0.18} />
-              <stop offset={gradientOffset} stopColor={GREEN} stopOpacity={0.04} />
+              <stop offset={0} stopColor={styled ? "#00ecc3" : GREEN} stopOpacity={0.18} />
+              <stop offset={gradientOffset} stopColor={styled ? "#00ecc3" : GREEN} stopOpacity={0.04} />
               <stop offset={gradientOffset} stopColor={RED} stopOpacity={0.04} />
               <stop offset={1} stopColor={RED} stopOpacity={0.18} />
             </linearGradient>
             <linearGradient id={strokeId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset={gradientOffset} stopColor={GREEN} stopOpacity={1} />
+              <stop offset={gradientOffset} stopColor={styled ? "#00ecc3" : GREEN} stopOpacity={1} />
               <stop offset={gradientOffset} stopColor={RED} stopOpacity={1} />
             </linearGradient>
           </defs>
+
+          {styled && <CartesianGrid stroke="#173541" strokeOpacity={0.7} />}
 
           <XAxis
             dataKey="spot"
             type="number"
             domain={[xMin, xMax]}
             allowDataOverflow
-            tickFormatter={(v) => formatINRWhole(v)}
+            tickFormatter={(v) => styled ? formatNumber(v) : formatINRWhole(v)}
             tick={{ fill: MUTED, fontSize: 11 }}
             tickLine={false}
             axisLine={{ stroke: "hsl(var(--border))" }}
@@ -155,7 +165,7 @@ export function PayoffChart({
           />
           <YAxis
             domain={[minPnl, maxPnl === minPnl ? maxPnl + 1 : maxPnl]}
-            tickFormatter={(v) => formatINRWhole(v)}
+            tickFormatter={(v) => styled ? formatNumber(v) : formatINRWhole(v)}
             tick={{ fill: MUTED, fontSize: 11 }}
             tickLine={false}
             axisLine={false}
@@ -174,7 +184,7 @@ export function PayoffChart({
             strokeWidth={2}
             fill={`url(#${fillId})`}
             dot={false}
-            activeDot={{ r: 3 }}
+            activeDot={styled ? { r: 6, stroke: "#00ecc3", strokeWidth: 4, fill: "#eafffa" } : { r: 3 }}
             isAnimationActive={false}
           />
           {baseline && (
@@ -183,7 +193,7 @@ export function PayoffChart({
           )}
 
           {/* P&L baseline */}
-          <ReferenceLine y={0} stroke={MUTED} strokeWidth={1.25} />
+          <ReferenceLine y={0} stroke={MUTED} strokeWidth={1.25} strokeDasharray={styled ? "5 4" : undefined} />
 
           {/* Breakevens */}
           {payoff.breakevens.filter((be) => be >= xMin && be <= xMax).map((be) => (
@@ -195,7 +205,7 @@ export function PayoffChart({
               strokeOpacity={0.7}
               label={{
                 value: formatINRWhole(be),
-                position: "insideBottom",
+                position: styled ? "insideTopRight" : "insideBottom",
                 fill: MUTED,
                 fontSize: 10,
               }}
@@ -227,6 +237,7 @@ export function PayoffChart({
         </ComposedChart>
       </ResponsiveContainer>
     </div>
+    {styled && <p className="pb-2 text-center text-sm text-muted-foreground">Underlying price (₹)</p>}
     </div>
   );
 }

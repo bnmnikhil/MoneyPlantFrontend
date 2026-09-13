@@ -14,7 +14,7 @@ export function UnderlyingSearch({ selected, onSelect }: {
   const items = search.data?.items ?? [];
 
   useEffect(() => {
-    if (selected) setQuery(selected.symbol);
+    setQuery(selected?.symbol ?? "");
   }, [selected?.code, selected?.exchange]);
 
   const choose = (item: UnderlyingSearchItem) => {
@@ -24,9 +24,9 @@ export function UnderlyingSearch({ selected, onSelect }: {
   };
 
   return (
-    <div className="relative min-w-[260px] flex-1">
+    <div className="builder-underlying relative" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
       <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="underlying-search">
-        Search stock or index
+        Underlying
       </label>
       <div className="flex items-center rounded-md border border-border bg-background px-3">
         <Search className="size-4 text-muted-foreground" />

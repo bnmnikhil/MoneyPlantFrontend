@@ -63,7 +63,7 @@ export function DashboardPage() {
       <section className="overview-summary" aria-label="Portfolio summary">
         {metrics.map((metric) => <div className="overview-metric" key={metric.label}>
           <div className="text-base text-muted-foreground">{metric.label}</div>
-          <div className="mt-1 text-[clamp(1.3rem,1.9vw,2rem)] leading-tight">
+          <div className="overview-metric-value">
             {metric.loading ? <Skeleton className="h-9 w-32" /> : <OverviewMoney value={metric.value} partial={metric.partial} />}
           </div>
           {metric.hint && <p className="text-sm text-muted-foreground">{metric.hint}</p>}

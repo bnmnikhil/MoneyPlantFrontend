@@ -111,12 +111,15 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.85fr);
   min-height: 104px;
-  padding: 17px 10px;
+  padding: 14px 10px;
   border: 1px solid hsl(var(--border));
   border-radius: 7px;
   background: linear-gradient(115deg, hsl(201 45% 9% / .82), hsl(201 48% 8% / .7));
 }
 .overview-metric { position: relative; min-width: 0; padding: 0 20px; }
+.overview-metric > div:first-child { line-height: 20px; }
+.overview-metric-value { margin-top: 4px; font-size: clamp(1.3rem, 1.9vw, 2rem); line-height: 1.1; }
+.overview-metric > p { line-height: 16px; }
 .overview-metric + .overview-metric::before {
   content: ""; position: absolute; left: 0; top: 0; bottom: 0;
   width: 1px; background: hsl(201 34% 24%);
@@ -124,12 +127,13 @@
 .overview-broker-grid { display: grid; grid-template-columns: minmax(0, 1.46fr) minmax(0, 1fr); gap: 16px; }
 .overview-preview-grid { display: grid; grid-template-columns: minmax(0, 1.32fr) minmax(0, 1fr); gap: 14px; }
 .overview-panel { min-width: 0; overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 7px; background: hsl(var(--card) / .7); }
-.overview-panel-title { display: flex; align-items: center; min-height: 54px; padding: 10px 18px; border-bottom: 1px solid hsl(var(--border)); font-size: 23px; font-weight: 600; letter-spacing: -.025em; }
-.overview-table-scroll { overflow-x: auto; }
+.overview-panel-title { display: flex; align-items: center; min-height: 54px; padding: 10px 18px; border-bottom: 1px solid hsl(var(--border)); font-size: 23px; line-height: 1.2; font-weight: 600; letter-spacing: -.025em; }
+.overview-table-scroll { overflow-x: auto; scrollbar-color: #486173 #10232d; scrollbar-width: thin; }
 .overview-table { width: 100%; border-collapse: collapse; font-size: 16px; font-variant-numeric: tabular-nums; }
 .overview-table th, .overview-table td { height: 49px; padding: 8px 18px; border-bottom: 1px solid hsl(var(--border)); text-align: right; white-space: nowrap; }
 .overview-table th { color: hsl(var(--muted-foreground)); font-size: 14px; font-weight: 400; }
 .overview-table th:first-child, .overview-table td:first-child { text-align: left; }
+.overview-table td > .inline-flex { vertical-align: middle; }
 .overview-table tbody tr:hover { background: hsl(var(--secondary) / .5); }
 .overview-table tfoot { background: hsl(var(--secondary) / .25); }
 .overview-table tfoot th, .overview-table tfoot td { height: 51px; border-bottom: 0; font-weight: 600; }
@@ -146,6 +150,7 @@
 .overview-preview-table th:nth-child(2), .overview-preview-table td:nth-child(2) { text-align: left; }
 .overview-preview-table .overview-account-row td { height: 42px; background: hsl(var(--background) / .35); text-align: right; }
 .overview-preview-table .overview-account-row td:first-child { text-align: left; }
+.overview-preview-table .overview-account-row button { padding-block: 0; }
 .overview-tree-symbol { position: relative; padding-left: 24px; display: inline-block; }
 .overview-tree-symbol::before { content: ""; position: absolute; left: 7px; top: -10px; bottom: -10px; width: 1px; background: #25414e; }
 .overview-tree-symbol::after { content: ""; position: absolute; left: 7px; top: 50%; width: 12px; height: 1px; background: #25414e; }
@@ -158,6 +163,10 @@
 }
 @media (max-width: 639px) {
   .overview-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .overview-metric { padding: 0 10px; }
+  .overview-metric > div:first-child { font-size: 14px; }
+  .overview-metric-value { font-size: clamp(1rem, 5vw, 1.3rem); }
+  .overview-metric > p { font-size: 12px; }
   .overview-metric:nth-child(3)::before { display: none; }
   .overview-panel-title { font-size: 20px; }
   .overview-table th, .overview-table td { padding-left: 12px; padding-right: 12px; }
@@ -220,7 +229,7 @@
 }
 
 /* Live payoff checkpoint. Strategy-builder chart keeps its own sizing. */
-.payoff-page, .payoff-live-view { display: grid; gap: 14px; }
+.payoff-page, .payoff-live-view { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 .payoff-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 22px; min-height: 76px; padding: 12px 16px; border: 1px solid hsl(var(--border)); border-radius: 7px; background: hsl(var(--card) / .65); }
 .payoff-tabs { display: inline-flex; flex-shrink: 0; border: 1px solid #173e4d; border-radius: 6px; background: #051923; }
 .payoff-tabs button { padding: 13px 24px; border: 1px solid transparent; border-radius: 5px; font-size: 16px; white-space: nowrap; }
@@ -294,7 +303,7 @@
 @media (max-width: 767px) {
   .payoff-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 0; }
   .payoff-metric:nth-child(odd) { border-left: 0; }
-  .payoff-curve-control { width: 100%; padding-left: 0; border-left: 0; }
+  .payoff-curve-control { flex: 0 1 100%; min-width: 0; padding-left: 0; border-left: 0; }
   .payoff-curve-picker { width: calc(100% - 58px); }
   .payoff-tabs { width: 100%; }
   .payoff-tabs button { flex: 1; padding: 12px 10px; font-size: 14px; }

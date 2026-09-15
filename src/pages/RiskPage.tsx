@@ -134,7 +134,7 @@ export function RiskPage() {
       ) : isError ? (
         <ErrorState title="Couldn't load risk analysis" onRetry={() => refetch()} />
       ) : (
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 [&>*]:min-w-0">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Portfolio market value</CardTitle>

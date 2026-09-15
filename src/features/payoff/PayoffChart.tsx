@@ -13,12 +13,27 @@ import type { Payoff } from "@/types/api";
 import { useState, useId } from "react";
 import { chartPoints, defaultRange, rangeAnchor, validRange } from "./chartRange";
 import type { ChartLeg, PriceRange } from "./chartRange";
+import { layoutReferenceLabels } from "./referenceLabels";
+import type { ReferenceLabel } from "./referenceLabels";
 import { formatINRWhole, formatNumber } from "@/lib/format";
 
 const GREEN = "#199e70";
 const RED = "#e34948";
 const MUTED = "hsl(var(--muted-foreground))";
 const AMBER = "#f5b34a";
+
+function ChartReferenceLabel({ viewBox, marker, color }: {
+  viewBox?: { x?: number; y?: number };
+  marker?: ReferenceLabel;
+  color: string;
+}) {
+  if (!marker || viewBox?.x === undefined || viewBox.y === undefined) return null;
+  return <text className="payoff-reference-label" x={viewBox.x + marker.dx}
+    y={viewBox.y + 12 + marker.row * 17} textAnchor="middle" fill={color}
+    fontSize={marker.fontSize} fontWeight={marker.key === "spot" ? 600 : 400}>
+    {marker.text}
+  </text>;
+}
 
 function PayoffTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
@@ -67,6 +82,7 @@ export function PayoffChart({
   variant?: "default" | "live" | "builder";
 }) {
   const styled = variant !== "default";
+  const [chartWidth, setChartWidth] = useState(0);
   const [mode, setMode] = useState<"auto" | "custom" | number>("auto");
   const [custom, setCustom] = useState<PriceRange | null>(null);
   const [draftLow, setDraftLow] = useState("");
@@ -78,6 +94,11 @@ export function PayoffChart({
     baseline ? [...payoff.breakevens, ...baseline.payoff.breakevens] : payoff.breakevens);
   const [xMin, xMax] = mode === "custom" && custom ? custom
     : typeof mode === "number" ? [anchor * (1 - mode), anchor * (1 + mode)] : auto;
+  // The plotting area excludes the 72px Y axis and the 8px/16px chart margins.
+  const referenceLabels = layoutReferenceLabels([
+    ...(spot > 0 ? [{ key: "spot", value: spot, text: `Spot ${formatINRWhole(spot)}` }] : []),
+    ...payoff.breakevens.map((be) => ({ key: `be-${be}`, value: be, text: formatINRWhole(be) })),
+  ], [xMin, xMax], chartWidth - 96);
   const points = chartPoints(legs, [xMin, xMax], [
     ...payoff.breakevens,
     ...(baseline?.payoff.breakevens ?? []),
@@ -132,7 +153,7 @@ export function PayoffChart({
       )}
     {styled && <p className="px-5 pt-2 text-sm text-muted-foreground">P&amp;L (₹)</p>}
     <div className={styled ? "payoff-chart-canvas" : "h-[380px] w-full"}>
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" onResize={(width) => setChartWidth(width)}>
         <ComposedChart
           data={points}
           margin={{ top: 16, right: 16, bottom: 8, left: 8 }}
@@ -203,9 +224,9 @@ export function PayoffChart({
               stroke={MUTED}
               strokeDasharray="3 3"
               strokeOpacity={0.7}
-              label={{
+              label={styled ? <ChartReferenceLabel marker={referenceLabels.find((label) => label.key === `be-${be}`)} color={MUTED} /> : {
                 value: formatINRWhole(be),
-                position: styled ? "insideTopRight" : "insideBottom",
+                position: "insideBottom",
                 fill: MUTED,
                 fontSize: 10,
               }}
@@ -225,7 +246,7 @@ export function PayoffChart({
               x={spot}
               stroke={AMBER}
               strokeDasharray="4 4"
-              label={{
+              label={styled ? <ChartReferenceLabel marker={referenceLabels.find((label) => label.key === "spot")} color={AMBER} /> : {
                 value: `Spot ${formatINRWhole(spot)}`,
                 position: "insideTopRight",
                 fill: AMBER,

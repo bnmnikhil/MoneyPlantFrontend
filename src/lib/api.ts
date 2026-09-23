@@ -1,5 +1,6 @@
 import type {
   BrokerAggregate,
+  BrokerDefinition,
   BrokerCredential,
   BrokerCredentialInput,
   BrokerErrorBody,
@@ -231,6 +232,7 @@ function credentialPath(brokerId: string, label: string) {
 
 export const api = {
   me: () => request<Me>("/api/me"),
+  brokerDefinitions: () => request<BrokerDefinition[]>("/api/brokers"),
   sessionStatus: () => request<SessionStatus>("/api/session/status"),
   loginUrl: (brokerId: string, label?: string) =>
     request<LoginUrl>(

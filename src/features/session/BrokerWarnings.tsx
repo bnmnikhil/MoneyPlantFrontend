@@ -2,16 +2,7 @@ import { Loader2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useConnectBroker } from "@/features/session/hooks";
 import type { BrokerWarning } from "@/types/api";
-
-const BROKER_LABELS: Record<string, string> = {
-  kite: "Zerodha Kite",
-  aliceblue: "Alice Blue",
-  paytm: "Paytm Money",
-};
-
-function label(brokerId: string) {
-  return BROKER_LABELS[brokerId] ?? brokerId;
-}
+import { brokerLabel } from "@/components/BrokerBadge";
 
 /**
  * Per-broker failure notice shown above still-useful data.
@@ -23,6 +14,7 @@ function label(brokerId: string) {
 function WarningRow({ warning }: { warning: BrokerWarning }) {
   const connect = useConnectBroker();
   const expired = warning.code === "SESSION_EXPIRED";
+  const unsupported = warning.code === "UNSUPPORTED_CAPABILITY";
 
   // login-url takes a brokerId as of 1f, so Reconnect now works for any broker.
   const canReconnect = expired;
@@ -35,13 +27,17 @@ function WarningRow({ warning }: { warning: BrokerWarning }) {
         <div className="text-sm">
           <p className="font-medium text-amber-200">
             {expired
-              ? `${label(warning.brokerId)} session expired`
-              : `Couldn't reach ${label(warning.brokerId)}`}
+              ? `${brokerLabel(warning.brokerId)} session expired`
+              : unsupported
+                ? `${brokerLabel(warning.brokerId)} does not provide this data`
+                : `Couldn't reach ${brokerLabel(warning.brokerId)}`}
           </p>
           <p className="text-amber-200/70">
             {expired
               ? "Data below excludes this broker until you reconnect it."
-              : "Data below excludes this broker. This is usually temporary — the next refresh may succeed."}
+              : unsupported
+                ? "This broker is connected, but the requested capability is not supported."
+                : "Data below excludes this broker. This is usually temporary — the next refresh may succeed."}
           </p>
         </div>
       </div>

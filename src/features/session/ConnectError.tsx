@@ -3,14 +3,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Loader2, TriangleAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { brokerLabel } from "@/components/BrokerBadge";
+import { useBrokerDefinitions } from "@/features/brokers/hooks";
 import { useConnectBroker } from "@/features/session/hooks";
-
-/**
- * Broker ids the callbacks can name in ?error=. Kept as a set rather than
- * trusted from the URL: the parameter is user-editable, so an unrecognised
- * value renders nothing at all instead of being echoed back onto the page.
- */
-const BROKER_CODES: ReadonlySet<string> = new Set(["kite", "aliceblue", "paytm"]);
 
 type ConnectFailure = {
   /** null when the failure is not attributable to one broker. */
@@ -24,7 +18,7 @@ type ConnectFailure = {
   action: "retry" | "settings" | "none";
 };
 
-function describe(code: string): ConnectFailure | null {
+function describe(code: string, brokerCodes: ReadonlySet<string>): ConnectFailure | null {
   // PendingConnect dropped the flow before the callback arrived, so the backend
   // never learned which broker it was — hence no retry button on this one.
   if (code === "connect_expired") {
@@ -42,7 +36,7 @@ function describe(code: string): ConnectFailure | null {
   const missing = code.endsWith("_not_configured")
     ? code.slice(0, -"_not_configured".length)
     : null;
-  if (missing && BROKER_CODES.has(missing)) {
+  if (missing && brokerCodes.has(missing)) {
     return {
       brokerId: missing,
       action: "settings",
@@ -52,7 +46,7 @@ function describe(code: string): ConnectFailure | null {
     };
   }
 
-  if (!BROKER_CODES.has(code)) return null;
+  if (!brokerCodes.has(code)) return null;
 
   return {
     brokerId: code,
@@ -77,6 +71,7 @@ function describe(code: string): ConnectFailure | null {
 export function ConnectError() {
   const [params, setParams] = useSearchParams();
   const connect = useConnectBroker();
+  const definitions = useBrokerDefinitions();
   const [failure, setFailure] = useState<ConnectFailure | null>(null);
 
   const code = params.get("error");
@@ -84,8 +79,9 @@ export function ConnectError() {
   // Held in state and stripped from the URL, so a refresh or a shared link does
   // not resurrect an error the user has already read and acted on.
   useEffect(() => {
-    if (!code) return;
-    setFailure(describe(code));
+    if (!code || definitions.isPending) return;
+    const brokerCodes = new Set((definitions.data ?? []).map((definition) => definition.id));
+    setFailure(describe(code, brokerCodes));
     setParams(
       (prev) => {
         const next = new URLSearchParams(prev);
@@ -94,7 +90,7 @@ export function ConnectError() {
       },
       { replace: true }
     );
-  }, [code, setParams]);
+  }, [code, definitions.data, definitions.isPending, setParams]);
 
   if (!failure) return null;
 

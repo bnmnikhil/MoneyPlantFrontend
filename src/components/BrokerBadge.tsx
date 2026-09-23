@@ -1,13 +1,8 @@
 import { Badge } from "@/components/ui/badge";
-
-const BROKER_LABELS: Record<string, string> = {
-  kite: "Kite",
-  aliceblue: "Alice Blue",
-  paytm: "Paytm",
-};
+import { brokerName } from "@/features/brokers/catalog";
 
 export function brokerLabel(brokerId: string) {
-  return BROKER_LABELS[brokerId] ?? brokerId;
+  return brokerName(brokerId);
 }
 
 /**

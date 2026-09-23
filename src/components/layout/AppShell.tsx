@@ -3,12 +3,17 @@ import { Outlet } from "react-router-dom";
 import { Topbar } from "@/components/layout/Topbar";
 import { MobileTabBar } from "@/components/layout/MobileTabBar";
 import { BrokerSessionBanner } from "@/features/session/BrokerSessionBanner";
+import { useBrokerDefinitions } from "@/features/brokers/hooks";
 import {
   BROKER_SESSION_LOST_EVENT,
   type BrokerSessionLostDetail,
 } from "@/lib/api";
 
 export function AppShell() {
+  // Installs backend-owned broker labels for every authenticated feature. A
+  // failed metadata request does not blank portfolio data; labels fall back to
+  // the broker id and Settings exposes the load failure explicitly.
+  useBrokerDefinitions();
   const [sessionLost, setSessionLost] = useState<BrokerSessionLostDetail | null>(
     null
   );

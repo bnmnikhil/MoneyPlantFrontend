@@ -9,6 +9,28 @@ export interface Me {
   picture: string;
 }
 
+export type BrokerCapability = "POSITIONS" | "HOLDINGS" | "MARGINS" | "INSTRUMENTS";
+export type BrokerAvailability = "HIDDEN" | "INTERNAL" | "STAGING" | "AVAILABLE";
+export type BrokerAuthType = "REDIRECT_CALLBACK" | "ACCESS_TOKEN";
+
+export interface CredentialField {
+  key: string;
+  label: string;
+  secret: boolean;
+  required: boolean;
+}
+
+/** Backend-owned product metadata; contains no user credentials or sessions. */
+export interface BrokerDefinition {
+  id: string;
+  displayName: string;
+  developerConsoleUrl: string;
+  authType: BrokerAuthType;
+  credentialFields: CredentialField[];
+  capabilities: BrokerCapability[];
+  availability: BrokerAvailability;
+}
+
 /** One linked broker account. Keyed by connectionId, like every other contract. */
 export interface BrokerConnection {
   connectionId: string;
@@ -86,7 +108,10 @@ export interface LoginUrl {
  * CALL_FAILED     -> transient (network, 5xx, rate limit). Do NOT tell the user
  *                    to reconnect; a retry may simply work.
  */
-export type BrokerWarningCode = "SESSION_EXPIRED" | "CALL_FAILED";
+export type BrokerWarningCode =
+  | "SESSION_EXPIRED"
+  | "CALL_FAILED"
+  | "UNSUPPORTED_CAPABILITY";
 
 export interface BrokerWarning {
   brokerId: string;
@@ -236,6 +261,7 @@ export interface Margins extends BrokerSourced {
  * BROKER_CALL_FAILED          -> 502, upstream problem, retry may work
  * BROKER_NOT_CONFIGURED       -> 409, no credentials stored: go to Settings
  * BROKER_CREDENTIAL_UNREADABLE-> 409, stored secret will not decrypt, re-enter it
+ * BROKER_CAPABILITY_UNSUPPORTED-> 422, the connected broker does not expose this read
  *
  * The last two arrived with 3d. Both are 409 rather than 404 for the same reason
  * as the first two: the request cannot proceed in the current state, and the fix
@@ -246,7 +272,8 @@ export type BrokerErrorCode =
   | "BROKER_NOT_CONNECTED"
   | "BROKER_CALL_FAILED"
   | "BROKER_NOT_CONFIGURED"
-  | "BROKER_CREDENTIAL_UNREADABLE";
+  | "BROKER_CREDENTIAL_UNREADABLE"
+  | "BROKER_CAPABILITY_UNSUPPORTED";
 
 export interface BrokerErrorBody {
   error: BrokerErrorCode;

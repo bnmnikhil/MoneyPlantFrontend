@@ -8,7 +8,9 @@ import { ErrorState } from "@/components/states";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BrokerCredentialCard } from "@/features/credentials/BrokerCredentialCard";
 import { useBrokerCredentials } from "@/features/credentials/hooks";
-import type { BrokerCredential } from "@/types/api";
+import { definitionById } from "@/features/brokers/catalog";
+import { useBrokerDefinitions } from "@/features/brokers/hooks";
+import type { BrokerCredential, BrokerDefinition } from "@/types/api";
 
 /**
  * Where a user supplies their own broker API credentials.
@@ -23,6 +25,7 @@ import type { BrokerCredential } from "@/types/api";
  */
 export function SettingsPage() {
   const credentials = useBrokerCredentials();
+  const definitions = useBrokerDefinitions();
 
   // Distinct brokers, in the order the backend sent them — it sorts by brokerId
   // then label, so grouping this way keeps a stable order without re-sorting.
@@ -51,25 +54,31 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      {credentials.isLoading ? (
+      {credentials.isLoading || definitions.isLoading ? (
         <div className="space-y-4">
           <Skeleton className="h-52 w-full" />
           <Skeleton className="h-52 w-full" />
         </div>
-      ) : credentials.isError ? (
+      ) : credentials.isError || definitions.isError ? (
         <ErrorState
-          title="Couldn't load your credentials"
-          onRetry={() => credentials.refetch()}
+          title="Couldn't load broker setup"
+          onRetry={() => {
+            credentials.refetch();
+            definitions.refetch();
+          }}
         />
       ) : (
         <div className="space-y-8">
-          {brokerIds.map((brokerId) => (
-            <BrokerSection
-              key={brokerId}
-              brokerId={brokerId}
-              rows={(credentials.data ?? []).filter((c) => c.brokerId === brokerId)}
-            />
-          ))}
+          {brokerIds.map((brokerId) => {
+            const definition = definitionById(definitions.data ?? [], brokerId);
+            return definition ? (
+              <BrokerSection
+                key={brokerId}
+                definition={definition}
+                rows={(credentials.data ?? []).filter((c) => c.brokerId === brokerId)}
+              />
+            ) : null;
+          })}
         </div>
       )}
     </div>
@@ -84,19 +93,31 @@ export function SettingsPage() {
  * you add a second trading account, which needs no new credential at all: press
  * Connect again and sign in as the other account.
  */
-function BrokerSection({ brokerId, rows }: { brokerId: string; rows: BrokerCredential[] }) {
+function BrokerSection({
+  definition,
+  rows,
+}: {
+  definition: BrokerDefinition;
+  rows: BrokerCredential[];
+}) {
+  const brokerId = definition.id;
   const [addingDraft, setAddingDraft] = useState(false);
   const configuredCount = rows.filter((r) => r.configured).length;
 
   return (
     <section className="space-y-4">
       {rows.map((c) => (
-        <BrokerCredentialCard key={`${c.brokerId}:${c.label}`} credential={c} />
+        <BrokerCredentialCard
+          key={`${c.brokerId}:${c.label}`}
+          credential={c}
+          definition={definition}
+        />
       ))}
 
       {addingDraft && (
         <BrokerCredentialCard
           credential={{ brokerId, label: "", apiKey: null, configured: false }}
+          definition={definition}
           draft
           onCancel={() => setAddingDraft(false)}
         />

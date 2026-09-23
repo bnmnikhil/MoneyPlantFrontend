@@ -4,26 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { brokerLabel } from "@/components/BrokerBadge";
+import { fieldByKey } from "@/features/brokers/catalog";
 import {
   useDeleteBrokerCredential,
   useSaveBrokerCredential,
 } from "@/features/credentials/hooks";
 import { useBrokerStatus, useConnectBroker } from "@/features/session/hooks";
-import type { BrokerCredential } from "@/types/api";
-
-/** What each broker calls the two values, so the labels match their console. */
-const FIELD_NAMES: Record<string, { key: string; secret: string }> = {
-  kite: { key: "API key", secret: "API secret" },
-  aliceblue: { key: "App code", secret: "API secret" },
-  paytm: { key: "API key", secret: "API secret" },
-};
-
-/** Where to go and get them. */
-const CONSOLES: Record<string, string> = {
-  kite: "developers.kite.trade",
-  aliceblue: "Alice Blue developer portal",
-  paytm: "developer.paytmmoney.com",
-};
+import type { BrokerCredential, BrokerDefinition } from "@/types/api";
 
 /** Mirrors the backend's path-segment constraint, so the error arrives before the request. */
 const LABEL_PATTERN = /^[A-Za-z0-9 _-]{1,32}$/;
@@ -42,15 +29,18 @@ const LABEL_PATTERN = /^[A-Za-z0-9 _-]{1,32}$/;
  */
 export function BrokerCredentialCard({
   credential,
+  definition,
   draft = false,
   onCancel,
 }: {
   credential: BrokerCredential;
+  definition: BrokerDefinition;
   draft?: boolean;
   onCancel?: () => void;
 }) {
   const { brokerId, label, apiKey, configured } = credential;
-  const names = FIELD_NAMES[brokerId] ?? { key: "API key", secret: "API secret" };
+  const keyField = fieldByKey(definition, "apiKey");
+  const secretField = fieldByKey(definition, "apiSecret");
 
   const [labelValue, setLabelValue] = useState(draft ? "" : label);
   const [keyValue, setKeyValue] = useState(apiKey ?? "");
@@ -179,13 +169,13 @@ export function BrokerCredentialCard({
                 htmlFor={`${brokerId}-${label}-key`}
                 className="text-sm font-medium text-foreground"
               >
-                {names.key}
+                {keyField.label}
               </label>
               <Input
                 id={`${brokerId}-${label}-key`}
                 value={keyValue}
                 onChange={(e) => setKeyValue(e.target.value)}
-                placeholder={`From ${CONSOLES[brokerId] ?? "the broker's console"}`}
+                placeholder={`From ${definition.displayName}`}
                 autoComplete="off"
                 spellCheck={false}
               />
@@ -196,7 +186,7 @@ export function BrokerCredentialCard({
                 htmlFor={`${brokerId}-${label}-secret`}
                 className="text-sm font-medium text-foreground"
               >
-                {names.secret}
+                {secretField.label}
               </label>
               <Input
                 id={`${brokerId}-${label}-secret`}
@@ -229,6 +219,15 @@ export function BrokerCredentialCard({
               <p className="text-sm text-destructive">Couldn&apos;t remove that one.</p>
             )}
           </div>
+
+          <a
+            href={definition.developerConsoleUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex text-xs text-primary underline-offset-4 hover:underline"
+          >
+            Open {definition.displayName} developer portal
+          </a>
         </form>
 
         {!draft && configured && (

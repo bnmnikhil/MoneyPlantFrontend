@@ -21,6 +21,7 @@ const PayoffSummary = component("PayoffSummary");
 const LegsTable = component("LegsTable");
 const HoldingsToggle = component("HoldingsToggle");
 const CurveSelector = component("CurveSelector");
+const PayoffTooltip = component("PayoffTooltip");
 const render = (Component, props) => renderToStaticMarkup(React.createElement(Component, props));
 const curve = (overrides = {}) => ({ connectionId: "a", brokerId: "kite", accountLabel: "Main account", underlying: "TEST", underlyingLabel: "Test display", ...overrides });
 const response = (overrides = {}) => ({
@@ -68,6 +69,19 @@ test("unknown spot stays unavailable and unbounded payoff is never shown as a fi
   assert.match(html, /Unlimited/);
   assert.doesNotMatch(html, /-₹500|₹0/);
   assert.match(html, /—/);
+});
+
+test("payoff tooltip shows hovered spot change relative to the current spot", () => {
+  const tooltip = (hoveredSpot, referenceSpot) => render(PayoffTooltip, {
+    active: true,
+    referenceSpot,
+    payload: [{ payload: { spot: hoveredSpot, pnl: 250 } }],
+  });
+
+  assert.match(tooltip(110, 100), /\(\+10\.00%\)/);
+  assert.match(tooltip(90, 100), /\(-10\.00%\)/);
+  assert.match(tooltip(100, 100), /\(0\.00%\)/);
+  assert.doesNotMatch(tooltip(110, 0), /%/);
 });
 
 test("legs retain signed unit quantities, duplicate symbols, futures and purchased shares", () => {

@@ -15,6 +15,7 @@ import { chartPoints, defaultRange, rangeAnchor, validRange } from "./chartRange
 import type { ChartLeg, PriceRange } from "./chartRange";
 import { layoutReferenceLabels } from "./referenceLabels";
 import type { ReferenceLabel } from "./referenceLabels";
+import { PayoffTooltip } from "./PayoffTooltip";
 import { formatINRWhole, formatNumber } from "@/lib/format";
 
 const GREEN = "#199e70";
@@ -33,37 +34,6 @@ function ChartReferenceLabel({ viewBox, marker, color }: {
     fontSize={marker.fontSize} fontWeight={marker.key === "spot" ? 600 : 400}>
     {marker.text}
   </text>;
-}
-
-function PayoffTooltip({ active, payload }: any) {
-  if (!active || !payload?.length) return null;
-  const { spot, pnl, baselinePnl } = payload[0].payload as {
-    spot: number;
-    pnl: number;
-    baselinePnl?: number;
-  };
-  return (
-    <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-lg">
-      <p className="font-medium text-foreground">Spot {formatINRWhole(spot)}</p>
-      <p
-        className="tabular-nums"
-        style={{ color: pnl >= 0 ? GREEN : RED }}
-      >
-        P&amp;L {pnl >= 0 ? "+" : ""}
-        {formatINRWhole(pnl)}
-      </p>
-      {baselinePnl !== undefined && (
-        <>
-          <p className="tabular-nums text-muted-foreground">
-            Existing {baselinePnl >= 0 ? "+" : ""}{formatINRWhole(baselinePnl)}
-          </p>
-          <p className="tabular-nums font-medium">
-            Change {pnl - baselinePnl >= 0 ? "+" : ""}{formatINRWhole(pnl - baselinePnl)}
-          </p>
-        </>
-      )}
-    </div>
-  );
 }
 
 export function PayoffChart({
@@ -194,7 +164,7 @@ export function PayoffChart({
           />
 
           <Tooltip
-            content={<PayoffTooltip />}
+            content={<PayoffTooltip referenceSpot={spot} />}
             cursor={{ stroke: MUTED, strokeDasharray: "3 3" }}
           />
 

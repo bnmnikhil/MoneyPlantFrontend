@@ -30,3 +30,10 @@ test('resampling retains exact option corners and prices beyond old chart bounds
   assert.deepEqual(points.find(p => p.spot === 550), { spot: 550, pnl: 6000 });
   assert.equal(chartPoints(legs, [600, 800]).every(p => p.pnl === 6000), true);
 });
+
+test('an imported signed M&M basis is preserved in the plotted expiry P&L', () => {
+  const points = chartPoints([leg('PE', 2900, 200, -50.8)], [2500, 3300], [2860, 2900]);
+  assert.deepEqual(points.find(point => point.spot === 2860), { spot: 2860, pnl: 18160 });
+  assert.deepEqual(points.find(point => point.spot === 2900), { spot: 2900, pnl: 10160 });
+  assert.deepEqual(points.at(-1), { spot: 3300, pnl: 10160 });
+});

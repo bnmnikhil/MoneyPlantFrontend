@@ -4,6 +4,7 @@ import {
   applyRecipe,
   baselineFromPayoff,
   changeDraftContract,
+  chartLeg,
   closeDraft,
   draftFromChain,
   useLatestPrice,
@@ -54,6 +55,23 @@ test('chain selection copies a quote once and refresh does not overwrite a manua
   assert.equal(manual.priceBasis, 'MANUAL');
   assert.equal(manual.currentMark.value, 4);
   assert.equal(useLatestPrice(manual, observation(6)).entryPrice, 6);
+});
+
+test('M&M import preserves a signed position basis without allowing it as a draft premium', () => {
+  const [imported] = baselineFromPayoff({
+    underlying: 'MM', brokerId: 'aliceblue', connectionId: 'alice-mm', spot: 2860,
+    isIndex: false, payoff: {}, expiries: ['2026-10-27'], retrievedAt: fetchedAt, complete: true,
+    warnings: [], holding: {},
+    legs: [{ legId: 'mm-adjusted', symbol: 'M&M27OCT26P2900', underlying: 'MM', exchange: 'NSE',
+      strike: 2900, type: 'PE', qty: 200, avgPrice: -50.8, expiry: '2026-10-27',
+      lotSize: 200, origin: 'EXISTING_POSITION', currentMark: 96.35, currentMarkKnown: true }],
+  });
+  assert.equal(imported.entryPrice, -50.8);
+  assert.equal(imported.priceBasis, 'POSITION_AVERAGE');
+  assert.equal(imported.origin, 'EXISTING_POSITION');
+  assert.equal(imported.contract.underlying, 'MM');
+  assert.equal(chartLeg(imported).avgPrice, -50.8);
+  assert.equal(validDraft({ ...imported, origin: 'DRAFT_TRADE', priceBasis: 'MANUAL' }), false);
 });
 
 test('missing quote creates a visible unpriced draft instead of inventing a premium', () => {

@@ -41,7 +41,7 @@ export function LegalLayout({
         {unfilled.length > 0 && (
           <div
             role="note"
-            className="mb-6 flex gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200"
+            className="mb-6 flex gap-2 rounded-md border border-orange-500/40 bg-orange-500/10 px-3 py-2 text-sm text-orange-200"
           >
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
             <span>

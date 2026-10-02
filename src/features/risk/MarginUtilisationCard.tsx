@@ -8,8 +8,8 @@ import type { MarginUtilisationReport } from "@/types/api";
 /** Amber past two thirds, red past 90% — the point where a bad day forces a trade. */
 function barColour(pct: number) {
   if (pct >= 90) return "bg-destructive";
-  if (pct >= 66) return "bg-amber-500";
-  return "bg-primary";
+  if (pct >= 66) return "bg-orange-500";
+  return "bg-muted-foreground/70";
 }
 
 export function MarginUtilisationCard({ margin }: { margin: MarginUtilisationReport }) {

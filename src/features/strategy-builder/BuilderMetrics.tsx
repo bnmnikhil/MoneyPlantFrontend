@@ -42,7 +42,7 @@ export function BuilderMargin({ comparison, account }: { comparison: PayoffCompa
       <div className="builder-margin-values">
         <div><p>Existing margin</p><strong>{margin.baseline ? formatINRWhole(margin.baseline.withBenefitMargin) : "—"}</strong></div>
         <div><p>After adjustments</p><strong>{formatINRWhole(margin.combined.withBenefitMargin)}</strong></div>
-        <div><p>Hedge benefit</p><strong className="text-primary">{formatINRWhole(margin.combined.hedgeBenefit)}</strong></div>
+        <div><p>Hedge benefit</p><strong className="text-profit">{formatINRWhole(margin.combined.hedgeBenefit)}</strong></div>
       </div><p className="mt-2 text-xs text-muted-foreground">Uses known marks. Premium is separate; this is not the broker's margin bill.</p>
     </> : <p className="mt-3 text-sm text-muted-foreground">Unavailable: {margin.status.replace(/_/g, " ").toLowerCase()}.</p>}
   </section>;

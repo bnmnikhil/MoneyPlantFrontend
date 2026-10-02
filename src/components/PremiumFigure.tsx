@@ -71,7 +71,7 @@ export function PremiumFigure({
 
   return (
     <span
-      className={`inline-flex flex-col items-end leading-tight ${compact ? "text-primary" : ""}`}
+      className={`inline-flex flex-col items-end leading-tight ${compact ? "text-foreground" : ""}`}
       title={
         (premiumLeft >= 0
           ? "Net option premium at current marks: short option value minus long option value. Includes intrinsic and time value; not guaranteed remaining profit."

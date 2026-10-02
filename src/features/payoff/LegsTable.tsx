@@ -2,7 +2,7 @@
 import { formatINR, formatNumber } from "@/lib/format";
 
 function DirTag({ qty }: { qty: number }) {
-  return <span className={`tnum whitespace-nowrap ${qty < 0 ? "text-loss" : "text-primary"}`}>{qty < 0 ? "Short" : "Long"} {formatNumber(Math.abs(qty))}</span>;
+  return <span className="tnum whitespace-nowrap text-foreground">{qty < 0 ? "Short" : "Long"} {formatNumber(Math.abs(qty))}</span>;
 }
 
 function TypeTag({ type }: { type: PayoffLeg["type"] }) {

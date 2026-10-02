@@ -62,7 +62,7 @@ function ConcentrationBars({ slices }: { slices: Concentration[] }) {
           </div>
           <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
             <div
-              className="h-full bg-primary transition-all"
+              className="h-full bg-muted-foreground/70 transition-all"
               style={{ width: `${Math.min(s.percent, 100)}%` }}
             />
           </div>
@@ -103,7 +103,7 @@ export function RiskPage() {
             Risk data calculated as of:{" "}
             <strong className="text-foreground">{new Date(data.asOf).toLocaleString()}</strong>
           </span>
-          <span className="font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary">
+          <span className="font-semibold px-2 py-0.5 rounded bg-secondary text-foreground">
             {freshness}
           </span>
         </div>
@@ -115,7 +115,7 @@ export function RiskPage() {
         missing broker could hold anything.
       */}
       {warnings.length > 0 && (
-        <div className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-400 px-3 py-2 rounded border border-amber-500/30 flex items-start gap-2">
+        <div className="text-xs bg-orange-500/10 text-orange-700 dark:text-orange-400 px-3 py-2 rounded border border-orange-500/30 flex items-start gap-2">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
           <div>
             <p className="font-medium">
@@ -309,7 +309,7 @@ export function RiskPage() {
                             <span
                               className={
                                 bucket.tier === "EXPIRED"
-                                  ? "text-amber-600 dark:text-amber-400"
+                                  ? "text-orange-600 dark:text-orange-400"
                                   : undefined
                               }
                             >

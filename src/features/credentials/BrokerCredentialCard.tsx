@@ -101,7 +101,7 @@ export function BrokerCredentialCard({
               New registration
             </span>
           ) : configured ? (
-            <span className="flex items-center gap-1 text-xs font-normal text-emerald-500">
+            <span className="flex items-center gap-1 text-xs font-normal text-profit">
               <CheckCircle2 className="size-3.5" />
               Stored
             </span>

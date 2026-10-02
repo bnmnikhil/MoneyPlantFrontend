@@ -21,18 +21,18 @@ function WarningRow({ warning }: { warning: BrokerWarning }) {
   const pending = connect.isPending && connect.variables?.brokerId === warning.brokerId;
 
   return (
-    <div className="flex flex-col items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col items-start gap-3 rounded-lg border border-orange-500/30 bg-orange-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-3">
-        <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-400" />
+        <TriangleAlert className="mt-0.5 size-4 shrink-0 text-orange-400" />
         <div className="text-sm">
-          <p className="font-medium text-amber-200">
+          <p className="font-medium text-orange-200">
             {expired
               ? `${brokerLabel(warning.brokerId)} session expired`
               : unsupported
                 ? `${brokerLabel(warning.brokerId)} does not provide this data`
                 : `Couldn't reach ${brokerLabel(warning.brokerId)}`}
           </p>
-          <p className="text-amber-200/70">
+          <p className="text-orange-200/70">
             {expired
               ? "Data below excludes this broker until you reconnect it."
               : unsupported

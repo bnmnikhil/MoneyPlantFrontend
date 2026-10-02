@@ -24,10 +24,10 @@ export function Logo({
         <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden="true">
           <path d="M20 10C15 6.5 9 5.5 3 6.5V31C9 30 15 31 20 34.5Z" fill={GOLD} />
           <path d="M20 10C25 6.5 31 5.5 37 6.5V31C31 30 25 31 20 34.5Z" fill={GOLD_LIGHT} />
-          <path d="M20 10V34.5" stroke="#061820" strokeWidth="1.6" strokeLinecap="round" />
-          <path d="M8 13.5C11 13.2 14 13.8 16.5 15M8 19C11 18.7 14 19.3 16.5 20.5" stroke="#061820" strokeOpacity="0.45" strokeWidth="1.4" strokeLinecap="round" />
+          <path d="M20 10V34.5" stroke="#0F0E0C" strokeWidth="1.6" strokeLinecap="round" />
+          <path d="M8 13.5C11 13.2 14 13.8 16.5 15M8 19C11 18.7 14 19.3 16.5 20.5" stroke="#0F0E0C" strokeOpacity="0.45" strokeWidth="1.4" strokeLinecap="round" />
         </svg>
-        {showWordmark && <span className="text-[22px] font-semibold tracking-tight text-foreground xl:text-[28px]">GoldenBook</span>}
+        {showWordmark && <span className="font-serif text-[22px] font-semibold tracking-tight text-foreground xl:text-[28px]">GoldenBook</span>}
       </span>
     );
   }
@@ -53,7 +53,7 @@ export function Logo({
         </svg>
       </span>
       {showWordmark && (
-        <span className="text-[15px] font-semibold tracking-tight text-foreground">
+        <span className="font-serif text-[15px] font-semibold tracking-tight text-foreground">
           GoldenBook
         </span>
       )}

@@ -32,7 +32,7 @@ export function Topbar() {
   const statusLabel = status.isPending ? "Checking" : status.isError ? "Unavailable" :
     allConnected ? "Live" : status.anyConnected ? "Partial" : "Offline";
   const dotClass = status.isPending || status.isError ? "bg-muted-foreground" :
-    allConnected ? "bg-primary shadow-[0_0_8px_#00e9bf30]" : "bg-amber-400";
+    allConnected ? "bg-profit" : "bg-orange-400";
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
@@ -50,7 +50,7 @@ export function Topbar() {
             <NavLink key={item.to} to={item.to} end={item.end}
               className={({ isActive }) => cn(
                 "rounded-md px-3 py-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:px-4 lg:text-base xl:px-5 xl:text-lg",
-                isActive ? "workspace-nav-active text-white" : "text-foreground/90 hover:bg-secondary hover:text-white"
+                isActive ? "workspace-nav-active" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
               )}>
               {item.label}
             </NavLink>
@@ -91,9 +91,9 @@ export function Topbar() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button type="button" aria-label="Account menu" className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                <Avatar className="size-9 border border-[#d4e5ff] md:size-11">
+                <Avatar className="size-9 border border-primary/40 md:size-11">
                   {me?.picture && <AvatarImage src={me.picture} alt={me.name} referrerPolicy="no-referrer" />}
-                  <AvatarFallback className="bg-[#c4d9f7] text-base font-semibold text-[#081824]">{initials(me?.name)}</AvatarFallback>
+                  <AvatarFallback className="bg-primary/15 text-base font-semibold text-primary">{initials(me?.name)}</AvatarFallback>
                 </Avatar>
               </button>
             </DropdownMenuTrigger>

@@ -77,7 +77,7 @@ export function OptionChainPicker({ chain, isLoading, error, onRetry, onExpand, 
       )}
       {!chain && !isLoading && !error && <p className="builder-empty">Choose an expiry and an available quote source to load the chain.</p>}
       {chain && <button type="button" className="builder-chain-expand" onClick={onExpand} disabled={!canExpand || isLoading}><ChevronDown className="size-4" />{canExpand ? "Load 10 more strikes each side" : "Maximum strike window loaded"}</button>}
-      {chain?.warnings.map((warning) => <p key={warning} role="status" className="text-xs text-amber-600">{warning}</p>)}
+      {chain?.warnings.map((warning) => <p key={warning} role="status" className="text-xs text-orange-600">{warning}</p>)}
     </div>
   );
 }

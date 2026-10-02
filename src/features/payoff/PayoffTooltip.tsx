@@ -1,7 +1,7 @@
 import { formatINRWhole } from "@/lib/format";
 
-const GREEN = "#199e70";
-const RED = "#e34948";
+const GREEN = "#3FCB85";
+const RED = "#FF6B5E";
 
 export function spotChangeLabel(hoveredSpot: number, referenceSpot: number): string | null {
   if (!Number.isFinite(hoveredSpot) || !Number.isFinite(referenceSpot) || referenceSpot <= 0) {

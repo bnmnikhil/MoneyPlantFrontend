@@ -10,7 +10,7 @@ export function PayoffSummary({ data, loading }: { data?: PayoffResponse; loadin
   const payoff = data?.payoff;
   const mixed = (data?.expiries.length ?? 0) > 1;
   const metrics = [
-    { label: "Current spot", value: data && data.spot > 0 ? formatINRWhole(data.spot) : "—", colour: "text-amber-300" },
+    { label: "Current spot", value: data && data.spot > 0 ? formatINRWhole(data.spot) : "—", colour: "text-foreground" },
     { label: mixed ? "Scenario max profit" : "Max profit", value: payoff?.unboundedProfit ? "Unlimited" : payoff ? formatINRWhole(payoff.maxProfit) : "—", colour: "text-profit" },
     { label: mixed ? "Scenario max loss" : "Max loss", value: payoff?.unboundedLoss ? "Unlimited" : payoff ? formatINRWhole(payoff.maxLoss) : "—", colour: "text-loss" },
     { label: "Breakeven", value: payoff?.breakevens.length ? payoff.breakevens.map(formatINRWhole).join(" / ") : "—", colour: "" },

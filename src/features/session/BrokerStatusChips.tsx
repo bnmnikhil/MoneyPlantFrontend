@@ -17,7 +17,7 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
  * payoff selector's rule for the broker name — a lone account is unambiguous,
  * and "Zerodha · ZR4821" beside nothing else is just noise.
  *
- * This row is *status*, so an amber chip means "something is not connected" and
+ * This row is *status*, so an orange chip means "something is not connected" and
  * nothing else. It used to also carry an add-another-account button per
  * registration, which meant a fully connected user still saw a button per
  * registration and read the row as duplicated. Linking a second account through
@@ -67,7 +67,7 @@ function ConnectChip({
       type="button"
       onClick={() => connect.mutate({ brokerId, label })}
       disabled={pending}
-      className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/20 disabled:opacity-60"
+      className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-xs font-medium text-orange-300 transition-colors hover:bg-orange-500/20 disabled:opacity-60"
       title={
         showLabel && label
           ? `Connect ${brokerLabel(brokerId)} using your "${label}" registration`
@@ -77,10 +77,10 @@ function ConnectChip({
       {pending ? (
         <Loader2 className="size-3 animate-spin" />
       ) : (
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+        <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
       )}
       {brokerLabel(brokerId)}
-      {showLabel && label && <span className="text-amber-300/70">· {label}</span>}
+      {showLabel && label && <span className="text-orange-300/70">· {label}</span>}
     </button>
   );
 

@@ -18,10 +18,11 @@ import type { ReferenceLabel } from "./referenceLabels";
 import { PayoffTooltip } from "./PayoffTooltip";
 import { formatINRWhole, formatNumber } from "@/lib/format";
 
-const GREEN = "#199e70";
-const RED = "#e34948";
+const GREEN = "#3FCB85";
+const RED = "#FF6B5E";
 const MUTED = "hsl(var(--muted-foreground))";
-const AMBER = "#f5b34a";
+// Spot is drawn in the text colour: amber would read as the brand gold.
+const SPOT = "#F2EDE3";
 
 function ChartReferenceLabel({ viewBox, marker, color }: {
   viewBox?: { x?: number; y?: number };
@@ -130,18 +131,18 @@ export function PayoffChart({
         >
           <defs>
             <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset={0} stopColor={styled ? "#00ecc3" : GREEN} stopOpacity={0.18} />
-              <stop offset={gradientOffset} stopColor={styled ? "#00ecc3" : GREEN} stopOpacity={0.04} />
+              <stop offset={0} stopColor={GREEN} stopOpacity={0.18} />
+              <stop offset={gradientOffset} stopColor={GREEN} stopOpacity={0.04} />
               <stop offset={gradientOffset} stopColor={RED} stopOpacity={0.04} />
               <stop offset={1} stopColor={RED} stopOpacity={0.18} />
             </linearGradient>
             <linearGradient id={strokeId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset={gradientOffset} stopColor={styled ? "#00ecc3" : GREEN} stopOpacity={1} />
+              <stop offset={gradientOffset} stopColor={GREEN} stopOpacity={1} />
               <stop offset={gradientOffset} stopColor={RED} stopOpacity={1} />
             </linearGradient>
           </defs>
 
-          {styled && <CartesianGrid stroke="#173541" strokeOpacity={0.7} />}
+          {styled && <CartesianGrid stroke="#2C2821" strokeOpacity={0.7} />}
 
           <XAxis
             dataKey="spot"
@@ -175,7 +176,7 @@ export function PayoffChart({
             strokeWidth={2}
             fill={`url(#${fillId})`}
             dot={false}
-            activeDot={styled ? { r: 6, stroke: "#00ecc3", strokeWidth: 4, fill: "#eafffa" } : { r: 3 }}
+            activeDot={styled ? { r: 6, stroke: GREEN, strokeWidth: 4, fill: "#F2EDE3" } : { r: 3 }}
             isAnimationActive={false}
           />
           {baseline && (
@@ -214,12 +215,12 @@ export function PayoffChart({
           {spot > 0 && spot >= xMin && spot <= xMax && (
             <ReferenceLine
               x={spot}
-              stroke={AMBER}
+              stroke={SPOT}
               strokeDasharray="4 4"
-              label={styled ? <ChartReferenceLabel marker={referenceLabels.find((label) => label.key === "spot")} color={AMBER} /> : {
+              label={styled ? <ChartReferenceLabel marker={referenceLabels.find((label) => label.key === "spot")} color={SPOT} /> : {
                 value: `Spot ${formatINRWhole(spot)}`,
                 position: "insideTopRight",
-                fill: AMBER,
+                fill: SPOT,
                 fontSize: 11,
                 fontWeight: 600,
               }}

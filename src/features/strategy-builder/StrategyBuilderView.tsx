@@ -350,7 +350,7 @@ export function StrategyBuilderView({ initialBaseline, onBackToLive, active = tr
     {!selection && <div className="builder-panel builder-empty">Search the exchange catalogue to start a strategy, or add existing positions above.</div>}
     {selection?.hasOptions === false && <div className="builder-panel builder-empty"><strong>No listed options</strong><p>{selection.name} has no listed option contracts in the current catalogue.</p></div>}
     {selection && selection.hasOptions !== false && <>
-      {!availableSources.length && <p role="status" className="text-sm text-amber-300">Option data unavailable. Connect a market-data-capable broker for chain quotes.</p>}
+      {!availableSources.length && <p role="status" className="text-sm text-orange-300">Option data unavailable. Connect a market-data-capable broker for chain quotes.</p>}
       {sources.isError && <p role="alert" className="text-sm text-loss">Could not load quote sources. <button className="underline" onClick={() => sources.refetch()}>Retry</button></p>}
       {expiries.isError && <p role="alert" className="text-sm text-loss">Could not load expiries. <button className="underline" onClick={() => expiries.refetch()}>Retry</button></p>}
       <div className="builder-grid">
@@ -395,7 +395,7 @@ export function StrategyBuilderView({ initialBaseline, onBackToLive, active = tr
         </div>
       </div>
       {comparison && comparison.expiries.length > 1 && <p role="note" className="payoff-warning">Expiry scenario: {comparison.expiries.map(expiryLabel).join(" / ")}. A single terminal price is applied to every expiry; later-contract time value is not modelled at the first expiry.</p>}
-      {comparison?.warnings.map((warning) => <p key={warning} role="status" className="text-xs text-amber-300">{warning}</p>)}
+      {comparison?.warnings.map((warning) => <p key={warning} role="status" className="text-xs text-orange-300">{warning}</p>)}
       {comparison?.assumptions.map((assumption) => <p key={assumption} className="text-xs text-muted-foreground">{assumption}</p>)}
     </>}
     {onBackToLive && <button type="button" onClick={onBackToLive} className="justify-self-start text-sm text-muted-foreground hover:text-primary">Back to live positions</button>}

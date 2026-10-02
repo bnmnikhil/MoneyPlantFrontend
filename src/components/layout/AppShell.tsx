@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { Topbar } from "@/components/layout/Topbar";
 import { MobileTabBar } from "@/components/layout/MobileTabBar";
+import { LegalFooter } from "@/features/legal/LegalFooter";
 import { BrokerSessionBanner } from "@/features/session/BrokerSessionBanner";
 import { useBrokerDefinitions } from "@/features/brokers/hooks";
 import {
@@ -43,6 +44,7 @@ export function AppShell() {
             )}
             <Outlet />
           </div>
+          <LegalFooter className="mt-8" />
         </main>
       </div>
 

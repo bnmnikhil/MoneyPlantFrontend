@@ -1,4 +1,4 @@
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
@@ -89,8 +89,17 @@ export function LoginPage() {
             Continue with Google
           </Button>
 
-          <p className="text-xs text-muted-foreground">
-            Private system. Access restricted.
+          <p className="text-xs leading-relaxed text-muted-foreground text-pretty">
+            By continuing you agree to the{" "}
+            <Link to="/terms" className="underline underline-offset-2 hover:text-foreground">
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
+              Privacy policy
+            </Link>
+            . MoneyPlant is read-only, places no orders and is not investment
+            advice.
           </p>
         </CardContent>
       </Card>

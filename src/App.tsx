@@ -10,6 +10,8 @@ import { PayoffPage } from "@/pages/PayoffPage";
 import { RiskPage } from "@/pages/RiskPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
+import { PrivacyPage } from "@/pages/PrivacyPage";
+import { TermsPage } from "@/pages/TermsPage";
 
 export default function App() {
   return (
@@ -17,6 +19,8 @@ export default function App() {
       {/* Public */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
 
       {/* Authenticated shell */}
       <Route element={<AuthGuard />}>

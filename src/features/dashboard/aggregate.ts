@@ -41,7 +41,7 @@ export interface DashboardTotals {
   holdingCount: number;
   available: number;
   used: number;
-  /** available + used. A MoneyPlant convention — no broker supplies it. */
+  /** available + used. A GoldenBook convention — no broker supplies it. */
   total: number;
   collateral: number;
   /** used / total, as a percentage. 0 when nothing is funded. */

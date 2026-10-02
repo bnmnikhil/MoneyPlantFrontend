@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 export function OverviewMoney({ value, partial = false }: { value: number | null; partial?: boolean }) {
   return <span className={cn("tnum whitespace-nowrap font-semibold", value === null ? "text-muted-foreground" : pnlColor(value))}>
     {value === null ? "—" : formatSignedINRWhole(value)}
-    {partial && value !== null && <span className="ml-1 text-xs text-amber-300" title="Partial total: some accounts could not be loaded" aria-label="Partial total">*</span>}
+    {partial && value !== null && <span className="ml-1 text-xs text-orange-300" title="Partial total: some accounts could not be loaded" aria-label="Partial total">*</span>}
   </span>;
 }
 
@@ -24,13 +24,15 @@ export function OverviewBroker({ brokerId, account }: { brokerId: string; accoun
 
 export function UtilisationBar({ percent, large = false }: { percent: number | null; large?: boolean }) {
   if (percent === null) return <span className="text-muted-foreground">—</span>;
-  const fill = percent > 85 ? "from-[#ff6666] to-[#ef4444]" : percent >= 60 ? "from-[#ffd451] to-[#ffc329]" : "from-[#00efc2] to-[#00bd92]";
+  // Neutral by default; orange when high. Never gold (that is the brand) and never
+  // green or red (those mean profit and loss).
+  const fill = percent >= 60 ? "bg-orange-400" : "bg-muted-foreground/70";
   return <div className={cn("flex items-center gap-3", large && "flex-col items-stretch gap-1") }>
     <span className="tnum whitespace-nowrap">{percent.toFixed(0)}%{large && " utilised"}</span>
     <div className="flex min-w-0 flex-1 items-center gap-4">
       <div role="meter" aria-label="Capital utilisation" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, percent)} aria-valuetext={`${percent.toFixed(0)}% utilised`}
-        className={cn("min-w-16 flex-1 overflow-hidden rounded-full bg-[#223441]", large ? "h-3.5" : "h-3")}>
-        <div className={cn("h-full rounded-full bg-gradient-to-r", fill)} style={{ width: `${Math.min(100, Math.max(0, percent))}%` }} />
+        className={cn("min-w-16 flex-1 overflow-hidden rounded-full bg-border", large ? "h-3.5" : "h-3")}>
+        <div className={cn("h-full rounded-full", fill)} style={{ width: `${Math.min(100, Math.max(0, percent))}%` }} />
       </div>
       {large && <span className="tnum whitespace-nowrap text-sm text-muted-foreground">{Math.max(0, 100 - percent).toFixed(0)}% free</span>}
     </div>

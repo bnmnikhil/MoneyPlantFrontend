@@ -35,7 +35,7 @@ export function PositionsPage() {
   const known = !!data && !isError && !(partial && positions.length === 0);
   const accountLabels = new Map(status.connections.map((connection) => [connection.connectionId, connection.accountLabel]));
   const refresh = <RefreshBar updatedAt={dataUpdatedAt} isFetching={isFetching} onRefresh={() => { void refetch(); }} />;
-  const partialMarker = partial && known ? <span className="ml-1 text-sm text-amber-300" title="Partial total: some broker accounts could not be loaded" aria-label="Partial total">*</span> : null;
+  const partialMarker = partial && known ? <span className="ml-1 text-sm text-orange-300" title="Partial total: some broker accounts could not be loaded" aria-label="Partial total">*</span> : null;
   const metrics = [
     { label: "Open positions", value: known ? formatNumber(summary.openCount) : "—", className: "" },
     { label: "Positions P&L", value: known ? formatSignedINRWhole(summary.pnl) : "—", className: known ? pnlColor(summary.pnl) : "" },
@@ -58,7 +58,7 @@ export function PositionsPage() {
         <div className="positions-metric-value" title="Sum of the available underlying estimates for displayed groups; not the sum of broker account bills.">
           {isLoading || risk.isLoading ? <Skeleton className="h-9 w-32" /> : <>
             {known && summary.estimatedMargin !== null ? formatINRWhole(summary.estimatedMargin) : "—"}
-            {known && summary.estimatedMargin !== null && summary.missingMarginLegs > 0 && <span className="ml-1 text-sm text-amber-300" title="Some displayed positions have no margin estimate" aria-label="Incomplete margin estimate">+?</span>}
+            {known && summary.estimatedMargin !== null && summary.missingMarginLegs > 0 && <span className="ml-1 text-sm text-orange-300" title="Some displayed positions have no margin estimate" aria-label="Incomplete margin estimate">+?</span>}
             {partialMarker}
           </>}
         </div>

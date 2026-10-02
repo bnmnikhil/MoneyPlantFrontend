@@ -53,7 +53,7 @@ export function OverviewCapitalTable({ rows, totals, marginWarnings = [] }: Prop
         <td>{row.margin ? formatINRWhole(row.margin.used) : "—"}</td>
         <td><UtilisationBar percent={row.margin ? capitalUtilisation(row.margin.available, row.margin.used) : null} /></td>
       </tr>)}</tbody>
-      <tfoot><tr title="Combined view only. Capital remains in separate broker accounts."><th>Total{partial && <span className="ml-1 text-amber-300" title="Some account margins are unavailable">*</span>}</th>
+      <tfoot><tr title="Combined view only. Capital remains in separate broker accounts."><th>Total{partial && <span className="ml-1 text-orange-300" title="Some account margins are unavailable">*</span>}</th>
         <td>{known ? formatINRWhole(totals.available) : "—"}</td><td>{known ? formatINRWhole(totals.used) : "—"}</td>
         <td><UtilisationBar percent={known ? capitalUtilisation(totals.available, totals.used) : null} /></td>
       </tr></tfoot>

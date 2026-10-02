@@ -69,7 +69,7 @@ export function DashboardPage() {
           {metric.hint && <p className="text-sm text-muted-foreground">{metric.hint}</p>}
         </div>)}
         <div className="overview-metric overview-capital" title="Combined view only. Capital remains in separate broker accounts.">
-          <div className="mb-1 text-base text-muted-foreground">Capital{marginsPartial && knownCapital && <span className="ml-1 text-amber-300" aria-label="Partial capital total">*</span>}</div>
+          <div className="mb-1 text-base text-muted-foreground">Capital{marginsPartial && knownCapital && <span className="ml-1 text-orange-300" aria-label="Partial capital total">*</span>}</div>
           {margins.isLoading ? <Skeleton className="h-10 w-full" /> : <UtilisationBar percent={utilisation} large />}
         </div>
       </section>

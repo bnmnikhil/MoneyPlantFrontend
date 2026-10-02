@@ -1,7 +1,11 @@
 import { cn } from "@/lib/utils";
 
+/** The mark's two golds: the lit page and the shaded one. Fixed, not themed — it is the brand. */
+const GOLD = "#F5B942";
+const GOLD_LIGHT = "#FFD677";
+
 /**
- * MoneyPlant wordmark + sprout glyph. Purely CSS/SVG primitives (no imagery).
+ * GoldenBook wordmark + open-book glyph. Purely CSS/SVG primitives (no imagery).
  */
 export function Logo({
   className,
@@ -18,40 +22,39 @@ export function Logo({
     return (
       <span className={cn("inline-flex shrink-0 items-center gap-2.5", className)}>
         <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden="true">
-          <path d="M20 13C25 5 32 3 38 3C38 17 33 28 21 31C16 32 12 30 10 27C13 22 17 18 20 13Z" fill="#00E9BF" />
-          <path d="M18 14C12 9 6 12 4 18C2 24 7 29 12 29L25 16C23 15 21 15 18 14Z" fill="#00F5C4" />
-          <path d="M3 36L29 11" stroke="#061820" strokeWidth="2.4" strokeLinecap="round" />
-          <path d="M3 36L12 27" stroke="#00E9BF" strokeWidth="2" strokeLinecap="round" />
+          <path d="M20 10C15 6.5 9 5.5 3 6.5V31C9 30 15 31 20 34.5Z" fill={GOLD} />
+          <path d="M20 10C25 6.5 31 5.5 37 6.5V31C31 30 25 31 20 34.5Z" fill={GOLD_LIGHT} />
+          <path d="M20 10V34.5" stroke="#0F0E0C" strokeWidth="1.6" strokeLinecap="round" />
+          <path d="M8 13.5C11 13.2 14 13.8 16.5 15M8 19C11 18.7 14 19.3 16.5 20.5" stroke="#0F0E0C" strokeOpacity="0.45" strokeWidth="1.4" strokeLinecap="round" />
         </svg>
-        {showWordmark && <span className="text-[22px] font-semibold tracking-tight text-foreground xl:text-[28px]">MoneyPlant</span>}
+        {showWordmark && <span className="font-serif text-[22px] font-semibold tracking-tight text-foreground xl:text-[28px]">GoldenBook</span>}
       </span>
     );
   }
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <span
-        className="grid place-items-center rounded-lg bg-primary/12 ring-1 ring-inset ring-primary/25"
+        className="grid place-items-center rounded-lg bg-[#F5B942]/12 ring-1 ring-inset ring-[#F5B942]/25"
         style={{ width: size, height: size }}
         aria-hidden
       >
         <svg
           viewBox="0 0 24 24"
           fill="none"
-          stroke="currentColor"
-          className="text-primary"
+          stroke={GOLD}
           style={{ width: size * 0.62, height: size * 0.62 }}
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          <path d="M12 20v-7" />
-          <path d="M12 13c0-3.3 2.5-5.5 6-5.5-.2 3.6-2.6 5.5-6 5.5Z" />
-          <path d="M12 15c0-2.6-2-4.4-5-4.4.2 2.8 2.2 4.4 5 4.4Z" />
+          <path d="M12 7c-2.5-2-5.5-2.5-9-2v13c3.5-.5 6.5 0 9 2" />
+          <path d="M12 7c2.5-2 5.5-2.5 9-2v13c-3.5-.5-6.5 0-9 2" />
+          <path d="M12 7v13" />
         </svg>
       </span>
       {showWordmark && (
-        <span className="text-[15px] font-semibold tracking-tight text-foreground">
-          MoneyPlant
+        <span className="font-serif text-[15px] font-semibold tracking-tight text-foreground">
+          GoldenBook
         </span>
       )}
     </span>

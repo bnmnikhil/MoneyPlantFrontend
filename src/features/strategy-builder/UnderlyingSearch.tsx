@@ -71,7 +71,7 @@ export function UnderlyingSearch({ selected, onSelect }: {
               </span>
             </button>
           ))}
-          {search.data?.warnings.map((warning) => <p key={warning} className="p-2 text-xs text-amber-600">{warning}</p>)}
+          {search.data?.warnings.map((warning) => <p key={warning} className="p-2 text-xs text-orange-600">{warning}</p>)}
         </div>
       )}
     </div>

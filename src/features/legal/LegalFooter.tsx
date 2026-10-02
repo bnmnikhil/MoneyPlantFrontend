@@ -15,12 +15,12 @@ export function LegalFooter({ className }: { className?: string }) {
       )}
     >
       <p className="text-pretty">
-        MoneyPlant is a read-only viewer: it places no orders and is not
+        GoldenBook is a read-only viewer: it places no orders and is not
         investment advice. All figures are estimates — your broker is the source
         of truth.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
-        <span>© {new Date().getFullYear()} MoneyPlant</span>
+        <span>© {new Date().getFullYear()} GoldenBook</span>
         <Link to="/privacy" className="hover:text-foreground">
           Privacy
         </Link>

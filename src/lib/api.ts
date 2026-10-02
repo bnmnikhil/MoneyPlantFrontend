@@ -33,7 +33,7 @@ export const BROKER_NOT_CONFIGURED = "BROKER_NOT_CONFIGURED";
 export const BROKER_CREDENTIAL_UNREADABLE = "BROKER_CREDENTIAL_UNREADABLE";
 
 /** Event fired when a broker needs (re)authorising, so any listener can react. */
-export const BROKER_SESSION_LOST_EVENT = "moneyplant:broker-session-lost";
+export const BROKER_SESSION_LOST_EVENT = "goldenbook:broker-session-lost";
 
 export interface BrokerSessionLostDetail {
   brokerId: string | null;

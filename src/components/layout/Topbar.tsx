@@ -40,7 +40,7 @@ export function Topbar() {
         Skip to content
       </a>
       <div className="flex min-h-[68px] items-center gap-3 px-4 sm:px-6 md:min-h-[76px] lg:gap-6 lg:px-7">
-        <Link to="/app" aria-label="MoneyPlant overview" className="shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <Link to="/app" aria-label="GoldenBook overview" className="shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <Logo variant="header" size={38} className="hidden sm:inline-flex lg:[&>span]:hidden xl:[&>span]:inline" />
           <Logo variant="header" size={32} showWordmark={false} className="sm:hidden" />
         </Link>

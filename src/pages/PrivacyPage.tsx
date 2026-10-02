@@ -13,7 +13,7 @@ const sections: LegalSection[] = [
     title: "Who we are",
     body: (
       <p>
-        MoneyPlant is operated by <strong>{d.operatorName}</strong>, {d.operatorLocation} ("we",
+        GoldenBook is operated by <strong>{d.operatorName}</strong>, {d.operatorLocation} ("we",
         "us"). For the personal data described here we are the Data Fiduciary under India's
         Digital Personal Data Protection Act, 2023. Contact us at{" "}
         <a href={`mailto:${d.contactEmail}`}>{d.contactEmail}</a>.
@@ -64,7 +64,7 @@ const sections: LegalSection[] = [
         </ul>
         <p>
           We do <strong>not</strong> sell your data, show you advertising, share your portfolio
-          with other users, or use it to build profiles or train AI models. MoneyPlant cannot place
+          with other users, or use it to build profiles or train AI models. GoldenBook cannot place
           orders or move money.
         </p>
       </>
@@ -95,7 +95,7 @@ const sections: LegalSection[] = [
           connect). We send them your credentials and tokens to fetch your own data.
         </li>
         <li>
-          <strong>Oracle Cloud Infrastructure</strong>, which hosts MoneyPlant and its encrypted
+          <strong>Oracle Cloud Infrastructure</strong>, which hosts GoldenBook and its encrypted
           backups in its Hyderabad, India region.
         </li>
         <li>
@@ -177,7 +177,7 @@ const sections: LegalSection[] = [
   {
     id: "age",
     title: "Age",
-    body: <p>MoneyPlant is for people aged 18 or over who hold their own broker accounts.</p>,
+    body: <p>GoldenBook is for people aged 18 or over who hold their own broker accounts.</p>,
   },
   {
     id: "changes",

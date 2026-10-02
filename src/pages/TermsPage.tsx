@@ -8,15 +8,15 @@ const sections: LegalSection[] = [
     title: "Agreement",
     body: (
       <p>
-        These terms are an agreement between you and {d.operatorName}, who operates MoneyPlant. By
+        These terms are an agreement between you and {d.operatorName}, who operates GoldenBook. By
         signing in you accept them and the <Link to="/privacy">privacy policy</Link>. If you do
-        not agree, do not use MoneyPlant.
+        not agree, do not use GoldenBook.
       </p>
     ),
   },
   {
     id: "eligibility",
-    title: "Who may use MoneyPlant",
+    title: "Who may use GoldenBook",
     body: (
       <p>
         You must be at least 18, and you may connect only broker accounts that are your own. Use
@@ -26,11 +26,11 @@ const sections: LegalSection[] = [
   },
   {
     id: "service",
-    title: "What MoneyPlant is — and is not",
+    title: "What GoldenBook is — and is not",
     body: (
       <>
         <p>
-          MoneyPlant is a <strong>read-only</strong> tool. It brings together positions, holdings
+          GoldenBook is a <strong>read-only</strong> tool. It brings together positions, holdings
           and margins from the broker accounts you connect, and calculates payoff, margin and risk
           figures from them.
         </p>
@@ -41,7 +41,7 @@ const sections: LegalSection[] = [
           </li>
           <li>
             <strong>It is not investment advice.</strong> We are not a SEBI-registered investment
-            adviser or research analyst. Nothing in MoneyPlant is a recommendation to buy, sell or
+            adviser or research analyst. Nothing in GoldenBook is a recommendation to buy, sell or
             hold anything. The Strategy Builder's templates are educational examples of common
             option structures, not suggestions.
           </li>
@@ -56,7 +56,7 @@ const sections: LegalSection[] = [
     body: (
       <>
         <p>
-          Margin, payoff, profit-and-loss and risk figures are <strong>computed by MoneyPlant</strong>,
+          Margin, payoff, profit-and-loss and risk figures are <strong>computed by GoldenBook</strong>,
           and they can differ from your broker's. In particular, the margin estimate is not the
           exchange's SPAN calculation, and a payoff chart for positions with different expiries is
           a simplified scenario. Data from brokers can be delayed, incomplete or wrong.
@@ -78,7 +78,7 @@ const sections: LegalSection[] = [
           that broker's API terms and paying any fees it charges.
         </li>
         <li>
-          You authorise MoneyPlant to use the credentials you enter for one purpose only: fetching
+          You authorise GoldenBook to use the credentials you enter for one purpose only: fetching
           your own data from that broker on your behalf.
         </li>
         <li>
@@ -86,7 +86,7 @@ const sections: LegalSection[] = [
           regenerate the app at your broker.
         </li>
         <li>
-          Your broker may limit or end API access independently of us. MoneyPlant is not
+          Your broker may limit or end API access independently of us. GoldenBook is not
           affiliated with or endorsed by Zerodha, Alice Blue or Paytm Money, whose names are
           trademarks of their owners.
         </li>
@@ -108,7 +108,7 @@ const sections: LegalSection[] = [
     title: "Availability and price",
     body: (
       <p>
-        {d.pricing} We will give notice before introducing any charge. MoneyPlant is provided "as
+        {d.pricing} We will give notice before introducing any charge. GoldenBook is provided "as
         is" and "as available": it may be unavailable at times — including during market hours —
         and features may change or be withdrawn.
       </p>
@@ -120,7 +120,7 @@ const sections: LegalSection[] = [
     body: (
       <p>
         To the extent the law allows, we are not liable for trading losses, for decisions made
-        using MoneyPlant, for errors or delays in data, or for brokers' outages. Our total liability
+        using GoldenBook, for errors or delays in data, or for brokers' outages. Our total liability
         to you is limited to the amount you have paid us in the preceding twelve months. Nothing
         in these terms limits any right you have that the law does not allow to be excluded.
       </p>
@@ -131,7 +131,7 @@ const sections: LegalSection[] = [
     title: "Ending",
     body: (
       <p>
-        You may stop using MoneyPlant at any time and ask us to delete your data — see{" "}
+        You may stop using GoldenBook at any time and ask us to delete your data — see{" "}
         <Link to="/privacy#rights">your rights</Link>. We may end or suspend access if you breach
         these terms, or if we stop running the service, in which case we will give reasonable
         notice where we can.
@@ -166,7 +166,7 @@ export function TermsPage() {
       title="Terms of use"
       summary={
         <>
-          <strong className="text-foreground">In short:</strong> MoneyPlant shows you your own
+          <strong className="text-foreground">In short:</strong> GoldenBook shows you your own
           broker data and calculates figures from it. It places no orders, it is not investment
           advice, its figures are estimates, and your broker is the source of truth.
         </>

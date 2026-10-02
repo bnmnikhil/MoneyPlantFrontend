@@ -14,7 +14,7 @@ Three conventions already hold in this codebase and are enforced by nothing:
 
 The third is load-bearing in a way the others are not. `lib/api.ts` maps **401 →
 redirect to `/login`** and **409 + a broker error body → the
-`moneyplant:broker-session-lost` window event** that drives the reconnect banner.
+`goldenbook:broker-session-lost` window event** that drives the reconnect banner.
 A `fetch()` written anywhere else silently opts out of both: a dead broker token
 would produce a component-level error instead of the reconnect prompt, and — worse
 — an unhandled 401 would leave the user staring at a broken page rather than
@@ -23,7 +23,7 @@ being sent to sign in.
 There is a live example of how narrow that path already is. A dead Alice Blue
 token returns a plain-text `401`, and because `lib/api.ts` maps *any* 401 to a
 logout redirect, the backend gateway must never let that status escape. One
-broker's expired token would otherwise log the user out of MoneyPlant entirely.
+broker's expired token would otherwise log the user out of GoldenBook entirely.
 That interaction is only reviewable while every request goes through one file.
 
 Conventions that hold by habit stop holding when the codebase doubles, and the

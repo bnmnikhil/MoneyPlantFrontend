@@ -50,7 +50,7 @@ const steps: { title: string; body: string }[] = [
   },
   {
     title: "Create your own API app at each broker",
-    body: "MoneyPlant has no shared broker app — each user registers their own. Kite Connect's personal tier is free; Alice Blue's team must activate the app; Paytm Money asks for your password and OTP at every login.",
+    body: "GoldenBook has no shared broker app — each user registers their own. Kite Connect's personal tier is free; Alice Blue's team must activate the app; Paytm Money asks for your password and OTP at every login.",
   },
   {
     title: "Paste the key and secret, then connect",
@@ -91,7 +91,7 @@ export function LandingPage() {
             All your F&amp;O positions, on one screen
           </h1>
           <p className="max-w-2xl text-balance text-lg text-muted-foreground">
-            MoneyPlant brings your positions, holdings and margins from every
+            GoldenBook brings your positions, holdings and margins from every
             broker together, and charts the payoff of what you actually hold.
             It is read-only: it never places an order.
           </p>
@@ -111,7 +111,7 @@ export function LandingPage() {
         {/* Features */}
         <section aria-labelledby="features" className="mt-20">
           <h2 id="features" className="sr-only">
-            What MoneyPlant does
+            What GoldenBook does
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {features.map(({ icon: Icon, title, body }) => (
@@ -133,14 +133,14 @@ export function LandingPage() {
               Read-only, by design
             </h2>
             <p className="mt-2 text-sm text-muted-foreground text-pretty">
-              MoneyPlant looks at your accounts. It cannot act on them.
+              GoldenBook looks at your accounts. It cannot act on them.
             </p>
           </div>
           <ul className="grid gap-4 sm:grid-cols-3">
             <li className="rounded-xl border border-border bg-card/50 p-5">
               <ShieldCheck className="size-5 text-primary" />
               <p className="mt-3 text-sm font-semibold">No orders, no money movement</p>
-              <p className="mt-1 text-sm text-muted-foreground">There is no code in MoneyPlant that places, modifies or cancels an order.</p>
+              <p className="mt-1 text-sm text-muted-foreground">There is no code in GoldenBook that places, modifies or cancels an order.</p>
             </li>
             <li className="rounded-xl border border-border bg-card/50 p-5">
               <Lock className="size-5 text-primary" />

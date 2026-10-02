@@ -19,7 +19,7 @@ export const legalDetails = {
   effectiveDate: "[DD Month 2026]",
   termsVersion: "[YYYY-MM-DD]",
   /** Plain statement of price; the terms promise notice before this changes. */
-  pricing: "[MoneyPlant is currently free of charge.]",
+  pricing: "[GoldenBook is currently free of charge.]",
 } as const;
 
 export type LegalDetailKey = keyof typeof legalDetails;

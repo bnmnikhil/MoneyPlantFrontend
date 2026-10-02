@@ -107,7 +107,7 @@ function ConfigureBrokersCard({ className }: { className?: string }) {
             Add your broker credentials
           </h2>
           <p className="mx-auto max-w-sm text-sm text-muted-foreground text-pretty">
-            MoneyPlant connects through your own broker API app, so your account
+            GoldenBook connects through your own broker API app, so your account
             access stays yours. Register one at each broker you use, then paste its
             key and secret.
           </p>

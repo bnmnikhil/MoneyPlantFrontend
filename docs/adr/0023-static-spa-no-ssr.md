@@ -5,7 +5,7 @@ Date: 2026-08-11
 
 ## Context
 
-The frontend is a Vite SPA served by Caddy from `/var/www/moneyplant`, alongside
+The frontend is a Vite SPA served by Caddy from `/var/www/goldenbook`, alongside
 a JVM and a Postgres on a single OCI always-free VM. Memory is the binding
 constraint, not CPU.
 

@@ -739,7 +739,7 @@ export interface AccountMargin {
   brokerId: string;
   available: number;
   used: number;
-  /** available + used. A MoneyPlant convention; no vendor supplies it. */
+  /** available + used. A GoldenBook convention; no vendor supplies it. */
   total: number;
   /**
    * Per account only, and never summed. Alice Blue's is `openingCashLimit`, a

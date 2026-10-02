@@ -59,7 +59,7 @@ export function LoginPage() {
 
           <div className="space-y-1.5">
             <h1 className="text-lg font-semibold tracking-tight">
-              Sign in to MoneyPlant
+              Sign in to GoldenBook
             </h1>
             <p className="text-sm text-muted-foreground">
               Continue to your trading terminal.
@@ -98,7 +98,7 @@ export function LoginPage() {
             <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
               Privacy policy
             </Link>
-            . MoneyPlant is read-only, places no orders and is not investment
+            . GoldenBook is read-only, places no orders and is not investment
             advice.
           </p>
         </CardContent>

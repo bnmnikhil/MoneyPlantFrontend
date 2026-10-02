@@ -25,7 +25,7 @@ export function LegalLayout({
   return (
     <div className="flex min-h-svh flex-col bg-background">
       <header className="mx-auto flex w-full max-w-3xl items-center justify-between px-4 py-5 sm:px-6">
-        <Link to="/" aria-label="MoneyPlant home">
+        <Link to="/" aria-label="GoldenBook home">
           <Logo />
         </Link>
         <Link

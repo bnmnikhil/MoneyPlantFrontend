@@ -1,4 +1,4 @@
-# MoneyPlant
+# GoldenBook
 
 Personal options-trading dashboard for Indian markets (NSE F&O via Zerodha Kite).
 Dark, broker-terminal UI. Read-only frontend that talks to a same-origin Spring Boot backend.
@@ -34,7 +34,7 @@ App auth (Google) and broker auth (Kite) are **separate**:
   (handled centrally in `src/lib/api.ts`).
 - **Broker session** — `GET /api/session/status` drives the top-bar chip.
   When the backend returns `409 {"error":"KITE_SESSION_EXPIRED"}`, the API layer
-  emits a `moneyplant:kite-expired` event and the shell shows a reconnect banner
+  emits a `goldenbook:kite-expired` event and the shell shows a reconnect banner
   instead of an error. Connect flow: `GET /api/session/login-url` → redirect to
   the returned `url`.
 

@@ -2,22 +2,10 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
+import { loginErrorMessage } from "@/features/session/loginErrors";
 
 /** Where Spring Security starts the Google flow. One registration, so no chooser. */
 const SIGN_IN_URL = "/oauth2/authorization/google";
-
-/**
- * SecurityConfig redirects here with ?error= when sign-in fails. `not_invited`
- * is the allowlist rejection and is not a fault the user can fix by retrying,
- * so it reads differently from a transient failure.
- */
-function errorMessage(code: string | null): string | null {
-  if (!code) return null;
-  if (code === "not_invited") {
-    return "That Google account is not on the invite list for this instance. Ask the owner to add it.";
-  }
-  return "Sign-in did not complete. Please try again.";
-}
 
 /** Google's "G" mark (official four-color logo). */
 function GoogleIcon() {
@@ -45,7 +33,7 @@ function GoogleIcon() {
 
 export function LoginPage() {
   const [params] = useSearchParams();
-  const message = errorMessage(params.get("error"));
+  const message = loginErrorMessage(params.get("error"));
 
   return (
     <div className="relative flex min-h-svh items-center justify-center bg-background px-4">

@@ -339,6 +339,12 @@ export interface PayoffResponse {
   brokerId: string;
   connectionId: string;
   spot: number;
+  /**
+   * Broker id of the caller's own connection that quoted `spot` ("paytm",
+   * "aliceblue"), or null when nothing could (then `spot` is 0). Never another
+   * user's: spot is fetched and cached per user (L18).
+   */
+  spotSource: string | null;
   legs: PayoffLeg[];
   payoff: Payoff;
   expiries: string[];

@@ -71,6 +71,17 @@ test("unknown spot stays unavailable and unbounded payoff is never shown as a fi
   assert.match(html, /—/);
 });
 
+test("current spot names the user's broker that quoted it", () => {
+  const html = render(PayoffSummary, { loading: false, data: response({ spot: 24812, spotSource: "paytm" }) });
+  assert.match(html, /Current spot.*· paytm/s);
+  assert.match(html, /₹24,812/);
+});
+
+test("an unavailable spot carries no source, even if one is sent", () => {
+  const html = render(PayoffSummary, { loading: false, data: response({ spot: 0, spotSource: "paytm" }) });
+  assert.doesNotMatch(html, /· paytm/);
+});
+
 test("payoff tooltip shows hovered spot change relative to the current spot", () => {
   const tooltip = (hoveredSpot, referenceSpot) => render(PayoffTooltip, {
     active: true,

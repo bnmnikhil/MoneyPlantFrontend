@@ -78,12 +78,19 @@ test("a credential for a broker with no catalogue entry is dropped, not rendered
  * per-broker "Add another registration" button go away: adding a second
  * developer app at Kite is the same act as adding a first one at Paytm.
  */
-test("the dropdown offers every available broker, set up or not", () => {
+test("the dropdown offers every broker the backend returned, set up or not", () => {
+  // Rollout state is the backend's rule (FOUND-06): it returns only brokers usable in
+  // this deployment, so whatever arrives is offered, preview states included.
   assert.deepEqual(
     addableBrokers(definitions).map((definition) => definition.id),
-    ["aliceblue", "kite"],
-    "INTERNAL availability is not offered"
+    definitions.map((definition) => definition.id)
   );
+});
+
+test("the dropdown does not mutate or reorder what the backend sent", () => {
+  const before = definitions.map((definition) => definition.id);
+  addableBrokers(definitions).reverse();
+  assert.deepEqual(definitions.map((definition) => definition.id), before);
 });
 
 test("a registration name is asked for only when that broker already has one", () => {

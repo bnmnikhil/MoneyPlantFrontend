@@ -44,13 +44,19 @@ export function groupRegistrations(
 /**
  * Brokers the Add panel offers.
  *
- * Every available broker, including ones already set up — picking one of those
- * adds a second developer app, which is what the old per-broker "Add another
- * registration" button did. Collapsing both into one list is what lets that
- * button go away.
+ * Every broker the backend returned, including ones already set up — picking one
+ * of those adds a second developer app, which is what the old per-broker "Add
+ * another registration" button did. Collapsing both into one list is what lets
+ * that button go away.
+ *
+ * <b>No rollout filter here.</b> The backend owns rollout state (FOUND-06) and
+ * returns only brokers usable in this deployment, so a STAGING-state broker
+ * arrives on staging and never reaches production's browser. Filtering on
+ * AVAILABLE again on the client would hide it on staging, where it is meant to
+ * be soaked, and would be a second copy of a rule that must have one owner.
  */
 export function addableBrokers(definitions: BrokerDefinition[]): BrokerDefinition[] {
-  return definitions.filter((definition) => definition.availability === "AVAILABLE");
+  return [...definitions];
 }
 
 /** Labels already used at this broker — the set a new registration must avoid. */

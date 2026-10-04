@@ -12,10 +12,14 @@ import { SettingsPage } from "@/pages/SettingsPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { PrivacyPage } from "@/pages/PrivacyPage";
 import { TermsPage } from "@/pages/TermsPage";
+import { StagingBanner } from "@/components/layout/StagingBanner";
+import { isStagingEnvironment } from "@/lib/environment";
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      {isStagingEnvironment(import.meta.env.VITE_ENVIRONMENT) && <StagingBanner />}
+      <Routes>
       {/* Public */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
@@ -35,6 +39,7 @@ export default function App() {
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+      </Routes>
+    </>
   );
 }

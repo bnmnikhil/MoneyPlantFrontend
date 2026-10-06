@@ -32,7 +32,7 @@ export function RegistrationRow({
   credential: BrokerCredential;
   definition: BrokerDefinition;
 }) {
-  const { brokerId, label, apiKey } = credential;
+  const { brokerId, label, apiKey, clientId } = credential;
   const { connections } = useBrokerStatus();
   const accounts = accountsFor(connections, brokerId, label);
 
@@ -60,7 +60,8 @@ export function RegistrationRow({
   const canSave = isComplete(definition, values);
 
   function startEditing() {
-    setValues({ apiKey: apiKey ?? "" });
+    // The key and the client id are identifiers and come back; the secret never does.
+    setValues({ apiKey: apiKey ?? "", ...(clientId ? { clientId } : {}) });
     setEditing(true);
   }
 
@@ -93,6 +94,11 @@ export function RegistrationRow({
           {hint && (
             <Badge variant="outline" className="font-normal text-muted-foreground">
               {definition.credentialFields?.[0]?.label ?? "Key"} {hint}
+            </Badge>
+          )}
+          {clientId && (
+            <Badge variant="outline" className="font-normal text-muted-foreground">
+              {definition.credentialFields?.find((f) => f.key === "clientId")?.label ?? "Client ID"} {clientId}
             </Badge>
           )}
         </div>

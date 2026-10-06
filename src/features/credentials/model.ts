@@ -122,9 +122,14 @@ export function accountsFor(
  * missing value rather than as a silently empty secret.
  */
 export function toCredentialInput(values: Record<string, string>): BrokerCredentialInput {
+  // FOUND-03: an optional clientId for the brokers that need one (Dhan). Sent only when
+  // typed, because the backend refuses one for a broker that does not declare it, so a
+  // stale value carried across brokers fails loudly instead of being stored.
+  const clientId = (values.clientId ?? "").trim();
   return {
     apiKey: (values.apiKey ?? "").trim(),
     apiSecret: (values.apiSecret ?? "").trim(),
+    ...(clientId ? { clientId } : {}),
   };
 }
 

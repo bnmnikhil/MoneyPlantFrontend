@@ -89,6 +89,12 @@ export interface BrokerCredential {
   label: string;
   /** The key itself, so the user can confirm they pasted the right one. Null when unconfigured. */
   apiKey: string | null;
+  /**
+   * The optional second identifier some brokers need before login (Dhan's client id).
+   * An identifier like the key, shown back in the clear; never a secret. Null or absent
+   * for brokers that do not take one.
+   */
+  clientId?: string | null;
   configured: boolean;
 }
 
@@ -96,6 +102,8 @@ export interface BrokerCredential {
 export interface BrokerCredentialInput {
   apiKey: string;
   apiSecret: string;
+  /** Only for a broker whose catalogue declares a `clientId` field; omitted otherwise. */
+  clientId?: string;
 }
 export interface LoginUrl {
   url: string;

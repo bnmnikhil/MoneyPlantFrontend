@@ -158,3 +158,36 @@ test("form values are trimmed on their way to the wire body", () => {
   });
   assert.deepEqual(toCredentialInput({}), { apiKey: "", apiSecret: "" });
 });
+
+// FOUND-03: Dhan's login needs the user's own client id beside the key and secret.
+const dhan = {
+  id: "dhan",
+  displayName: "Dhan",
+  developerConsoleUrl: "https://example.test/dhan",
+  authType: "REDIRECT_CALLBACK",
+  credentialFields: [
+    { key: "apiKey", label: "API key", secret: false, required: true },
+    { key: "apiSecret", label: "API secret", secret: true, required: true },
+    { key: "clientId", label: "Dhan client ID", secret: false, required: true },
+  ],
+  capabilities: [],
+  availability: "STAGING",
+};
+
+test("a broker that declares a client id is not complete without one", () => {
+  assert.equal(isComplete(dhan, { apiKey: "k", apiSecret: "s" }), false);
+  assert.equal(isComplete(dhan, { apiKey: "k", apiSecret: "s", clientId: "  " }), false);
+  assert.equal(isComplete(dhan, { apiKey: "k", apiSecret: "s", clientId: "1100000001" }), true);
+});
+
+test("the client id goes on the wire only when typed, and trimmed", () => {
+  assert.deepEqual(toCredentialInput({ apiKey: "k", apiSecret: "s", clientId: " 1100000001 " }), {
+    apiKey: "k",
+    apiSecret: "s",
+    clientId: "1100000001",
+  });
+  // Kite's form never has one, so Kite's body is unchanged and carries no clientId key at all.
+  const kiteBody = toCredentialInput({ apiKey: "k", apiSecret: "s" });
+  assert.equal("clientId" in kiteBody, false);
+  assert.equal("clientId" in toCredentialInput({ apiKey: "k", apiSecret: "s", clientId: "" }), false);
+});

@@ -108,6 +108,39 @@ export function LandingPage() {
           </div>
         </section>
 
+        {/*
+         * Product preview. Captured from the real app against broker-sim, never
+         * from a user's book; retake it when the payoff page changes visibly.
+         */}
+        <figure className="relative mt-14 sm:mt-16">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-[10%] -top-8 bottom-1/3 rounded-full bg-primary/15 blur-3xl"
+          />
+          <div className="relative overflow-hidden rounded-xl border border-border bg-card shadow-2xl shadow-black/50">
+            <div aria-hidden className="flex items-center gap-1.5 border-b border-border px-4 py-2.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
+              <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
+              <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
+            </div>
+            {/* Phones get the app's own narrow layout, cropped to the figures and the chart, so the numbers stay legible. */}
+            <picture>
+              <source media="(max-width: 639px)" srcSet="/landing/payoff-phone.webp" width={1336} height={1708} />
+              <img
+                src="/landing/payoff.webp"
+                width={2400}
+                height={1500}
+                decoding="async"
+                alt="GoldenBook's payoff page for a BANKNIFTY iron condor: spot, maximum profit and loss, two breakevens and the expiry payoff chart."
+                className="block h-auto w-full"
+              />
+            </picture>
+          </div>
+          <figcaption className="mt-3 text-center text-xs text-muted-foreground">
+            Simulated account and prices. The expiry payoff of an iron condor held in one account.
+          </figcaption>
+        </figure>
+
         {/* Features */}
         <section aria-labelledby="features" className="mt-20">
           <h2 id="features" className="sr-only">

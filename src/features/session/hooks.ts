@@ -73,6 +73,20 @@ export function useConnectBroker() {
   });
 }
 
+/**
+ * Disconnect one broker account. Everything is refetched afterwards, not just the session
+ * status: positions, holdings, margins and payoff curves all included that account's rows.
+ */
+export function useDisconnectBroker() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (connectionId: string) => api.disconnectBroker(connectionId),
+    onSettled: () => {
+      void qc.invalidateQueries();
+    },
+  });
+}
+
 /** Sign out of the app, then hard-redirect to /login. */
 export function useLogout() {
   const qc = useQueryClient();

@@ -236,6 +236,9 @@ export const api = {
   adminStatus: () => request<AdminStatus>("/api/admin/status"),
   brokerDefinitions: () => request<BrokerDefinition[]>("/api/brokers"),
   sessionStatus: () => request<SessionStatus>("/api/session/status"),
+  /** Disconnect one broker account (C5). 404 when it is not this user's, or already gone. */
+  disconnectBroker: (connectionId: string) =>
+    request<void>(`/api/session/${encodeURIComponent(connectionId)}`, { method: "DELETE" }),
   loginUrl: (brokerId: string, label?: string) =>
     request<LoginUrl>(
       `/api/session/login-url?brokerId=${encodeURIComponent(brokerId)}` +

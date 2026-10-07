@@ -3,8 +3,10 @@ import { cn } from "@/lib/utils";
 import { legalDetails } from "@/features/legal/details";
 
 /**
- * The one footer: landing, login, the legal pages and the app shell all render
- * it, so the disclosure and the links read the same everywhere.
+ * The one footer for the public pages: landing, login and the legal pages render
+ * it, so the disclosure and the links read the same everywhere. The signed-in app
+ * has no footer (owner decision, 7 Oct 2026); its legal links are in the header's
+ * More options menu.
  */
 export function LegalFooter({ className }: { className?: string }) {
   return (

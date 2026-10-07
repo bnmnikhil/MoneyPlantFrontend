@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { comparisonRequest, legKey } from "./legSelection";
 import { api } from "@/lib/api";
-import type { CurveRef } from "@/types/api";
+import type { CurveRef, PayoffLeg, PayoffResponse } from "@/types/api";
 
 export const payoffKeys = {
   curves: ["payoff", "curves"] as const,
@@ -28,6 +29,24 @@ export function usePayoff(curve: CurveRef | undefined, includeHoldings = false, 
     enabled: !!curve,
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
+  });
+}
+
+/**
+ * Payoff and margin estimate for a chosen set of a live curve's legs, from the compare endpoint
+ * (those legs as the baseline, nothing drafted). Keyed by the legs and by the payoff's
+ * retrievedAt, so it follows the 30-second refresh. The previous answer is kept during a refresh
+ * of the same legs only: after a tick changes, the old figures are hidden until the new ones
+ * arrive, so a figure never describes a different set of legs from the one on screen.
+ */
+export function useLegScenario(data: PayoffResponse | undefined, legs: PayoffLeg[], enabled = true) {
+  const ids = data ? legs.map((leg) => legKey(leg, data.legs.indexOf(leg))).join("|") : "";
+  return useQuery({
+    queryKey: ["payoff", "scenario", data?.connectionId, data?.underlying, ids, data?.retrievedAt] as const,
+    queryFn: ({ signal }) => api.comparePayoff(comparisonRequest(data!, legs), signal),
+    enabled: enabled && !!data && legs.length > 0,
+    retry: false,
+    placeholderData: (previous, previousQuery) => previousQuery?.queryKey[4] === ids ? previous : undefined,
   });
 }
 

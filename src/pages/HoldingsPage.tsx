@@ -26,7 +26,7 @@ export function HoldingsPage() {
   const warnings = data?.warnings ?? [];
 
   return (
-    <div className="space-y-6">
+    <div className="page-stack page-fit">
       <PageHeader
         title="Holdings"
         description="Your long-term equity holdings across all connected brokers."
@@ -41,7 +41,7 @@ export function HoldingsPage() {
 
       <BrokerWarnings warnings={warnings} />
 
-      <Card>
+      <Card className="fit-fill">
         <CardContent className="p-0">
           {isLoading ? (
             <TableSkeleton headers={HEADERS} rows={8} />

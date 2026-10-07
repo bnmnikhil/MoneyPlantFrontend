@@ -55,7 +55,7 @@ export function DashboardPage() {
     { label: "Day P&L", value: positions.isError || !positionsKnown ? null : totals.dayPnl, loading: positions.isLoading, partial: positionsPartial, hint: "(Positions only)" },
   ];
 
-  return <div className="overview-page">
+  return <div className="overview-page page-fit">
     <h1 className="sr-only">Overview</h1>
     <ConnectError />
     {status.data && !status.anyConnected ? <ConnectBrokerCard /> : <>
@@ -91,7 +91,7 @@ export function DashboardPage() {
         </section>
       </div>
 
-      <div className="overview-preview-grid">
+      <div className="overview-preview-grid fit-fill">
         <OverviewPreview kind="positions" items={positions.data?.items ?? []} loading={positions.isLoading} failed={positions.isError} retry={() => { void positions.refetch(); }} accountLabels={accountLabels} />
         <OverviewPreview kind="holdings" items={holdings.data?.items ?? []} loading={holdings.isLoading} failed={holdings.isError} retry={() => { void holdings.refetch(); }} accountLabels={accountLabels} />
       </div>

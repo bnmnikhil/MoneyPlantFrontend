@@ -42,7 +42,7 @@ export function PositionsPage() {
     { label: "Day P&L", value: known ? formatSignedINRWhole(summary.dayPnl) : "—", className: known ? pnlColor(summary.dayPnl) : "" },
   ];
 
-  return <div className="positions-page">
+  return <div className="positions-page page-fit">
     <BrokerWarnings warnings={warnings} />
     <section className="positions-summary" aria-label="Positions summary">
       {metrics.map((metric) => <div className="positions-metric" key={metric.label}>
@@ -65,7 +65,7 @@ export function PositionsPage() {
       </div>
     </section>
 
-    <section className="positions-panel" aria-label="Position details">
+    <section className="positions-panel fit-fill" aria-label="Position details">
       {isLoading || isError || positions.length === 0 ? <>
         <div className="positions-toolbar"><h1 className="text-2xl font-semibold tracking-tight">Positions</h1>{refresh}</div>
         {isLoading ? <TableSkeleton headers={HEADERS} rows={8} />

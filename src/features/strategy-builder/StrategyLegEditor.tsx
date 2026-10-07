@@ -12,7 +12,7 @@ export function StrategyLegEditor({ baseline, drafts, expiries, chain, account, 
   onContract: (id: string, row: OptionChainRow, type: "CE" | "PE") => void; onClose: (leg: ScenarioLeg) => void;
 }) {
   return <div className="builder-leg-sections">
-    <section aria-label="Existing positions">
+    {baseline.length > 0 && <section aria-label="Existing positions">
       <div className="builder-section-heading"><h3>Existing positions{account ? ` · ${account}` : ""}</h3><span><LockKeyhole className="size-3.5" />{baseline.length} locked</span></div>
       {baseline.length ? <div className="builder-table-scroll" tabIndex={0} role="region" aria-label="Existing position legs">
         <table className="builder-baseline-table"><thead><tr><th>Instrument</th><th>Type</th><th>Qty</th><th>Entry price</th><th>LTP</th><th title="Unrealised P&L at the imported mark; realised P&L is not included">Unreal. P&amp;L</th><th><span className="sr-only">Action</span></th></tr></thead>
@@ -28,8 +28,8 @@ export function StrategyLegEditor({ baseline, drafts, expiries, chain, account, 
               <td><button type="button" className="builder-small-button" aria-label={`Close or reduce ${contractLabel(leg)}`} onClick={() => onClose(leg)}>Close</button></td>
             </tr>;
           })}</tbody>
-        </table></div> : <p className="builder-empty">No baseline. Add existing positions above or build a new strategy.</p>}
-    </section>
+        </table></div> : null}
+    </section>}
     <section aria-label="Draft adjustments">
       <div className="builder-section-heading"><h3>Draft adjustments · {drafts.length} legs</h3><span>{drafts.filter((leg) => leg.enabled).length} enabled · assumed prices</span></div>
       {!drafts.length ? <p className="builder-empty">Add Buy/Sell legs from the chain or choose a quick recipe.</p> :

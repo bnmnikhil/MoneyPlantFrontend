@@ -153,3 +153,9 @@ test("the target box shows paise, never a raw slider value", () => {
   const html = render(TargetInspector, { spot: 429, target: 430.240788, metrics: null, onTarget() {} });
   assert.match(html, /aria-label="Target underlying price"[^>]*value="430\.24"/);
 });
+
+test("with no existing positions the locked section is not drawn at all", () => {
+  const html = render(StrategyLegEditor, { baseline: [], drafts: [leg({ id: "d1" })], expiries: ["2026-09-24"], ...callbacks });
+  assert.doesNotMatch(html, /Existing positions/);
+  assert.match(html, /Draft adjustments/);
+});

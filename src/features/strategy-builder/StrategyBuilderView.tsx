@@ -5,11 +5,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { brokerLabel } from "@/components/BrokerBadge";
 import { PayoffChart } from "@/features/payoff/PayoffChart";
 import { usePayoffCurves, useStrategyMetadata } from "@/features/payoff/hooks";
+import { useHoldings } from "@/features/holdings/hooks";
+import { useBrokerStatus } from "@/features/session/hooks";
 import { api, ApiError } from "@/lib/api";
 import { formatPrice, formatSignedINR } from "@/lib/format";
 import type {
   OptionChainRow,
-  CurveRef,
   PayoffComparisonResponse,
   PayoffResponse,
   ScenarioLeg,
@@ -50,8 +51,6 @@ interface DraftContext {
   drafts: ScenarioLeg[];
 }
 
-const curveKey = (curve: CurveRef) => `${curve.connectionId}:${curve.underlying}`;
-
 export function StrategyBuilderView({ initialBaseline, active = true }: StrategyBuilderProps) {
   const metadata = useStrategyMetadata();
   const positionCurves = usePayoffCurves();
@@ -65,11 +64,14 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
   const [isComparing, setIsComparing] = useState(false);
   const [targetSpot, setTargetSpot] = useState<number | null>(null);
   const [recipeMessage, setRecipeMessage] = useState<string | null>(null);
-  const [importCurveKey, setImportCurveKey] = useState("");
-  const [isImporting, setIsImporting] = useState(false);
+  // The baseline is switched on and off from the legs panel: existing positions, holdings, or both,
+  // from one account. `baselineAccount` is the account chosen when more than one holds this
+  // underlying; with a baseline loaded the baseline's own account wins.
+  const [baselineAccount, setBaselineAccount] = useState<string | null>(null);
+  const [baselineBusy, setBaselineBusy] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
-  const [importMessage, setImportMessage] = useState<string | null>(null);
-  const [importOpen, setImportOpen] = useState(false);
+  const holdingsQuery = useHoldings();
+  const status = useBrokerStatus();
   // Layout B: the chain is a drawer over the legs, opened by "+ Add from chain"; the payoff stays in
   // view beside it so each Buy or Sell visibly redraws the curve.
   const [chainOpen, setChainOpen] = useState(false);
@@ -91,9 +93,9 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
   const positionCurve = positionCurves.data?.find((curve) =>
     curve.connectionId === positionConnectionId && curve.underlying === selection?.code);
 
-  const importBaseline = useCallback((response: PayoffResponse) => {
+  const importBaseline = useCallback((response: PayoffResponse, keep?: { selection: UnderlyingSearchItem; draftsFrom: string | null }) => {
     const key = draftKey(response.underlying, response.connectionId);
-    const importedSelection: UnderlyingSearchItem = {
+    const importedSelection: UnderlyingSearchItem = keep?.selection ?? {
       code: response.underlying,
       symbol: response.underlying,
       name: response.underlying,
@@ -109,7 +111,9 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
         baseline: baselineFromPayoff(response),
         baselineResponse: response,
         positionConnectionId: response.connectionId,
-        drafts: current[key]?.drafts ?? [],
+        // Switching a baseline on from the legs panel keeps the drafts already on screen.
+        drafts: current[key]?.drafts?.length ? current[key].drafts
+          : keep?.draftsFrom ? current[keep.draftsFrom]?.drafts ?? [] : current[key]?.drafts ?? [],
       },
     }));
     setActiveKey(key);
@@ -126,27 +130,37 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
     importBaseline(initialBaseline);
   }, [initialBaseline, importBaseline]);
 
-  useEffect(() => {
-    const curves = positionCurves.data ?? [];
-    setImportCurveKey((current) => curves.some((curve) => curveKey(curve) === current)
-      ? current : curves[0] ? curveKey(curves[0]) : "");
-  }, [positionCurves.data]);
+  // Who holds this underlying: accounts with open positions in it, and accounts with its shares.
+  const positionAccounts = useMemo(() => (positionCurves.data ?? []).filter((curve) => curve.underlying === selection?.code)
+    .map((curve) => curve.connectionId), [positionCurves.data, selection?.code]);
+  const holdingAccounts = useMemo(() => [...new Set((holdingsQuery.data?.items ?? [])
+    .filter((h) => h.qty > 0 && h.underlying === selection?.code).map((h) => h.connectionId))], [holdingsQuery.data, selection?.code]);
+  const baselineAccounts = useMemo(() => [...new Set([...positionAccounts, ...holdingAccounts])], [positionAccounts, holdingAccounts]);
+  const accountName = (connectionId: string) => {
+    const c = status.connections.find((x) => x.connectionId === connectionId);
+    return c ? `${brokerLabel(c.brokerId)} · ${c.accountLabel}` : connectionId.split(":").slice(1).join(" · ");
+  };
+  const currentAccount = positionConnectionId ?? (baselineAccount && baselineAccounts.includes(baselineAccount) ? baselineAccount : baselineAccounts[0] ?? null);
+  const positionsOn = baseline.some((leg) => leg.origin === "EXISTING_POSITION");
+  const holdingsOn = baseline.some((leg) => leg.origin === "EXISTING_HOLDING");
 
-  const importExistingPositions = async () => {
-    const curve = positionCurves.data?.find((candidate) => curveKey(candidate) === importCurveKey);
-    if (!curve) return;
-    setIsImporting(true);
+  /** Loads exactly the baseline asked for: positions, holdings, both, or neither. Drafts stay. */
+  const setBaselineParts = async (positions: boolean, holdings: boolean, account: string | null) => {
+    if (!selection || !activeKey) return;
     setImportError(null);
-    setImportMessage(null);
+    if ((!positions && !holdings) || !account) {
+      setContexts((current) => current[activeKey] ? ({ ...current, [activeKey]: { ...current[activeKey], baseline: [], baselineResponse: null } }) : current);
+      return;
+    }
+    setBaselineBusy(true);
     try {
-      const response = await api.payoff(curve.connectionId, curve.underlying);
-      importBaseline(response);
-      setImportOpen(false);
-      setImportMessage(`Loaded ${curve.underlyingLabel} positions from ${brokerLabel(curve.brokerId)} · ${curve.accountLabel}. Existing draft adjustments for this account were kept.`);
+      const response = await api.payoff(account, selection.code, holdings);
+      const legs = response.legs.filter((leg) => (positions && leg.origin === "EXISTING_POSITION") || (holdings && leg.origin === "EXISTING_HOLDING"));
+      importBaseline({ ...response, legs }, { selection, draftsFrom: activeKey });
     } catch (error) {
-      setImportError(error instanceof ApiError ? error.message : "Could not load those existing positions.");
+      setImportError(error instanceof ApiError ? error.message : "Could not load that account's positions.");
     } finally {
-      setIsImporting(false);
+      setBaselineBusy(false);
     }
   };
 
@@ -244,7 +258,6 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
     setRecipeMessage(null);
     setTargetSpot(null);
     setImportError(null);
-    setImportMessage(null);
   };
 
   const addFromChain = (row: OptionChainRow, type: "CE" | "PE", direction: "BUY" | "SELL") => {
@@ -334,7 +347,6 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
           {!expiries.data?.expiries.length && <option value="">No expiry available</option>}
           {expiries.data?.expiries.map((expiry) => <option key={expiry} value={expiry}>{expiryLabel(expiry)}</option>)}
         </select></label>
-        <div className="builder-baseline-context"><p>Existing positions (baseline)</p><div><span title={account}>{account ? `${account} · ${baseline.length} positions` : "No baseline"}</span><button type="button" className="builder-small-button" aria-expanded={importOpen} onClick={() => setImportOpen(!importOpen)}>{account ? "Change" : "Add existing"}</button></div></div>
         <label title={quotesNote}>Quotes source<select value={sourceConnectionId} disabled={!availableSources.length} onChange={(event) => setSourceConnectionId(event.target.value)}>
           {!availableSources.length && <option value="">No usable source</option>}
           {sources.data?.sources.map((source) => <option key={source.connectionId} value={source.connectionId} disabled={!source.available}>{brokerLabel(source.brokerId)} · {source.accountLabel}{source.policyRestricted ? " (restricted)" : ""}</option>)}
@@ -342,21 +354,11 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
         <div className="builder-spot"><p>Spot</p><strong>{spot !== null && spot > 0 ? formatPrice(spot) : "—"}</strong></div>
         <div className="builder-context-actions">
           <span className="builder-hypo" title="A what-if workspace: nothing here is sent to a broker.">Hypothetical · no orders</span>
-          <button type="button" className="builder-primary-button" onClick={() => { setActiveKey(null); setComparisonSnapshot(null); setTargetSpot(null); setImportMessage(null); setChainOpen(false); }}>New strategy</button>
+          <button type="button" className="builder-primary-button" onClick={() => { setActiveKey(null); setComparisonSnapshot(null); setTargetSpot(null); setImportError(null); setChainOpen(false); }}>New strategy</button>
           <Button variant="outline" disabled={!drafts.length} onClick={() => updateDrafts(() => [])}><RotateCcw className="size-3.5" />Reset</Button>
         </div>
       </div>
-      {importOpen && <div className="builder-import">
-        <label>Add existing positions<select value={importCurveKey} disabled={positionCurves.isLoading || isImporting} onChange={(event) => setImportCurveKey(event.target.value)}>
-          {!positionCurves.data?.length && <option value="">No open position set available</option>}
-          {positionCurves.data?.map((curve) => <option key={curveKey(curve)} value={curveKey(curve)}>{curve.underlyingLabel} · {brokerLabel(curve.brokerId)} · {curve.accountLabel}</option>)}
-        </select></label>
-        <Button type="button" variant="outline" disabled={!importCurveKey || isImporting} onClick={importExistingPositions}>{isImporting ? "Loading positions…" : "Load as baseline"}</Button>
-        <p className="basis-full text-xs text-muted-foreground">Existing units and entry costs stay immutable; adjustments remain hypothetical draft trades. {quotesNote}</p>
-      </div>}
       {positionCurves.isError && <p role="alert" className="text-xs text-loss">Could not list existing positions. <button type="button" className="underline" onClick={() => positionCurves.refetch()}>Retry</button></p>}
-      {importError && <p role="alert" className="text-xs text-loss">{importError}</p>}
-      {importMessage && <p role="status" className="text-xs text-muted-foreground">{importMessage}</p>}
       {Object.keys(contexts).length > 1 && <div className="builder-session-drafts"><span>Session drafts:</span>{Object.entries(contexts).map(([key, saved]) => <button key={key} type="button" aria-pressed={key === activeKey} onClick={() => { setActiveKey(key); setTargetSpot(null); }}>
         {saved.selection.symbol}{saved.positionConnectionId ? ` · ${positionCurves.data?.find((curve) => curve.connectionId === saved.positionConnectionId && curve.underlying === saved.selection.code)?.accountLabel ?? "imported positions"}` : " · new"} ({saved.drafts.length})
       </button>)}</div>}
@@ -381,6 +383,25 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
               </DropdownMenu>
             </div>
           </div>
+          <div className="builder-baseline-bar" aria-label="Existing positions and holdings">
+            <label className="builder-switch" title={positionAccounts.length ? "Add this account's open positions as a locked baseline" : `No open ${selection.symbol} positions in any account`}>
+              <input type="checkbox" role="switch" className="payoff-holdings-switch" checked={positionsOn} disabled={baselineBusy || (!positionsOn && !(currentAccount && positionAccounts.includes(currentAccount)))}
+                onChange={(event) => { void setBaselineParts(event.target.checked, holdingsOn, currentAccount); }} />
+              Existing positions
+            </label>
+            <label className="builder-switch" title={holdingAccounts.length ? "Add this account's shares as a locked baseline (margin is not estimated with shares)" : `No ${selection.symbol} shares in any account`}>
+              <input type="checkbox" role="switch" className="payoff-holdings-switch" checked={holdingsOn} disabled={baselineBusy || (!holdingsOn && !(currentAccount && holdingAccounts.includes(currentAccount)))}
+                onChange={(event) => { void setBaselineParts(positionsOn, event.target.checked, currentAccount); }} />
+              Holdings
+            </label>
+            {baselineAccounts.length > 1 && <select aria-label="Account for existing positions and holdings" value={currentAccount ?? ""} disabled={baselineBusy}
+              onChange={(event) => { setBaselineAccount(event.target.value); if (positionsOn || holdingsOn) void setBaselineParts(positionsOn, holdingsOn, event.target.value); }}>
+              {baselineAccounts.map((id) => <option key={id} value={id}>{accountName(id)}</option>)}
+            </select>}
+            {baselineAccounts.length === 1 && (positionsOn || holdingsOn) && <span className="builder-baseline-account">{accountName(baselineAccounts[0])}</span>}
+            {baselineBusy && <span className="builder-baseline-account">Loading…</span>}
+          </div>
+          {importError && <p role="alert" className="builder-legs-note text-loss">{importError}</p>}
           {recipeMessage && <p role="status" className="builder-legs-note">{recipeMessage}</p>}
           <div className="builder-b-legs-scroll">
             <StrategyLegEditor baseline={baseline} drafts={drafts} expiries={expiries.data?.expiries ?? []} chain={chain.data} account={account}

@@ -29,6 +29,17 @@ export function formatINRWhole(value: number): string {
   return inrCompact.format(value);
 }
 
+/**
+ * An underlying price, e.g. a breakeven or spot: whole rupees from ₹1,000 up, where paise are noise
+ * (NIFTY ₹24,280), and paise below it, where they are the answer (ITC's breakeven is ₹266.25, not
+ * ₹266). A price with no paise drops the ".00".
+ */
+export function formatPrice(value: number): string {
+  if (!Number.isFinite(value)) return "—";
+  const rounded = Math.round(value * 100) / 100;
+  return Math.abs(rounded) >= 1000 || Number.isInteger(rounded) ? inrCompact.format(rounded) : inr.format(rounded);
+}
+
 /** Signed currency, e.g. +₹1,234.50 / -₹1,234.50 — used for P&L. */
 export function formatSignedINR(value: number): string {
   if (!Number.isFinite(value)) return "—";

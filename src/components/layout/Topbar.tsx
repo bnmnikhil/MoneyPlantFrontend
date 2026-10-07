@@ -40,9 +40,9 @@ export function Topbar() {
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-2 focus:z-50 focus:rounded focus:bg-card focus:p-3">
         Skip to content
       </a>
-      <div className="flex min-h-[68px] items-center gap-3 px-4 sm:px-6 md:min-h-[76px] lg:gap-6 lg:px-7">
+      <div className="flex min-h-[3.75rem] items-center gap-3 px-4 sm:px-6 lg:min-h-[3.5rem] lg:gap-6 lg:px-7">
         <Link to="/app" aria-label="GoldenBook overview" className="shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <Logo variant="header" size={38} className="hidden sm:inline-flex lg:[&>span]:hidden xl:[&>span]:inline" />
+          <Logo variant="header" size={32} className="hidden sm:inline-flex lg:[&>span]:hidden xl:[&>span]:inline" />
           <Logo variant="header" size={32} showWordmark={false} className="sm:hidden" />
         </Link>
 
@@ -50,7 +50,7 @@ export function Topbar() {
           {primaryNavItems.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end}
               className={({ isActive }) => cn(
-                "rounded-md px-3 py-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:px-4 lg:text-base xl:px-5 xl:text-lg",
+                "rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:px-4 lg:text-base",
                 isActive ? "workspace-nav-active" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
               )}>
               {item.label}
@@ -61,7 +61,7 @@ export function Topbar() {
         <div className="ml-auto flex shrink-0 items-center gap-3 xl:gap-6">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button type="button" className="flex h-10 items-center gap-2 rounded-md border border-border bg-background/50 px-3 text-sm outline-none hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring md:h-12 xl:text-lg">
+              <button type="button" className="flex h-9 items-center gap-2 rounded-md border border-border bg-background/50 px-3 text-sm outline-none hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring xl:text-base">
                 {status.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <span className={cn("size-3 rounded-full", dotClass)} />}
                 <span>Brokers {status.isPending || status.isError ? "—" : `${connectedIds.size}/${brokerIds.size}`}</span>
                 <ChevronDown className="size-4 text-muted-foreground" />
@@ -83,7 +83,7 @@ export function Topbar() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <div className="hidden items-center gap-2 border-l border-border pl-4 text-base lg:flex xl:pl-7 xl:text-lg"
+          <div className="hidden items-center gap-2 border-l border-border pl-4 text-sm lg:flex xl:pl-6 xl:text-base"
             title="Broker session status. Each page reports its own data freshness." aria-label={`Broker sessions: ${statusLabel}`}>
             <span className={cn("size-3 rounded-full", dotClass)} />
             {statusLabel}
@@ -92,7 +92,7 @@ export function Topbar() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button type="button" aria-label="Account menu" className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                <Avatar className="size-9 border border-primary/40 md:size-11">
+                <Avatar className="size-8 border border-primary/40 md:size-9">
                   {me?.picture && <AvatarImage src={me.picture} alt={me.name} referrerPolicy="no-referrer" />}
                   <AvatarFallback className="bg-primary/15 text-base font-semibold text-primary">{initials(me?.name)}</AvatarFallback>
                 </Avatar>

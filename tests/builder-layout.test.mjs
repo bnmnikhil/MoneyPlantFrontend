@@ -16,7 +16,7 @@ function components(name) {
 }
 const { StrategyLegEditor } = components("StrategyLegEditor");
 const { OptionChainPicker } = components("OptionChainPicker");
-const { BuilderMetrics, BuilderMargin, TargetInspector } = components("BuilderMetrics");
+const { BuilderMetrics, PnlLadder, TargetInspector } = components("BuilderMetrics");
 const render = (Component, props) => renderToStaticMarkup(React.createElement(Component, props));
 const observation = (value, priceKnown = true) => ({ value, priceKnown, fetchedAt: "2026-09-12T05:00:00Z", sourceConnectionId: "quote-account", status: "AVAILABLE" });
 const leg = (overrides = {}) => ({ id: "leg-a", contract: { underlying: "TEST", type: "CE", expiry: "2026-09-24", strike: 100 },
@@ -45,15 +45,17 @@ test("quantities distinguish complete lots, partial units and shares without rou
   assert.deepEqual(quantitySize(leg({ contract: { type: "EQ" }, qty: 20, lotSize: 20 })), { value: 20, unit: "units" });
 });
 
-test("baseline and draft tables retain seven columns and locked entry costs", () => {
+test("the compact baseline (5) and draft (6) tables keep aligned columns and locked entry costs", () => {
   const html = render(StrategyLegEditor, { ...callbacks, baseline: [leg()], drafts: [leg({ id: "draft" })], expiries: ["2026-09-24"], account: "Kite · Main" });
   assert.match(html, /1 locked/);
   assert.match(html, /Kite · Main/);
   const tables = [...html.matchAll(/<table\b[\s\S]*?<\/table>/g)].map(([table]) => table);
   assert.equal(tables.length, 2);
-  for (const table of tables) {
-    for (const [, row] of table.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)) assert.equal((row.match(/<(?:td|th)\b/g) ?? []).length, 7);
-  }
+  tables.forEach((table, index) => {
+    for (const [, row] of table.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)) assert.equal((row.match(/<(?:td|th)\b/g) ?? []).length, index === 0 ? 5 : 6);
+  });
+  assert.match(html, /Draft adjustments · 1 leg</);
+  assert.match(html, /aria-label="Change direction for/);
   assert.doesNotMatch(tables[0], /<input|<select/);
   assert.match(tables[0], /Unreal\. P&amp;L/);
 });
@@ -98,9 +100,40 @@ test("mixed expiry metrics preserve global limits and a signed debit", () => {
 });
 
 test("unsupported holdings margin does not expose a numeric estimate", () => {
-  const html = render(BuilderMargin, { account: "Kite · Main", comparison: { margin: { status: "UNSUPPORTED_HOLDINGS", combined: { withBenefitMargin: 10000 } } } });
+  const html = render(BuilderMetrics, { comparison: { combined: payoff, expiries: ["2026-09-24"], adjustmentCashflow: -400,
+    margin: { status: "UNSUPPORTED_HOLDINGS", baseline: null, combined: { withBenefitMargin: 10000, hedgeBenefit: 2000 } } } });
   assert.match(html, /unsupported holdings/);
-  assert.doesNotMatch(html, /₹10,000/);
+  assert.doesNotMatch(html, /₹10,000|₹2,000/);
+});
+
+test("the summary carries margin and hedge benefit, and what the margin was before adjustments", () => {
+  const html = render(BuilderMetrics, { comparison: { combined: payoff, expiries: ["2026-09-24"], adjustmentCashflow: -2156.25,
+    margin: { status: "AVAILABLE", baseline: { withBenefitMargin: 12000, hedgeBenefit: 0 }, combined: { withBenefitMargin: 18198, hedgeBenefit: 59822 } } } });
+  assert.equal((html.match(/<p>/g) ?? []).length, 6);
+  assert.match(html, /Margin.*₹18,198/s);
+  assert.match(html, /was ₹12,000/);
+  assert.match(html, /Hedge benefit.*₹59,822/s);
+});
+
+test("breakevens keep their paise below ₹1,000 and drop them above", () => {
+  const low = render(BuilderMetrics, { comparison: { combined: { ...payoff, breakevens: [266.25] }, expiries: ["2026-10-27"], adjustmentCashflow: -1 } });
+  assert.match(low, /₹266\.25/);
+  const high = render(BuilderMetrics, { comparison: { combined: { ...payoff, breakevens: [24280.4] }, expiries: ["2026-10-27"], adjustmentCashflow: -1 } });
+  assert.match(high, /₹24,280</);
+});
+
+test("the P&L table lists round prices around spot, marks the nearest, and compares to existing", () => {
+  const spread = [{ type: "CE", strike: 265, price: 5.35, qty: 1725 }, { type: "CE", strike: 267.5, price: 4.10, qty: -1725 }];
+  const html = render(PnlLadder, { spot: 265.7, isIndex: false, baseline: [], combined: spread });
+  assert.match(html, /Strategy/);
+  assert.doesNotMatch(html, /Existing/);
+  assert.match(html, /builder-ladder-now/);
+  assert.match(html, /-₹2,156/);   // below 265: the whole debit
+  assert.match(html, /\+₹2,156/);  // above 267.5: the whole credit of the width less the debit
+  const withBase = render(PnlLadder, { spot: 265.7, isIndex: false, baseline: [spread[0]], combined: spread });
+  assert.match(withBase, /Existing/);
+  assert.match(withBase, /After adjustments/);
+  assert.match(render(PnlLadder, { spot: null, isIndex: false, baseline: [], combined: spread }), /needs the current spot/);
 });
 
 test("target inspector allows manual prices without inventing an unknown spot or P&L", () => {
@@ -110,4 +143,21 @@ test("target inspector allows manual prices without inventing an unknown spot or
   const ranged = render(TargetInspector, { spot: 100, target: 120, metrics: { existing: -100, combined: 50, change: 150 }, onTarget() {} });
   assert.match(ranged, /min="90" max="120"/);
   assert.match(ranged, /After adjustments/);
+});
+
+test("big figures drop their paise; small ones keep them", () => {
+  const html = render(BuilderMetrics, { comparison: { combined: { ...payoff, maxProfit: 1223520, maxLoss: -480 }, expiries: ["2026-10-27"], adjustmentCashflow: -480 } });
+  assert.match(html, /\+₹12,23,520</);
+  assert.match(html, /-₹480\.00/);
+});
+
+test("the target box shows paise, never a raw slider value", () => {
+  const html = render(TargetInspector, { spot: 429, target: 430.240788, metrics: null, onTarget() {} });
+  assert.match(html, /aria-label="Target underlying price"[^>]*value="430\.24"/);
+});
+
+test("with no existing positions the locked section is not drawn at all", () => {
+  const html = render(StrategyLegEditor, { baseline: [], drafts: [leg({ id: "d1" })], expiries: ["2026-09-24"], ...callbacks });
+  assert.doesNotMatch(html, /Existing positions/);
+  assert.match(html, /Draft adjustments/);
 });

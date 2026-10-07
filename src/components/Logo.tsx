@@ -27,7 +27,7 @@ export function Logo({
           <path d="M20 10V34.5" stroke="#0F0E0C" strokeWidth="1.6" strokeLinecap="round" />
           <path d="M8 13.5C11 13.2 14 13.8 16.5 15M8 19C11 18.7 14 19.3 16.5 20.5" stroke="#0F0E0C" strokeOpacity="0.45" strokeWidth="1.4" strokeLinecap="round" />
         </svg>
-        {showWordmark && <span className="font-serif text-[22px] font-semibold tracking-tight text-foreground xl:text-[28px]">GoldenBook</span>}
+        {showWordmark && <span className="font-serif text-[1.375rem] font-semibold tracking-tight text-foreground xl:text-[1.5rem]">GoldenBook</span>}
       </span>
     );
   }

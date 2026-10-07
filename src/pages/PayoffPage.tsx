@@ -126,12 +126,12 @@ export function PayoffPage() {
             {shown ? <PositionFigures shown={shown} real={whatIf ? real : undefined} mixedExpiries={mixedExpiries} />
               : payoff.isLoading ? <Skeleton className="h-10 w-72" /> : null}
           </div>
-          {payoff.isLoading ? <Skeleton className="m-4 h-[430px]" />
+          {payoff.isLoading ? <Skeleton className="m-4 h-[26.875rem]" />
             : payoff.isError ? <ErrorState title={includeHoldings ? "Couldn't include holdings in payoff" : "Couldn't load payoff"} description={includeHoldings ? "Check the share quantity and retry, or turn off Holdings to view positions only." : undefined} onRetry={() => { void payoff.refetch(); }} />
             : chartPayoff && data ? <PayoffChart variant="live" key={viewKey} payoff={chartPayoff} spot={data.spot} legs={legs} isIndex={data.isIndex}
-                baseline={whatIf ? { payoff: data.payoff, legs: data.legs } : undefined} /> : null}
+                baseline={whatIf ? { payoff: data.payoff, legs: data.legs } : undefined}
+                labels={{ baseline: "Your real position", current: "Ticked legs" }} /> : null}
           {data && <div className="payoff-chart-notes">
-            {whatIf && <p className="payoff-chart-key"><span className="payoff-key-line" />Ticked legs <span className="payoff-key-line payoff-key-dashed" />Your real position</p>}
             {includeHoldings && <p className="flex items-start gap-2"><Info className="mt-0.5 size-4 shrink-0" /><span>Includes {data.holding.includedQty} {activeCurve.underlyingLabel} shares at purchase cost, assumed held until expiry; pledged shares are counted once. This graph does not determine delivery eligibility or margin benefit.</span></p>}
             {chartPayoff?.unboundedLoss && <p className="text-loss">Loss is unlimited beyond the plotted range.</p>}
             {chartPayoff?.unboundedProfit && <p>Profit continues beyond the plotted range.</p>}

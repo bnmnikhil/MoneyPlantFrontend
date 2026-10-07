@@ -247,6 +247,8 @@ export interface Holding extends BrokerSourced {
   currentValue: number;
   pnl: number;
   pnlPct: number;
+  /** Canonical underlying, the same code the builder and payoff use (MM for M&M). */
+  underlying: string;
 }
 
 /** One row per connected broker. The frontend sums these for headline figures. */

@@ -1,6 +1,7 @@
 import { brokerLabel } from "@/components/BrokerBadge";
 import { formatSignedINRWhole, pnlColor } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { MARGIN_PRESSURE_PCT } from "./attention";
 
 export function OverviewMoney({ value, partial = false }: { value: number | null; partial?: boolean }) {
   return <span className={cn("tnum whitespace-nowrap font-semibold", value === null ? "text-muted-foreground" : pnlColor(value))}>
@@ -24,9 +25,10 @@ export function OverviewBroker({ brokerId, account }: { brokerId: string; accoun
 
 export function UtilisationBar({ percent, large = false }: { percent: number | null; large?: boolean }) {
   if (percent === null) return <span className="text-muted-foreground">—</span>;
-  // Neutral by default; orange when high. Never gold (that is the brand) and never
-  // green or red (those mean profit and loss).
-  const fill = percent >= 60 ? "bg-orange-400" : "bg-muted-foreground/70";
+  // Neutral by default; orange from the Overview's margin-pressure threshold, so amber means the
+  // same thing in the bar and in the Needs attention band. Never gold (that is the brand) and
+  // never green or red (those mean profit and loss).
+  const fill = percent >= MARGIN_PRESSURE_PCT ? "bg-orange-400" : "bg-muted-foreground/70";
   return <div className={cn("flex items-center gap-3", large && "flex-col items-stretch gap-1") }>
     <span className="tnum whitespace-nowrap">{percent.toFixed(0)}%{large && " utilised"}</span>
     <div className="flex min-w-0 flex-1 items-center gap-4">

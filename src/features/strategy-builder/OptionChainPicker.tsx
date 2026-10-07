@@ -1,9 +1,14 @@
+import { useEffect, useRef, type ReactNode } from "react";
 import { ChevronDown, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { formatINR, formatNumber } from "@/lib/format";
 import type { OptionChainResponse, OptionChainRow } from "@/types/api";
 
-export function OptionChainPicker({ chain, isLoading, error, onRetry, onExpand, onAdd, quantityFor, canExpand = true }: {
+/**
+ * The option chain, compact enough to show about ten strikes in a 380px drawer: one header line, one
+ * column-header row, and on first load (or a new underlying or expiry) it opens scrolled to the strike
+ * nearest spot rather than to the deepest in-the-money call.
+ */
+export function OptionChainPicker({ chain, isLoading, error, onRetry, onExpand, onAdd, quantityFor, canExpand = true, actions }: {
   chain?: OptionChainResponse;
   isLoading: boolean;
   error: unknown;
@@ -12,59 +17,61 @@ export function OptionChainPicker({ chain, isLoading, error, onRetry, onExpand, 
   onAdd: (row: OptionChainRow, type: "CE" | "PE", direction: "BUY" | "SELL") => void;
   quantityFor: (row: OptionChainRow, type: "CE" | "PE") => { existing: number; draft: number };
   canExpand?: boolean;
+  /** Extra controls for the header line, such as the drawer's Done button. */
+  actions?: ReactNode;
 }) {
   // Once for the table, not once per row: a 50-strike chain made this quadratic.
   const atmStrike = atmOf(chain);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const atmRef = useRef<HTMLTableRowElement>(null);
+  // Centre on the ATM strike when a different chain arrives, not on every 30-second refresh, which
+  // would yank the list away from wherever the user had scrolled.
+  const chainKey = chain ? `${chain.underlying}|${chain.expiry}|${chain.rows.length}` : "";
+  useEffect(() => {
+    const box = scrollRef.current, row = atmRef.current;
+    if (!box || !row) return;
+    box.scrollTop = Math.max(0, row.offsetTop - box.clientHeight / 2 + row.offsetHeight / 2);
+  }, [chainKey]);
 
   return (
     <div className="builder-chain">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2>Option chain</h2>
-          <p className="text-xs text-muted-foreground">
-            {chain ? `Last traded price · Retrieved ${new Date(chain.fetchedAt).toLocaleTimeString("en-IN")}` : "Choose an expiry and quote source"}
-            {chain?.availability === "STALE" ? " · Stale after failed refresh" : ""}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={onRetry} disabled={isLoading}>
-            <RefreshCw className={`mr-1 size-3.5 ${isLoading ? "animate-spin" : ""}`} /> Refresh
-          </Button>
-        </div>
+      <div className="builder-chain-head">
+        <p>
+          {chain ? <><strong>{chain.underlying}</strong> · {new Date(`${chain.expiry}T00:00:00`).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })} · {chain.rows.length} strikes · LTP {new Date(chain.fetchedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</> : "Choose an expiry and quote source"}
+          {chain?.availability === "STALE" ? " · Stale after failed refresh" : ""}
+        </p>
+        <button type="button" className="builder-chain-refresh" onClick={onRetry} disabled={isLoading} aria-label="Refresh the option chain" title="Refresh">
+          <RefreshCw className={`size-3.5 ${isLoading ? "animate-spin" : ""}`} />
+        </button>
+        {actions}
       </div>
-      {chain && <div className="builder-chain-context"><span>{chain.underlying}</span><span>{new Date(`${chain.expiry}T00:00:00`).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span><span>{chain.rows.length} strikes</span></div>}
 
       {Boolean(error) && <p role="alert" className="rounded border border-loss/30 bg-loss/5 p-3 text-sm text-loss">Option data unavailable. Your existing draft and manual assumptions are unchanged.</p>}
       {isLoading && !chain && <p className="p-6 text-center text-sm text-muted-foreground">Loading option chain…</p>}
       {chain && (
         // Scrolls inside its own pane so the payoff beside it stays in view
         // however many strikes are expanded.
-        <div className="builder-chain-scroll" tabIndex={0} role="region" aria-label="Option chain strikes">
+        <div ref={scrollRef} className="builder-chain-scroll" tabIndex={0} role="region" aria-label="Option chain strikes">
           <table className="builder-chain-table">
             <thead className="sticky top-0 z-10 bg-card text-muted-foreground shadow-[0_1px_0_hsl(var(--border))]">
-              <tr>
-                <th className="p-2 text-center font-medium" colSpan={3}>Calls</th>
-                <th className="p-2 text-center font-medium">Strike</th>
-                <th className="p-2 text-center font-medium" colSpan={3}>Puts</th>
-              </tr>
-              <tr>{["LTP", "Buy", "Sell", "Strike", "LTP", "Buy", "Sell"].map((label, index) => <th key={index}>{label}</th>)}</tr>
+              <tr>{["Call LTP", "", "", "Strike", "Put LTP", "", ""].map((label, index) => <th key={index}>{label}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-border">
               {chain.rows.map((row) => {
                 const disabled = row.lotSize === null || row.metadataConflict;
                 const isAtm = row.strike === atmStrike;
                 return (
-                  <tr key={row.strike} className={isAtm ? "bg-primary/5" : undefined}>
-                    <td className="py-1.5 pr-2 text-right">
+                  <tr key={row.strike} ref={isAtm ? atmRef : undefined} className={isAtm ? "bg-primary/5" : undefined}>
+                    <td className="pr-2 text-right">
                       <Quote observation={row.call} quantity={quantityFor(row, "CE")} />
                     </td>
                     <SideButtons disabled={disabled} onBuy={() => onAdd(row, "CE", "BUY")} onSell={() => onAdd(row, "CE", "SELL")} label="CE" strike={row.strike} />
-                    <td className={`border-x border-border px-2 py-1.5 text-center tabular-nums ${isAtm ? "font-bold text-primary" : "font-semibold"}`}>
+                    <td className={`border-x border-border px-2 text-center tabular-nums ${isAtm ? "font-bold text-primary" : "font-semibold"}`}>
                       {formatNumber(row.strike)}
                       {isAtm && <span className="ml-1 text-[10px] font-medium uppercase tracking-wide">atm</span>}
                       {row.metadataConflict && <span className="block text-[10px] font-normal text-loss">Lot-size conflict</span>}
                     </td>
-                    <td className="py-1.5 pl-2 text-left">
+                    <td className="pl-2 text-left">
                       <Quote observation={row.put} quantity={quantityFor(row, "PE")} align="left" />
                     </td>
                     <SideButtons disabled={disabled} onBuy={() => onAdd(row, "PE", "BUY")} onSell={() => onAdd(row, "PE", "SELL")} label="PE" strike={row.strike} />
@@ -76,7 +83,7 @@ export function OptionChainPicker({ chain, isLoading, error, onRetry, onExpand, 
         </div>
       )}
       {!chain && !isLoading && !error && <p className="builder-empty">Choose an expiry and an available quote source to load the chain.</p>}
-      {chain && <button type="button" className="builder-chain-expand" onClick={onExpand} disabled={!canExpand || isLoading}><ChevronDown className="size-4" />{canExpand ? "Load 10 more strikes each side" : "Maximum strike window loaded"}</button>}
+      {chain && <button type="button" className="builder-chain-expand" onClick={onExpand} disabled={!canExpand || isLoading}><ChevronDown className="size-3.5" />{canExpand ? "10 more strikes each side" : "All strikes loaded"}</button>}
       {chain?.warnings.map((warning) => <p key={warning} role="status" className="text-xs text-orange-600">{warning}</p>)}
     </div>
   );

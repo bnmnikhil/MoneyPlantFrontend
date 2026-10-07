@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Plus, RotateCcw } from "lucide-react";
+import { ChevronDown, Info, Plus, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { brokerLabel } from "@/components/BrokerBadge";
@@ -330,14 +330,14 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
     <section className="builder-panel builder-context" aria-label="Strategy context">
       <div className="builder-context-fields">
         <UnderlyingSearch selected={selection} onSelect={chooseUnderlying} />
+        <label>Expiry<select value={pickerExpiry} disabled={!expiries.data?.expiries.length} onChange={(event) => setPickerExpiry(event.target.value)}>
+          {!expiries.data?.expiries.length && <option value="">No expiry available</option>}
+          {expiries.data?.expiries.map((expiry) => <option key={expiry} value={expiry}>{expiryLabel(expiry)}</option>)}
+        </select></label>
         <div className="builder-baseline-context"><p>Existing positions (baseline)</p><div><span title={account}>{account ? `${account} · ${baseline.length} positions` : "No baseline"}</span><button type="button" className="builder-small-button" aria-expanded={importOpen} onClick={() => setImportOpen(!importOpen)}>{account ? "Change" : "Add existing"}</button></div></div>
         <label title={quotesNote}>Quotes source<select value={sourceConnectionId} disabled={!availableSources.length} onChange={(event) => setSourceConnectionId(event.target.value)}>
           {!availableSources.length && <option value="">No usable source</option>}
           {sources.data?.sources.map((source) => <option key={source.connectionId} value={source.connectionId} disabled={!source.available}>{brokerLabel(source.brokerId)} · {source.accountLabel}{source.policyRestricted ? " (restricted)" : ""}</option>)}
-        </select></label>
-        <label>Expiry<select value={pickerExpiry} disabled={!expiries.data?.expiries.length} onChange={(event) => setPickerExpiry(event.target.value)}>
-          {!expiries.data?.expiries.length && <option value="">No expiry available</option>}
-          {expiries.data?.expiries.map((expiry) => <option key={expiry} value={expiry}>{expiryLabel(expiry)}</option>)}
         </select></label>
         <div className="builder-spot"><p>Spot</p><strong>{spot !== null && spot > 0 ? formatPrice(spot) : "—"}</strong></div>
         <div className="builder-context-actions">
@@ -400,10 +400,10 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
           </div>
           {comparison && <BuilderMetrics comparison={comparison} linearTrades={drafts.some((leg) => leg.enabled && (leg.contract.type === "EQ" || leg.contract.type === "FUT"))} />}
           {chainOpen && <div id="builder-chain-drawer" className="builder-drawer" role="dialog" aria-label="Add legs from the option chain">
-            <div className="builder-drawer-head"><span>Tap Buy or Sell; the payoff on the right updates as you go.</span><button type="button" className="builder-primary-button" autoFocus onClick={() => setChainOpen(false)}>Done</button></div>
             <OptionChainPicker chain={chain.data} isLoading={chain.isLoading || chain.isFetching} error={chain.error}
               onRetry={() => chain.refetch()} onExpand={() => setStrikeCount((value) => Math.min(50, value + 10))} canExpand={strikeCount < 50}
-              onAdd={addFromChain} quantityFor={quantityFor} />
+              onAdd={addFromChain} quantityFor={quantityFor}
+              actions={<button type="button" className="builder-primary-button" autoFocus title="Tap Buy or Sell; the payoff on the right updates as you go. Esc also closes." onClick={() => setChainOpen(false)}>Done</button>} />
           </div>}
         </section>
         <section className="builder-panel builder-b-chart" aria-labelledby="builder-preview-title">
@@ -413,12 +413,13 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
               <button type="button" role="tab" aria-selected={chartTab === "chart"} onClick={() => setChartTab("chart")}>Chart</button>
               <button type="button" role="tab" aria-selected={chartTab === "table"} onClick={() => setChartTab("table")}>P&amp;L table</button>
             </div>
-            <span className="ml-auto text-xs text-muted-foreground" role="status">{isComparing ? "Calculating…" : comparison ? "Calculated · expiry" : "Awaiting valid legs"}</span>
+            <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground" role="status">{isComparing ? "Calculating…" : comparison ? "Calculated · expiry" : "Awaiting valid legs"}
+              {comparison?.assumptions.length ? <Info className="size-3.5" aria-label={comparison.assumptions.join(" ")}><title>{comparison.assumptions.join(" ")}</title></Info> : null}</span>
           </div>
           {compareError && <p role="alert" className="p-3 text-sm text-loss">{compareError}</p>}
           {comparison ? <>
             {chartTab === "chart"
-              ? <PayoffChart variant="live" key={activeKey} payoff={comparison.combined} spot={comparison.spot ?? 0} legs={enabledCombined.map(chartLeg)} isIndex={selection.isIndex}
+              ? <PayoffChart variant="builder" axisTitles={false} key={activeKey} payoff={comparison.combined} spot={comparison.spot ?? 0} legs={enabledCombined.map(chartLeg)} isIndex={selection.isIndex}
                   baseline={baseline.length ? { payoff: comparison.baseline, legs: baseline.map(chartLeg) } : undefined} />
               : <PnlLadder spot={comparison.spot} isIndex={selection.isIndex} baseline={baseline.map(ladderLeg)} combined={enabledCombined.map(ladderLeg)} />}
             <TargetInspector spot={spot} target={target} metrics={targetMetrics} onTarget={setTargetSpot} />
@@ -427,7 +428,6 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
       </div>
       {comparison && comparison.expiries.length > 1 && <p role="note" className="payoff-warning">Expiry scenario: {comparison.expiries.map(expiryLabel).join(" / ")}. A single terminal price is applied to every expiry; later-contract time value is not modelled at the first expiry.</p>}
       {comparison?.warnings.map((warning) => <p key={warning} role="status" className="text-xs text-orange-300">{warning}</p>)}
-      {comparison?.assumptions.map((assumption) => <p key={assumption} className="builder-assumption">{assumption}</p>)}
     </>}
   </div>;
 }

@@ -45,6 +45,7 @@ export function PayoffChart({
   baseline,
   variant = "default",
   labels = { baseline: "Existing positions", current: "After adjustments" },
+  axisTitles = true,
 }: {
   payoff: Payoff;
   spot: number;
@@ -54,6 +55,8 @@ export function PayoffChart({
   variant?: "default" | "live" | "builder";
   /** Legend wording when a baseline is drawn: the builder compares adjustments, Payoff a what-if. */
   labels?: { baseline: string; current: string };
+  /** False drops the "P&L (₹)" and "Underlying price (₹)" titles; the tick labels already carry the units. */
+  axisTitles?: boolean;
 }) {
   const styled = variant !== "default";
   const [chartWidth, setChartWidth] = useState(0);
@@ -125,7 +128,7 @@ export function PayoffChart({
           <span className="font-medium text-primary">— {labels.current}</span>
         </div>
       )}
-    {styled && <p className="px-5 pt-2 text-sm text-muted-foreground">P&amp;L (₹)</p>}
+    {styled && axisTitles && <p className="px-5 pt-2 text-sm text-muted-foreground">P&amp;L (₹)</p>}
     <div className={styled ? "payoff-chart-canvas" : "h-[380px] w-full"}>
       <ResponsiveContainer width="100%" height="100%" onResize={(width) => setChartWidth(width)}>
         <ComposedChart
@@ -234,7 +237,7 @@ export function PayoffChart({
         </ComposedChart>
       </ResponsiveContainer>
     </div>
-    {styled && <p className="pb-2 text-center text-sm text-muted-foreground">Underlying price (₹)</p>}
+    {styled && axisTitles && <p className="pb-2 text-center text-sm text-muted-foreground">Underlying price (₹)</p>}
     </div>
   );
 }

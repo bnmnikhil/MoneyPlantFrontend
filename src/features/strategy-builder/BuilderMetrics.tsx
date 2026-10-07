@@ -1,5 +1,8 @@
 import type { PayoffComparisonResponse } from "@/types/api";
 import { formatINRWhole, formatPrice, formatSignedINR, formatSignedINRWhole } from "@/lib/format";
+
+/** Signed money with paise only where they matter: +₹480.50, but +₹12,23,520. */
+const signedMoney = (value: number) => Math.abs(value) >= 1000 ? formatSignedINRWhole(value) : formatSignedINR(value);
 import { cn } from "@/lib/utils";
 import { niceTicks } from "@/features/payoff/chartRange";
 import { legPnlAtSpot } from "./payoffMath";
@@ -22,10 +25,10 @@ export function BuilderMetrics({ comparison, linearTrades = false }: { compariso
   const marginKnown = margin?.status === "AVAILABLE" && !!margin.combined;
   const baselineMargin = marginKnown && margin.baseline && margin.baseline.withBenefitMargin > 0 ? margin.baseline.withBenefitMargin : null;
   const metrics: { label: string; value: string; colour: string; title?: string; sub?: string }[] = [
-    { label: mixed ? "Scenario max profit" : "Max profit", value: comparison.combined.unboundedProfit ? "Unlimited" : formatSignedINR(comparison.combined.maxProfit), colour: "text-profit" },
-    { label: mixed ? "Scenario max loss" : "Max loss", value: comparison.combined.unboundedLoss ? "Unlimited" : formatSignedINR(comparison.combined.maxLoss), colour: "text-loss" },
+    { label: mixed ? "Scenario max profit" : "Max profit", value: comparison.combined.unboundedProfit ? "Unlimited" : signedMoney(comparison.combined.maxProfit), colour: "text-profit" },
+    { label: mixed ? "Scenario max loss" : "Max loss", value: comparison.combined.unboundedLoss ? "Unlimited" : signedMoney(comparison.combined.maxLoss), colour: "text-loss" },
     { label: "Breakevens", value: comparison.combined.breakevens.length ? comparison.combined.breakevens.map(formatPrice).join(" / ") : "—", colour: "" },
-    { label: `${linearTrades ? "New cashflow" : "New premium"} (${comparison.adjustmentCashflow >= 0 ? "credit" : "debit"})`, value: formatSignedINR(comparison.adjustmentCashflow), colour: comparison.adjustmentCashflow >= 0 ? "text-profit" : "text-loss" },
+    { label: `${linearTrades ? "New cashflow" : "New premium"} (${comparison.adjustmentCashflow >= 0 ? "credit" : "debit"})`, value: signedMoney(comparison.adjustmentCashflow), colour: comparison.adjustmentCashflow >= 0 ? "text-profit" : "text-loss" },
     { label: "Margin", value: marginKnown ? formatINRWhole(margin.combined!.withBenefitMargin) : "—", colour: "",
       title: marginKnown ? "GoldenBook's estimate (SPAN + exposure, after hedge benefit). Premium is separate; this is not the broker's margin bill." : `Margin ${MARGIN_REASON[margin?.status ?? "UNAVAILABLE_SPOT"]}`,
       sub: !marginKnown && margin ? MARGIN_REASON[margin.status] : baselineMargin !== null ? `was ${formatINRWhole(baselineMargin)}` : undefined },
@@ -46,11 +49,11 @@ export function TargetInspector({ spot, target, metrics, onTarget }: {
   const high = hasSpot ? Math.max(spot * 1.1, target ?? spot) : 0;
   return <section className="builder-target" aria-label="Target spot inspector">
     <span className="builder-target-label">If it expires at</span>
-    <input aria-label="Target underlying price" type="number" min={0} step="any" value={target ?? ""}
+    <input aria-label="Target underlying price" type="number" min={0} step="any" value={target === null ? "" : Math.round(target * 100) / 100}
       onChange={(event) => { const value = event.target.value === "" ? null : Number(event.target.value); if (value === null || (Number.isFinite(value) && value >= 0)) onTarget(value); }} />
     {hasSpot && <div className="builder-target-slider">
       <input aria-label="Target price slider" type="range" min={low} max={high} step="any" value={target ?? spot}
-        onChange={(event) => onTarget(Number(event.target.value))} />
+        onChange={(event) => onTarget(Math.round(Number(event.target.value) * 100) / 100)} />
       <div className="builder-target-scale"><span>{((low / spot - 1) * 100).toFixed(0)}%</span><span>Spot {formatPrice(spot)}</span><span>+{((high / spot - 1) * 100).toFixed(0)}%</span></div>
     </div>}
     <div className="builder-target-values">{([['Existing', metrics?.existing], ['After adjustments', metrics?.combined], ['Change', metrics?.change]] as const).map(([label, value]) =>

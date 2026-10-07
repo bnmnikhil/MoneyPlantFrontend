@@ -142,3 +142,14 @@ test("target inspector allows manual prices without inventing an unknown spot or
   assert.match(ranged, /min="90" max="120"/);
   assert.match(ranged, /After adjustments/);
 });
+
+test("big figures drop their paise; small ones keep them", () => {
+  const html = render(BuilderMetrics, { comparison: { combined: { ...payoff, maxProfit: 1223520, maxLoss: -480 }, expiries: ["2026-10-27"], adjustmentCashflow: -480 } });
+  assert.match(html, /\+₹12,23,520</);
+  assert.match(html, /-₹480\.00/);
+});
+
+test("the target box shows paise, never a raw slider value", () => {
+  const html = render(TargetInspector, { spot: 429, target: 430.240788, metrics: null, onTarget() {} });
+  assert.match(html, /aria-label="Target underlying price"[^>]*value="430\.24"/);
+});

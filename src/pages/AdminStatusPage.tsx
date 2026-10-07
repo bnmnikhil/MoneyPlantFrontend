@@ -28,7 +28,7 @@ export function AdminStatusPage() {
 
   const s = q.data;
   return (
-    <div className="space-y-6">
+    <div className="page-stack page-fit">
       <PageHeader
         title="Status"
         description={`${s.app.environment} - up ${formatUptime(s.app.uptimeSeconds)} - refreshes every 15 seconds`}
@@ -131,7 +131,7 @@ function Users({ s }: { s: AdminStatus }) {
 function Errors({ s }: { s: AdminStatus }) {
   const e = s.errors;
   return (
-    <Card>
+    <Card className="fit-fill">
       <CardHeader>
         <CardTitle className="text-base">
           Error log - {e.lastHour} in the last hour, {e.last24h} in 24 hours

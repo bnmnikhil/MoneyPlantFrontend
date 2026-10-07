@@ -59,7 +59,7 @@ export function SettingsPage() {
           .join(" · ");
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
+    <div className="page-stack page-fit mx-auto w-full max-w-5xl">
       {/*
         Broker credentials is not in `primaryNavItems`, so no top-nav tab
         highlights while you are here and nothing in the chrome offers a way
@@ -102,7 +102,7 @@ export function SettingsPage() {
           }}
         />
       ) : (
-        <div className="space-y-5">
+        <div className="fit-fill space-y-5">
           {adding && (
             <AddRegistrationPanel
               definitions={catalogue}

@@ -8,7 +8,7 @@ import type { PayoffResponse } from "@/types/api";
  */
 export function BuilderPage({ prefill, active }: { prefill: PayoffResponse | null; active: boolean }) {
   const navigate = useNavigate();
-  return <div className="payoff-page">
+  return <div className="payoff-page page-fit">
     <h1 className="sr-only">Strategy builder</h1>
     <div className="payoff-toolbar builder-page-bar">
       <span className="font-semibold">Build &amp; test strategy</span>

@@ -1,4 +1,5 @@
 import type {
+  AdminStatus,
   BrokerAggregate,
   BrokerDefinition,
   BrokerCredential,
@@ -232,6 +233,7 @@ function credentialPath(brokerId: string, label: string) {
 
 export const api = {
   me: () => request<Me>("/api/me"),
+  adminStatus: () => request<AdminStatus>("/api/admin/status"),
   brokerDefinitions: () => request<BrokerDefinition[]>("/api/brokers"),
   sessionStatus: () => request<SessionStatus>("/api/session/status"),
   loginUrl: (brokerId: string, label?: string) =>

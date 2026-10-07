@@ -9,6 +9,7 @@ import { HoldingsPage } from "@/pages/HoldingsPage";
 import { PayoffPage } from "@/pages/PayoffPage";
 import { RiskPage } from "@/pages/RiskPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { AdminStatusPage } from "@/pages/AdminStatusPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { PrivacyPage } from "@/pages/PrivacyPage";
 import { TermsPage } from "@/pages/TermsPage";
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="/app/payoff" element={<PayoffPage />} />
           <Route path="/app/risk" element={<RiskPage />} />
           <Route path="/app/settings" element={<SettingsPage />} />
+          <Route path="/app/admin" element={<AdminStatusPage />} />
         </Route>
       </Route>
 

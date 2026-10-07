@@ -845,3 +845,23 @@ export interface RiskSummaryReport {
   asOf: string | null;
   freshness: Freshness;
 }
+
+/** GET /api/admin/status. Owner only: anyone else gets a 404. Aggregates only, no user data. */
+export interface AdminStatus {
+  takenAt: string;
+  app: { environment: string; version: string | null; buildTime: string | null; startedAt: string; uptimeSeconds: number; java: string };
+  host: {
+    cpu: { cores: number; loadPercent: number | null; load1: number | null; load5: number | null; load15: number | null; load15PerCore: number | null };
+    memory: { totalMb: number | null; availableMb: number | null; usedPercent: number | null; swapTotalMb: number | null; swapUsedMb: number | null };
+    disks: { path: string; totalMb: number | null; freeMb: number | null; freePercent: number | null }[];
+  };
+  jvm: { heapUsedMb: number; heapMaxMb: number; threads: number };
+  database: { up: boolean; sizeMb: number | null; activeConnections: number | null; idleConnections: number | null };
+  brokers: { rollout: Record<string, string>; liveSessions: Record<string, number> };
+  users: { total: number; active24h: number; new24h: number; new7d: number; disabled: number } | null;
+  errors: {
+    last24h: number;
+    lastHour: number;
+    recent: { at: string; logger: string | null; exception: string | null; message: string | null }[];
+  };
+}

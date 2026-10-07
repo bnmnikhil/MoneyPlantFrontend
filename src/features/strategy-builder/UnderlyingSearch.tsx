@@ -36,6 +36,10 @@ export function UnderlyingSearch({ selected, onSelect }: {
           aria-expanded={open}
           aria-controls="underlying-results"
           aria-autocomplete="list"
+          // Our own suggestions only: the browser's autofill list covered them and painted the box
+          // in its light autofill colour on the dark theme.
+          autoComplete="off"
+          spellCheck={false}
           value={query}
           placeholder="Symbol or company name"
           className="w-full bg-transparent px-2 py-2 text-sm outline-none"

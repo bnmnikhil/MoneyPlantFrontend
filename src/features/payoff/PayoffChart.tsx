@@ -11,12 +11,12 @@ import {
 } from "recharts";
 import type { Payoff } from "@/types/api";
 import { useState, useId } from "react";
-import { chartPoints, defaultRange, rangeAnchor, validRange } from "./chartRange";
+import { chartPoints, defaultRange, niceTicks, rangeAnchor, validRange } from "./chartRange";
 import type { ChartLeg, PriceRange } from "./chartRange";
 import { layoutReferenceLabels } from "./referenceLabels";
 import type { ReferenceLabel } from "./referenceLabels";
 import { PayoffTooltip } from "./PayoffTooltip";
-import { formatINRWhole, formatNumber } from "@/lib/format";
+import { formatINRWhole, formatNumber, formatPrice } from "@/lib/format";
 
 const GREEN = "#3FCB85";
 const RED = "#FF6B5E";
@@ -44,6 +44,7 @@ export function PayoffChart({
   isIndex,
   baseline,
   variant = "default",
+  labels = { baseline: "Existing positions", current: "After adjustments" },
 }: {
   payoff: Payoff;
   spot: number;
@@ -51,6 +52,8 @@ export function PayoffChart({
   isIndex: boolean;
   baseline?: { payoff: Payoff; legs: ChartLeg[] };
   variant?: "default" | "live" | "builder";
+  /** Legend wording when a baseline is drawn: the builder compares adjustments, Payoff a what-if. */
+  labels?: { baseline: string; current: string };
 }) {
   const styled = variant !== "default";
   const [chartWidth, setChartWidth] = useState(0);
@@ -67,8 +70,8 @@ export function PayoffChart({
     : typeof mode === "number" ? [anchor * (1 - mode), anchor * (1 + mode)] : auto;
   // The plotting area excludes the 72px Y axis and the 8px/16px chart margins.
   const referenceLabels = layoutReferenceLabels([
-    ...(spot > 0 ? [{ key: "spot", value: spot, text: `Spot ${formatINRWhole(spot)}` }] : []),
-    ...payoff.breakevens.map((be) => ({ key: `be-${be}`, value: be, text: formatINRWhole(be) })),
+    ...(spot > 0 ? [{ key: "spot", value: spot, text: `Spot ${formatPrice(spot)}` }] : []),
+    ...payoff.breakevens.map((be) => ({ key: `be-${be}`, value: be, text: formatPrice(be) })),
   ], [xMin, xMax], chartWidth - 96);
   const points = chartPoints(legs, [xMin, xMax], [
     ...payoff.breakevens,
@@ -118,8 +121,8 @@ export function PayoffChart({
       </details>
       {baseline && (
         <div className="flex gap-4 text-xs">
-          <span className="text-muted-foreground">- - Existing positions</span>
-          <span className="font-medium text-primary">— After adjustments</span>
+          <span className="text-muted-foreground">- - {labels.baseline}</span>
+          <span className="font-medium text-primary">— {labels.current}</span>
         </div>
       )}
     {styled && <p className="px-5 pt-2 text-sm text-muted-foreground">P&amp;L (₹)</p>}
@@ -148,6 +151,7 @@ export function PayoffChart({
             dataKey="spot"
             type="number"
             domain={[xMin, xMax]}
+            ticks={niceTicks(xMin, xMax)}
             allowDataOverflow
             tickFormatter={(v) => styled ? formatNumber(v) : formatINRWhole(v)}
             tick={{ fill: MUTED, fontSize: 11 }}
@@ -157,6 +161,7 @@ export function PayoffChart({
           />
           <YAxis
             domain={[minPnl, maxPnl === minPnl ? maxPnl + 1 : maxPnl]}
+            ticks={niceTicks(minPnl, maxPnl === minPnl ? maxPnl + 1 : maxPnl, 5)}
             tickFormatter={(v) => styled ? formatNumber(v) : formatINRWhole(v)}
             tick={{ fill: MUTED, fontSize: 11 }}
             tickLine={false}
@@ -196,7 +201,7 @@ export function PayoffChart({
               strokeDasharray="3 3"
               strokeOpacity={0.7}
               label={styled ? <ChartReferenceLabel marker={referenceLabels.find((label) => label.key === `be-${be}`)} color={MUTED} /> : {
-                value: formatINRWhole(be),
+                value: formatPrice(be),
                 position: "insideBottom",
                 fill: MUTED,
                 fontSize: 10,
@@ -218,7 +223,7 @@ export function PayoffChart({
               stroke={SPOT}
               strokeDasharray="4 4"
               label={styled ? <ChartReferenceLabel marker={referenceLabels.find((label) => label.key === "spot")} color={SPOT} /> : {
-                value: `Spot ${formatINRWhole(spot)}`,
+                value: `Spot ${formatPrice(spot)}`,
                 position: "insideTopRight",
                 fill: SPOT,
                 fontSize: 11,

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Info, RotateCcw } from "lucide-react";
+import { ChevronDown, Plus, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { brokerLabel } from "@/components/BrokerBadge";
 import { PayoffChart } from "@/features/payoff/PayoffChart";
 import { usePayoffCurves, useStrategyMetadata } from "@/features/payoff/hooks";
 import { api, ApiError } from "@/lib/api";
-import { formatINR, formatSignedINR } from "@/lib/format";
+import { formatPrice, formatSignedINR } from "@/lib/format";
 import type {
   OptionChainRow,
   CurveRef,
@@ -31,14 +32,13 @@ import {
   withManualPrice,
 } from "./scenarioState";
 import { legPnlAtSpot } from "./payoffMath";
-import { BuilderMargin, BuilderMetrics, TargetInspector } from "./BuilderMetrics";
+import { BuilderMetrics, PnlLadder, TargetInspector } from "./BuilderMetrics";
 import { CustomLegForm } from "./CustomLegForm";
 import { draftCashflow } from "./legFigures";
 import { expiryLabel } from "@/features/payoff/expiry";
 
 interface StrategyBuilderProps {
   initialBaseline?: PayoffResponse | null;
-  onBackToLive?: () => void;
   active?: boolean;
 }
 
@@ -52,7 +52,7 @@ interface DraftContext {
 
 const curveKey = (curve: CurveRef) => `${curve.connectionId}:${curve.underlying}`;
 
-export function StrategyBuilderView({ initialBaseline, onBackToLive, active = true }: StrategyBuilderProps) {
+export function StrategyBuilderView({ initialBaseline, active = true }: StrategyBuilderProps) {
   const metadata = useStrategyMetadata();
   const positionCurves = usePayoffCurves();
   const [contexts, setContexts] = useState<Record<string, DraftContext>>({});
@@ -70,6 +70,16 @@ export function StrategyBuilderView({ initialBaseline, onBackToLive, active = tr
   const [importError, setImportError] = useState<string | null>(null);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  // Layout B: the chain is a drawer over the legs, opened by "+ Add from chain"; the payoff stays in
+  // view beside it so each Buy or Sell visibly redraws the curve.
+  const [chainOpen, setChainOpen] = useState(false);
+  const [chartTab, setChartTab] = useState<"chart" | "table">("chart");
+  useEffect(() => {
+    if (!chainOpen) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setChainOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [chainOpen]);
   const revision = useRef(0);
   const importedRevision = useRef<string | null>(null);
 
@@ -314,12 +324,14 @@ export function StrategyBuilderView({ initialBaseline, onBackToLive, active = tr
 
   const account = context?.baselineResponse ? `${brokerLabel(context.baselineResponse.brokerId)} · ${positionCurve?.accountLabel ?? "Imported account"}` : undefined;
   const netCashflow = draftCashflow(drafts);
-  return <div className="builder-workspace">
+  const ladderLeg = (leg: ScenarioLeg) => ({ type: leg.contract.type, strike: leg.contract.strike, price: leg.entryPrice ?? 0, qty: leg.qty });
+  const quotesNote = `Quotes may come from another broker; positions and margin ${account ? `remain tied to ${account}` : "stay in their original account"}.`;
+  return <div className="builder-workspace builder-b">
     <section className="builder-panel builder-context" aria-label="Strategy context">
       <div className="builder-context-fields">
         <UnderlyingSearch selected={selection} onSelect={chooseUnderlying} />
         <div className="builder-baseline-context"><p>Existing positions (baseline)</p><div><span title={account}>{account ? `${account} · ${baseline.length} positions` : "No baseline"}</span><button type="button" className="builder-small-button" aria-expanded={importOpen} onClick={() => setImportOpen(!importOpen)}>{account ? "Change" : "Add existing"}</button></div></div>
-        <label>Quotes source (market data)<select value={sourceConnectionId} disabled={!availableSources.length} onChange={(event) => setSourceConnectionId(event.target.value)}>
+        <label title={quotesNote}>Quotes source<select value={sourceConnectionId} disabled={!availableSources.length} onChange={(event) => setSourceConnectionId(event.target.value)}>
           {!availableSources.length && <option value="">No usable source</option>}
           {sources.data?.sources.map((source) => <option key={source.connectionId} value={source.connectionId} disabled={!source.available}>{brokerLabel(source.brokerId)} · {source.accountLabel}{source.policyRestricted ? " (restricted)" : ""}</option>)}
         </select></label>
@@ -327,23 +339,25 @@ export function StrategyBuilderView({ initialBaseline, onBackToLive, active = tr
           {!expiries.data?.expiries.length && <option value="">No expiry available</option>}
           {expiries.data?.expiries.map((expiry) => <option key={expiry} value={expiry}>{expiryLabel(expiry)}</option>)}
         </select></label>
-        <div className="builder-spot"><p>Spot</p><strong>{spot !== null && spot > 0 ? formatINR(spot) : "—"}</strong></div>
-        <div className="builder-context-actions"><button type="button" className="builder-primary-button" onClick={() => { setActiveKey(null); setComparisonSnapshot(null); setTargetSpot(null); setImportMessage(null); }}>New strategy</button>
-          <Button variant="outline" disabled={!drafts.length} onClick={() => updateDrafts(() => [])}><RotateCcw className="size-3.5" />Reset adjustments</Button></div>
+        <div className="builder-spot"><p>Spot</p><strong>{spot !== null && spot > 0 ? formatPrice(spot) : "—"}</strong></div>
+        <div className="builder-context-actions">
+          <span className="builder-hypo" title="A what-if workspace: nothing here is sent to a broker.">Hypothetical · no orders</span>
+          <button type="button" className="builder-primary-button" onClick={() => { setActiveKey(null); setComparisonSnapshot(null); setTargetSpot(null); setImportMessage(null); setChainOpen(false); }}>New strategy</button>
+          <Button variant="outline" disabled={!drafts.length} onClick={() => updateDrafts(() => [])}><RotateCcw className="size-3.5" />Reset</Button>
+        </div>
       </div>
-      <p className="builder-context-note"><Info className="size-3.5 shrink-0" />Quotes may come from another broker; positions and margin{account ? ` remain tied to ${account}` : " stay in their original account"}.</p>
       {importOpen && <div className="builder-import">
         <label>Add existing positions<select value={importCurveKey} disabled={positionCurves.isLoading || isImporting} onChange={(event) => setImportCurveKey(event.target.value)}>
           {!positionCurves.data?.length && <option value="">No open position set available</option>}
           {positionCurves.data?.map((curve) => <option key={curveKey(curve)} value={curveKey(curve)}>{curve.underlyingLabel} · {brokerLabel(curve.brokerId)} · {curve.accountLabel}</option>)}
         </select></label>
         <Button type="button" variant="outline" disabled={!importCurveKey || isImporting} onClick={importExistingPositions}>{isImporting ? "Loading positions…" : "Load as baseline"}</Button>
-        <p className="basis-full text-xs text-muted-foreground">Existing units and entry costs stay immutable; adjustments remain hypothetical draft trades.</p>
+        <p className="basis-full text-xs text-muted-foreground">Existing units and entry costs stay immutable; adjustments remain hypothetical draft trades. {quotesNote}</p>
       </div>}
       {positionCurves.isError && <p role="alert" className="text-xs text-loss">Could not list existing positions. <button type="button" className="underline" onClick={() => positionCurves.refetch()}>Retry</button></p>}
       {importError && <p role="alert" className="text-xs text-loss">{importError}</p>}
       {importMessage && <p role="status" className="text-xs text-muted-foreground">{importMessage}</p>}
-      {Object.keys(contexts).length > 0 && <div className="builder-session-drafts"><span>Session drafts:</span>{Object.entries(contexts).map(([key, saved]) => <button key={key} type="button" aria-pressed={key === activeKey} onClick={() => { setActiveKey(key); setTargetSpot(null); }}>
+      {Object.keys(contexts).length > 1 && <div className="builder-session-drafts"><span>Session drafts:</span>{Object.entries(contexts).map(([key, saved]) => <button key={key} type="button" aria-pressed={key === activeKey} onClick={() => { setActiveKey(key); setTargetSpot(null); }}>
         {saved.selection.symbol}{saved.positionConnectionId ? ` · ${positionCurves.data?.find((curve) => curve.connectionId === saved.positionConnectionId && curve.underlying === saved.selection.code)?.accountLabel ?? "imported positions"}` : " · new"} ({saved.drafts.length})
       </button>)}</div>}
     </section>
@@ -353,51 +367,67 @@ export function StrategyBuilderView({ initialBaseline, onBackToLive, active = tr
       {!availableSources.length && <p role="status" className="text-sm text-orange-300">Option data unavailable. Connect a market-data-capable broker for chain quotes.</p>}
       {sources.isError && <p role="alert" className="text-sm text-loss">Could not load quote sources. <button className="underline" onClick={() => sources.refetch()}>Retry</button></p>}
       {expiries.isError && <p role="alert" className="text-sm text-loss">Could not load expiries. <button className="underline" onClick={() => expiries.refetch()}>Retry</button></p>}
-      <div className="builder-grid">
-        <section className="builder-panel builder-chain-panel">
-          <OptionChainPicker chain={chain.data} isLoading={chain.isLoading || chain.isFetching} error={chain.error}
-            onRetry={() => chain.refetch()} onExpand={() => setStrikeCount((value) => Math.min(50, value + 10))} canExpand={strikeCount < 50}
-            onAdd={addFromChain} quantityFor={quantityFor} />
+      <div className="builder-b-grid">
+        <section className="builder-panel builder-b-legs" aria-labelledby="builder-legs-title">
+          <div className="builder-panel-heading">
+            <h2 id="builder-legs-title">Strategy legs</h2>
+            <div className="flex items-center gap-2">
+              <button type="button" className="builder-primary-button" aria-expanded={chainOpen} aria-controls="builder-chain-drawer" onClick={() => setChainOpen(true)}><Plus className="size-3.5" />Add from chain</button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild><Button variant="outline" size="sm" disabled={!chain.data || !metadata.data?.templates.length}>Recipes<ChevronDown className="size-3.5" /></Button></DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="app-workspace max-h-80 overflow-auto">
+                  {metadata.data?.templates.map((template) => <DropdownMenuItem key={template.id} title={template.description} onSelect={() => addRecipe(template.id)}>{template.label}</DropdownMenuItem>)}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+          {recipeMessage && <p role="status" className="builder-legs-note">{recipeMessage}</p>}
+          <div className="builder-b-legs-scroll">
+            <StrategyLegEditor baseline={baseline} drafts={drafts} expiries={expiries.data?.expiries ?? []} chain={chain.data} account={account}
+              onToggle={(id) => updateDraft(id, (leg) => ({ ...leg, enabled: !leg.enabled }))}
+              onRemove={(id) => updateDrafts((current) => current.filter((leg) => leg.id !== id))}
+              onDirection={(id) => updateDraft(id, (leg) => ({ ...leg, qty: -leg.qty, closesLegId: null }))}
+              onQuantity={(id, units) => updateDraft(id, (leg) => ({ ...leg, qty: Math.sign(leg.qty) * units, closesLegId: null }))}
+              onPrice={(id, price) => updateDraft(id, (leg) => withManualPrice(leg, price))}
+              onLatest={(id) => updateDraft(id, (leg) => useLatestPrice(leg, leg.currentMark))}
+              onExpiry={setLegExpiry} onContract={setContract}
+              onClose={(leg) => updateDrafts((current) => {
+                const closing = current.filter((draft) => draft.enabled && draft.closesLegId === leg.id).reduce((sum, draft) => sum + Math.abs(draft.qty), 0);
+                const remaining = Math.abs(leg.qty) - closing;
+                return remaining <= 0 ? current : [...current, closeDraft(leg, leg.currentMark?.value ?? null, remaining)];
+              })} />
+            <div className="builder-legs-footer"><CustomLegForm chain={chain.data} onAdd={addFromChain} /><div className="text-sm"><span className="text-muted-foreground">Net draft cashflow </span><strong className={netCashflow === null ? "" : netCashflow < 0 ? "text-loss" : "text-profit"}>{netCashflow === null ? "Incomplete" : formatSignedINR(netCashflow)}</strong></div></div>
+          </div>
+          {comparison && <BuilderMetrics comparison={comparison} linearTrades={drafts.some((leg) => leg.enabled && (leg.contract.type === "EQ" || leg.contract.type === "FUT"))} />}
+          {chainOpen && <div id="builder-chain-drawer" className="builder-drawer" role="dialog" aria-label="Add legs from the option chain">
+            <div className="builder-drawer-head"><span>Tap Buy or Sell; the payoff on the right updates as you go.</span><button type="button" className="builder-primary-button" autoFocus onClick={() => setChainOpen(false)}>Done</button></div>
+            <OptionChainPicker chain={chain.data} isLoading={chain.isLoading || chain.isFetching} error={chain.error}
+              onRetry={() => chain.refetch()} onExpand={() => setStrikeCount((value) => Math.min(50, value + 10))} canExpand={strikeCount < 50}
+              onAdd={addFromChain} quantityFor={quantityFor} />
+          </div>}
         </section>
-        <section className="builder-panel builder-legs-panel" aria-labelledby="builder-legs-title">
-          <div className="builder-panel-heading"><h2 id="builder-legs-title">Strategy legs</h2></div>
-          <div className="builder-recipes"><h3>Quick recipes</h3><div>
-            {metadata.data?.templates.map((template) => <button key={template.id} type="button" disabled={!chain.data} title={template.description} onClick={() => addRecipe(template.id)}>{template.label}</button>)}
-          </div>{recipeMessage && <p role="status" className="mt-2 text-xs text-muted-foreground">{recipeMessage}</p>}</div>
-          <StrategyLegEditor baseline={baseline} drafts={drafts} expiries={expiries.data?.expiries ?? []} chain={chain.data} account={account}
-            onToggle={(id) => updateDraft(id, (leg) => ({ ...leg, enabled: !leg.enabled }))}
-            onRemove={(id) => updateDrafts((current) => current.filter((leg) => leg.id !== id))}
-            onDirection={(id) => updateDraft(id, (leg) => ({ ...leg, qty: -leg.qty, closesLegId: null }))}
-            onQuantity={(id, units) => updateDraft(id, (leg) => ({ ...leg, qty: Math.sign(leg.qty) * units, closesLegId: null }))}
-            onPrice={(id, price) => updateDraft(id, (leg) => withManualPrice(leg, price))}
-            onLatest={(id) => updateDraft(id, (leg) => useLatestPrice(leg, leg.currentMark))}
-            onExpiry={setLegExpiry} onContract={setContract}
-            onClose={(leg) => updateDrafts((current) => {
-              const closing = current.filter((draft) => draft.enabled && draft.closesLegId === leg.id).reduce((sum, draft) => sum + Math.abs(draft.qty), 0);
-              const remaining = Math.abs(leg.qty) - closing;
-              return remaining <= 0 ? current : [...current, closeDraft(leg, leg.currentMark?.value ?? null, remaining)];
-            })} />
-          <div className="builder-legs-footer"><CustomLegForm chain={chain.data} onAdd={addFromChain} /><div className="text-sm"><span className="text-muted-foreground">Net draft cashflow </span><strong className={netCashflow === null ? "" : netCashflow < 0 ? "text-loss" : "text-profit"}>{netCashflow === null ? "Incomplete" : formatSignedINR(netCashflow)}</strong></div></div>
-          <p className="px-4 pb-3 text-xs text-muted-foreground">Prices are accepted snapshots or manual assumptions. Expand an instrument to edit its contract or price source. Close adds an opposite draft trade.</p>
+        <section className="builder-panel builder-b-chart" aria-labelledby="builder-preview-title">
+          <div className="builder-panel-heading">
+            <h2 id="builder-preview-title">Payoff at expiry</h2>
+            <div className="builder-chart-tabs" role="tablist" aria-label="Payoff view">
+              <button type="button" role="tab" aria-selected={chartTab === "chart"} onClick={() => setChartTab("chart")}>Chart</button>
+              <button type="button" role="tab" aria-selected={chartTab === "table"} onClick={() => setChartTab("table")}>P&amp;L table</button>
+            </div>
+            <span className="ml-auto text-xs text-muted-foreground" role="status">{isComparing ? "Calculating…" : comparison ? "Calculated · expiry" : "Awaiting valid legs"}</span>
+          </div>
+          {compareError && <p role="alert" className="p-3 text-sm text-loss">{compareError}</p>}
+          {comparison ? <>
+            {chartTab === "chart"
+              ? <PayoffChart variant="live" key={activeKey} payoff={comparison.combined} spot={comparison.spot ?? 0} legs={enabledCombined.map(chartLeg)} isIndex={selection.isIndex}
+                  baseline={baseline.length ? { payoff: comparison.baseline, legs: baseline.map(chartLeg) } : undefined} />
+              : <PnlLadder spot={comparison.spot} isIndex={selection.isIndex} baseline={baseline.map(ladderLeg)} combined={enabledCombined.map(ladderLeg)} />}
+            <TargetInspector spot={spot} target={target} metrics={targetMetrics} onTarget={setTargetSpot} />
+          </> : <div className="builder-empty builder-preview-empty">{isComparing ? "Calculating this scenario…" : "Add legs from the chain or a recipe to see the expiry payoff."}</div>}
         </section>
-        <div className="builder-preview-column">
-          <section className="builder-panel builder-preview" aria-labelledby="builder-preview-title">
-            <div className="builder-panel-heading"><h2 id="builder-preview-title">Live payoff preview</h2><span className="text-xs text-muted-foreground" role="status">{isComparing ? "Calculating…" : comparison ? "Calculated · expiry" : "Awaiting valid legs"}</span></div>
-            {compareError && <p role="alert" className="p-3 text-sm text-loss">{compareError}</p>}
-            {comparison ? <>
-              <PayoffChart variant="builder" key={activeKey} payoff={comparison.combined} spot={comparison.spot ?? 0} legs={enabledCombined.map(chartLeg)} isIndex={selection.isIndex}
-                baseline={baseline.length ? { payoff: comparison.baseline, legs: baseline.map(chartLeg) } : undefined} />
-              <BuilderMetrics comparison={comparison} linearTrades={drafts.some((leg) => leg.enabled && (leg.contract.type === "EQ" || leg.contract.type === "FUT"))} />
-              <TargetInspector spot={spot} target={target} metrics={targetMetrics} onTarget={setTargetSpot} />
-            </> : <div className="builder-empty builder-preview-empty">{isComparing ? "Calculating this scenario…" : "Add and price a leg to calculate the expiry payoff."}</div>}
-          </section>
-          {comparison && <BuilderMargin comparison={comparison} account={account} />}
-        </div>
       </div>
       {comparison && comparison.expiries.length > 1 && <p role="note" className="payoff-warning">Expiry scenario: {comparison.expiries.map(expiryLabel).join(" / ")}. A single terminal price is applied to every expiry; later-contract time value is not modelled at the first expiry.</p>}
       {comparison?.warnings.map((warning) => <p key={warning} role="status" className="text-xs text-orange-300">{warning}</p>)}
-      {comparison?.assumptions.map((assumption) => <p key={assumption} className="text-xs text-muted-foreground">{assumption}</p>)}
+      {comparison?.assumptions.map((assumption) => <p key={assumption} className="builder-assumption">{assumption}</p>)}
     </>}
-    {onBackToLive && <button type="button" onClick={onBackToLive} className="justify-self-start text-sm text-muted-foreground hover:text-primary">Back to live positions</button>}
   </div>;
 }

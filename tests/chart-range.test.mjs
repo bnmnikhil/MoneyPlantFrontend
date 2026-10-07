@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultRange, chartPoints, rangeAnchor, validRange } from '../src/features/payoff/chartRange.ts';
+import { defaultRange, chartPoints, niceTicks, rangeAnchor, validRange } from '../src/features/payoff/chartRange.ts';
 
 const leg = (type, strike, qty = 1, avgPrice = 10) => ({ type, strike, qty, avgPrice });
 test('indices default to ten percent, stocks to fifteen percent', () => {
@@ -36,4 +36,13 @@ test('an imported signed M&M basis is preserved in the plotted expiry P&L', () =
   assert.deepEqual(points.find(point => point.spot === 2860), { spot: 2860, pnl: 18160 });
   assert.deepEqual(points.find(point => point.spot === 2900), { spot: 2900, pnl: 10160 });
   assert.deepEqual(points.at(-1), { spot: 3300, pnl: 10160 });
+});
+
+test("axis ticks land on round steps inside the range", () => {
+  assert.deepEqual(niceTicks(225.845, 305.555), [230, 240, 250, 260, 270, 280, 290, 300]);
+  assert.deepEqual(niceTicks(23675.04, 28936.16), [24000, 25000, 26000, 27000, 28000]);
+  assert.deepEqual(niceTicks(-21172.5, 8827.5, 5), [-20000, -15000, -10000, -5000, 0, 5000]);
+  assert.deepEqual(niceTicks(259.6, 271.8, 14), [260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271]);
+  assert.deepEqual(niceTicks(5, 5), []);
+  assert.deepEqual(niceTicks(Number.NaN, 10), []);
 });

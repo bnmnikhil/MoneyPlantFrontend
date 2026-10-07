@@ -353,9 +353,26 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
         </select></label>
         <div className="builder-spot"><p>Spot</p><strong>{spot !== null && spot > 0 ? formatPrice(spot) : "—"}</strong></div>
         <div className="builder-context-actions">
+          {selection && selection.hasOptions !== false && <div className="builder-baseline-bar" aria-label="Existing positions and holdings">
+            <label className="builder-switch" title={positionAccounts.length ? "Add this account's open positions as a locked baseline" : `No open ${selection.symbol} positions in any account`}>
+              <input type="checkbox" role="switch" className="payoff-holdings-switch" checked={positionsOn} disabled={baselineBusy || (!positionsOn && !(currentAccount && positionAccounts.includes(currentAccount)))}
+                onChange={(event) => { void setBaselineParts(event.target.checked, holdingsOn, currentAccount); }} />
+              Existing positions
+            </label>
+            <label className="builder-switch" title={holdingAccounts.length ? "Add this account's shares as a locked baseline (margin is not estimated with shares)" : `No ${selection.symbol} shares in any account`}>
+              <input type="checkbox" role="switch" className="payoff-holdings-switch" checked={holdingsOn} disabled={baselineBusy || (!holdingsOn && !(currentAccount && holdingAccounts.includes(currentAccount)))}
+                onChange={(event) => { void setBaselineParts(positionsOn, event.target.checked, currentAccount); }} />
+              Holdings
+            </label>
+            {baselineAccounts.length > 1 && <select aria-label="Account for existing positions and holdings" value={currentAccount ?? ""} disabled={baselineBusy}
+              onChange={(event) => { setBaselineAccount(event.target.value); if (positionsOn || holdingsOn) void setBaselineParts(positionsOn, holdingsOn, event.target.value); }}>
+              {baselineAccounts.map((id) => <option key={id} value={id}>{accountName(id)}</option>)}
+            </select>}
+            {baselineAccounts.length === 1 && (positionsOn || holdingsOn) && <span className="builder-baseline-account">{accountName(baselineAccounts[0])}</span>}
+            {baselineBusy && <span className="builder-baseline-account">Loading…</span>}
+          </div>}
           <span className="builder-hypo" title="A what-if workspace: nothing here is sent to a broker.">Hypothetical · no orders</span>
-          <button type="button" className="builder-primary-button" onClick={() => { setActiveKey(null); setComparisonSnapshot(null); setTargetSpot(null); setImportError(null); setChainOpen(false); }}>New strategy</button>
-          <Button variant="outline" disabled={!drafts.length} onClick={() => updateDrafts(() => [])}><RotateCcw className="size-3.5" />Reset</Button>
+          <Button variant="outline" disabled={!drafts.length} title="Remove the draft legs; existing positions and holdings stay" onClick={() => updateDrafts(() => [])}><RotateCcw className="size-3.5" />Reset</Button>
         </div>
       </div>
       {positionCurves.isError && <p role="alert" className="text-xs text-loss">Could not list existing positions. <button type="button" className="underline" onClick={() => positionCurves.refetch()}>Retry</button></p>}
@@ -363,7 +380,7 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
         {saved.selection.symbol}{saved.positionConnectionId ? ` · ${positionCurves.data?.find((curve) => curve.connectionId === saved.positionConnectionId && curve.underlying === saved.selection.code)?.accountLabel ?? "imported positions"}` : " · new"} ({saved.drafts.length})
       </button>)}</div>}
     </section>
-    {!selection && <div className="builder-panel builder-empty">Search the exchange catalogue to start a strategy, or add existing positions above.</div>}
+    {!selection && <div className="builder-panel builder-empty">Search for an underlying above to start a strategy.</div>}
     {selection?.hasOptions === false && <div className="builder-panel builder-empty"><strong>No listed options</strong><p>{selection.name} has no listed option contracts in the current catalogue.</p></div>}
     {selection && selection.hasOptions !== false && <>
       {!availableSources.length && <p role="status" className="text-sm text-orange-300">Option data unavailable. Connect a market-data-capable broker for chain quotes.</p>}
@@ -382,24 +399,6 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          </div>
-          <div className="builder-baseline-bar" aria-label="Existing positions and holdings">
-            <label className="builder-switch" title={positionAccounts.length ? "Add this account's open positions as a locked baseline" : `No open ${selection.symbol} positions in any account`}>
-              <input type="checkbox" role="switch" className="payoff-holdings-switch" checked={positionsOn} disabled={baselineBusy || (!positionsOn && !(currentAccount && positionAccounts.includes(currentAccount)))}
-                onChange={(event) => { void setBaselineParts(event.target.checked, holdingsOn, currentAccount); }} />
-              Existing positions
-            </label>
-            <label className="builder-switch" title={holdingAccounts.length ? "Add this account's shares as a locked baseline (margin is not estimated with shares)" : `No ${selection.symbol} shares in any account`}>
-              <input type="checkbox" role="switch" className="payoff-holdings-switch" checked={holdingsOn} disabled={baselineBusy || (!holdingsOn && !(currentAccount && holdingAccounts.includes(currentAccount)))}
-                onChange={(event) => { void setBaselineParts(positionsOn, event.target.checked, currentAccount); }} />
-              Holdings
-            </label>
-            {baselineAccounts.length > 1 && <select aria-label="Account for existing positions and holdings" value={currentAccount ?? ""} disabled={baselineBusy}
-              onChange={(event) => { setBaselineAccount(event.target.value); if (positionsOn || holdingsOn) void setBaselineParts(positionsOn, holdingsOn, event.target.value); }}>
-              {baselineAccounts.map((id) => <option key={id} value={id}>{accountName(id)}</option>)}
-            </select>}
-            {baselineAccounts.length === 1 && (positionsOn || holdingsOn) && <span className="builder-baseline-account">{accountName(baselineAccounts[0])}</span>}
-            {baselineBusy && <span className="builder-baseline-account">Loading…</span>}
           </div>
           {importError && <p role="alert" className="builder-legs-note text-loss">{importError}</p>}
           {recipeMessage && <p role="status" className="builder-legs-note">{recipeMessage}</p>}

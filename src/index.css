@@ -404,7 +404,7 @@
 .builder-b-grid { display: grid; grid-template-columns: minmax(23.75rem, 27.5rem) minmax(0, 1fr); gap: 0.625rem; align-items: stretch; }
 .builder-b-legs { position: relative; display: flex; flex-direction: column; min-height: 32.5rem; overflow: hidden; }
 .builder-b-legs-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--gb-thumb) transparent; }
-.builder-baseline-bar { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem 1rem; padding: 0.4375rem 0.875rem; border-bottom: 1px solid hsl(var(--border)); font-size: 0.8125rem; }
+.builder-baseline-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem 0.875rem; font-size: 0.8125rem; }
 .builder-switch { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; white-space: nowrap; }
 .builder-switch:has(input:disabled) { color: hsl(var(--muted-foreground)); cursor: not-allowed; }
 .builder-baseline-bar select { max-width: 14rem; padding: 0.25rem 0.5rem; border: 1px solid var(--gb-control-edge); border-radius: 4px; background: var(--gb-sunken); color: hsl(var(--foreground)); font-size: 0.8125rem; }
@@ -479,7 +479,7 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 .builder-workspace h2 { font-size: 1.3125rem; font-weight: 600; letter-spacing: -.025em; }
 .builder-workspace h3 { font-size: 0.875rem; font-weight: 600; }
 .builder-context { padding: 0.75rem 0.9375rem 0.625rem; }
-.builder-context-fields { display: grid; grid-template-columns: minmax(10.3125rem, 1.1fr) minmax(9.0625rem, .85fr) minmax(14.6875rem, 1.6fr) minmax(12.5rem, 1.2fr) minmax(7.5rem, .75fr) auto; align-items: end; gap: 1.25rem; }
+.builder-context-fields { display: grid; grid-template-columns: minmax(10rem, 1.1fr) minmax(8.5rem, .8fr) minmax(11rem, 1.3fr) minmax(5.5rem, .55fr) auto; align-items: end; gap: 1.25rem; }
 .builder-context-fields > * + * { border-left: 1px solid hsl(var(--border)); padding-left: 1.25rem; }
 .builder-context label, .builder-context-fields p { display: block; font-size: 0.8125rem; color: hsl(var(--muted-foreground)); }
 .builder-workspace select, .builder-custom-form select { max-width: 100%; min-width: 0; border: 1px solid var(--gb-control-edge); border-radius: 4px; padding: 0.5rem 0.5625rem; background: var(--gb-sunken); color: hsl(var(--foreground)); font-size: 0.875rem; }
@@ -490,7 +490,7 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 .builder-baseline-context > div { display: flex; align-items: center; gap: 0.5rem; min-height: 2.4375rem; margin-top: 0.3125rem; }
 .builder-baseline-context > div > span { min-width: 0; font-size: 0.875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .builder-spot strong { display: block; padding: 0.5rem 0; font-size: 1.3125rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.builder-context-actions { display: flex; align-items: center; gap: 0.625rem; padding-bottom: 2px; }
+.builder-context-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.625rem; padding-bottom: 2px; }
 .builder-context-actions > button { height: 2.5625rem; white-space: nowrap; font-size: 0.8125rem; }
 .builder-primary-button, .builder-small-button { display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; padding: 0.5625rem 0.75rem; border: 1px solid var(--gb-gold); border-radius: 5px; background: var(--gb-gold); color: var(--gb-on-gold); font-weight: 600; font-size: 0.8125rem; white-space: nowrap; }
 .builder-small-button { padding: 0.3125rem 0.5rem; border-color: var(--gb-control-edge); background: var(--gb-sunken); color: hsl(var(--foreground)); font-size: 0.75rem; font-weight: 400; }
@@ -568,8 +568,9 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 .builder-target-values > div + div { padding-left: 0.5rem; border-left: 1px solid hsl(var(--border)); }
 .builder-target-values strong { display: block; margin-top: 3px; font-size: 1.0625rem; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 @media (max-width: 1535px) {
-  .builder-context-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
-  .builder-context-fields > :nth-child(4) { border-left: 0; padding-left: 0; }
+  /* The four fields on one row; the switches, the tag and Reset on a row of their own. */
+  .builder-context-fields { grid-template-columns: minmax(10rem, 1.1fr) minmax(8.5rem, .8fr) minmax(11rem, 1.3fr) minmax(5.5rem, .55fr); gap: 0.625rem 1rem; }
+  .builder-context-fields > .builder-context-actions { grid-column: 1 / -1; border-left: 0; padding-left: 0; flex-wrap: wrap; }
 }
 @media (max-width: 900px) {
   .builder-context-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }

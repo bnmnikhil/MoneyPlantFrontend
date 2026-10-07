@@ -7,6 +7,7 @@ import {
   ShieldAlert,
   BellRing,
   KeyRound,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,6 +25,7 @@ export const navItems: NavItem[] = [
   { label: "Positions", to: "/app/positions", icon: Layers },
   { label: "Holdings", to: "/app/holdings", icon: Wallet },
   { label: "Payoff", to: "/app/payoff", icon: LineChart },
+  { label: "Builder", to: "/app/builder", icon: Wrench },
   { label: "Risk", to: "/app/risk", icon: ShieldAlert },
   { label: "Option Chain", to: "/app/option-chain", icon: ListTree, soon: true },
   { label: "Alerts", to: "/app/alerts", icon: BellRing, soon: true },

@@ -34,7 +34,7 @@ import { legPnlAtSpot } from "./payoffMath";
 import { BuilderMargin, BuilderMetrics, TargetInspector } from "./BuilderMetrics";
 import { CustomLegForm } from "./CustomLegForm";
 import { draftCashflow } from "./legFigures";
-import { expiryLabel } from "@/features/payoff/PayoffSummary";
+import { expiryLabel } from "@/features/payoff/expiry";
 
 interface StrategyBuilderProps {
   initialBaseline?: PayoffResponse | null;

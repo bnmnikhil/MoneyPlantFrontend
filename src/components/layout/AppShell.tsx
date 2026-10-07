@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
-import { Outlet } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Topbar } from "@/components/layout/Topbar";
 import { MobileTabBar } from "@/components/layout/MobileTabBar";
 import { LegalFooter } from "@/features/legal/LegalFooter";
 import { BrokerSessionBanner } from "@/features/session/BrokerSessionBanner";
 import { useBrokerDefinitions } from "@/features/brokers/hooks";
+import { BuilderHostContext } from "@/features/strategy-builder/builderHost";
+import { BuilderPage } from "@/pages/BuilderPage";
+import type { PayoffResponse } from "@/types/api";
 import {
   BROKER_SESSION_LOST_EVENT,
   type BrokerSessionLostDetail,
@@ -18,6 +21,22 @@ export function AppShell() {
   const [sessionLost, setSessionLost] = useState<BrokerSessionLostDetail | null>(
     null
   );
+
+  // The strategy builder is its own page, but it stays mounted once opened so
+  // draft trades survive moving between pages (it used to live inside Payoff
+  // for the same reason). It is not mounted at all until first visited.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const onBuilder = location.pathname === "/app/builder";
+  const [builderMounted, setBuilderMounted] = useState(onBuilder);
+  const [builderPrefill, setBuilderPrefill] = useState<PayoffResponse | null>(null);
+  useEffect(() => { if (onBuilder) setBuilderMounted(true); }, [onBuilder]);
+  const openInBuilder = useCallback((baseline: PayoffResponse) => {
+    setBuilderPrefill(baseline);
+    setBuilderMounted(true);
+    navigate("/app/builder");
+  }, [navigate]);
+  const builderHost = useMemo(() => ({ openInBuilder }), [openInBuilder]);
 
   // Surface the banner whenever any /api call reports a broker that needs
   // authorising. Carries the brokerId so the banner names the right one.
@@ -42,7 +61,12 @@ export function AppShell() {
                 code={sessionLost.code}
               />
             )}
-            <Outlet />
+            <BuilderHostContext.Provider value={builderHost}>
+              <Outlet />
+              {builderMounted && <div hidden={!onBuilder}>
+                <BuilderPage prefill={builderPrefill} active={onBuilder} />
+              </div>}
+            </BuilderHostContext.Provider>
           </div>
           <LegalFooter className="mt-8" />
         </main>

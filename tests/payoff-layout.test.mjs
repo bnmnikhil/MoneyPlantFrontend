@@ -17,8 +17,8 @@ function component(name) {
   new Function("module", "exports", "require", result.outputFiles[0].text)(loaded, loaded.exports, createRequire(import.meta.url));
   return loaded.exports[name];
 }
-const PayoffSummary = component("PayoffSummary");
-const LegsTable = component("LegsTable");
+const PositionFigures = component("PositionFigures");
+const LegsRail = component("LegsRail");
 const HoldingsToggle = component("HoldingsToggle");
 const CurveSelector = component("CurveSelector");
 const PayoffTooltip = component("PayoffTooltip");
@@ -50,36 +50,55 @@ test("curve trigger distinguishes the account and uses the display spelling", ()
   assert.match(html, /aria-expanded="false"/);
 });
 
-test("mixed expiry summary keeps every date and global breakeven with scenario labels", () => {
-  const html = render(PayoffSummary, { loading: false, data: response({ expiries: ["2026-09-24", "2026-10-29"] }) });
+const figureSet = (overrides = {}) => ({
+  openPnl: { value: 2115, partial: false },
+  payoff: { maxProfit: 8420, maxLoss: -11580, unboundedProfit: false, unboundedLoss: false, breakevens: [], points: [] },
+  margin: { status: "AVAILABLE", baseline: { initialMargin: 200000, withBenefitMargin: 142000, hedgeBenefit: 58000 }, combined: null },
+  ...overrides,
+});
+
+test("the four figures: current P/L, margin used, max profit and max loss", () => {
+  const html = render(PositionFigures, { shown: figureSet(), mixedExpiries: false });
+  assert.match(html, /Current P\/L.*\+₹2,115/s);
+  assert.match(html, /Margin used.*₹1,42,000/s);
+  assert.match(html, /Max profit.*₹8,420/s);
+  assert.match(html, /Max loss.*-₹11,580/s);
+  assert.doesNotMatch(html, /Spot|Breakeven|Expiry/);
+});
+
+test("mixed expiries label the limits as a scenario", () => {
+  const html = render(PositionFigures, { shown: figureSet(), mixedExpiries: true });
   assert.match(html, /Scenario max profit/);
   assert.match(html, /Scenario max loss/);
-  assert.match(html, /24 Sept 2026/);
-  assert.match(html, /29 Oct 2026/);
-  assert.match(html, /₹80 \/ ₹120/);
-  assert.match(html, /-₹500/);
 });
 
-test("unknown spot stays unavailable and unbounded payoff is never shown as a finite loss", () => {
-  const data = response();
-  data.spot = 0;
-  data.expiries = [];
-  data.payoff.unboundedLoss = true;
-  const html = render(PayoffSummary, { loading: false, data });
+test("unbounded loss is never shown as a finite figure, and missing values are dashes", () => {
+  const payoff = { ...figureSet().payoff, unboundedLoss: true };
+  const html = render(PositionFigures, { shown: figureSet({ payoff, openPnl: { value: null, partial: false },
+    margin: { status: "UNSUPPORTED_HOLDINGS", baseline: null, combined: null } }), mixedExpiries: false });
   assert.match(html, /Unlimited/);
-  assert.doesNotMatch(html, /-₹500|₹0/);
-  assert.match(html, /—/);
+  assert.doesNotMatch(html, /-₹11,580/);
+  assert.equal((html.match(/>—</g) ?? []).length, 2);
+  assert.match(html, /Not estimated when shares are included/);
 });
 
-test("current spot names the user's broker that quoted it", () => {
-  const html = render(PayoffSummary, { loading: false, data: response({ spot: 24812, spotSource: "paytm" }) });
-  assert.match(html, /Current spot.*· paytm/s);
-  assert.match(html, /₹24,812/);
+test("a P/L that is missing a leg's price is marked partial", () => {
+  const html = render(PositionFigures, { shown: figureSet({ openPnl: { value: 900, partial: true } }), mixedExpiries: false });
+  assert.match(html, /\+₹900 \?/);
 });
 
-test("an unavailable spot carries no source, even if one is sent", () => {
-  const html = render(PayoffSummary, { loading: false, data: response({ spot: 0, spotSource: "paytm" }) });
-  assert.doesNotMatch(html, /· paytm/);
+test("a what-if shows the real position's figures struck through, and only where they differ", () => {
+  const shown = figureSet({ openPnl: { value: 2450, partial: false }, payoff: { ...figureSet().payoff, unboundedLoss: true } });
+  const html = render(PositionFigures, { shown, real: figureSet(), mixedExpiries: false });
+  assert.match(html, /<s>\+₹2,115<\/s>/);
+  assert.match(html, /<s>-₹11,580<\/s>/);
+  assert.doesNotMatch(html, /<s>₹8,420<\/s>/);
+});
+
+test("figures still loading show placeholders, not stale numbers", () => {
+  const html = render(PositionFigures, { shown: figureSet({ payoff: undefined, margin: undefined }), mixedExpiries: false });
+  assert.doesNotMatch(html, /₹8,420|₹1,42,000/);
+  assert.match(html, /\+₹2,115/);
 });
 
 test("payoff tooltip shows hovered spot change relative to the current spot", () => {
@@ -95,21 +114,36 @@ test("payoff tooltip shows hovered spot change relative to the current spot", ()
   assert.doesNotMatch(tooltip(110, 0), /%/);
 });
 
-test("legs retain signed unit quantities, duplicate symbols, futures and purchased shares", () => {
-  const html = render(LegsTable, { legs: [
-    { symbol: "TEST", type: "CE", qty: -100, strike: 120, avgPrice: 12, lotSize: 50 },
-    { symbol: "TEST", type: "PE", qty: 50, strike: 80, avgPrice: 5, lotSize: 50 },
-    { symbol: "TEST-FUT", type: "FUT", qty: 25, strike: 0, avgPrice: 100, lotSize: 25 },
-    { symbol: "TEST-SHARES", type: "EQ", qty: 10, strike: 0, avgPrice: 90, lotSize: null },
+const railLeg = (overrides = {}) => ({ legId: "a", symbol: "TEST120CE", underlying: "TEST", exchange: "NFO", type: "CE", qty: -100,
+  strike: 120, avgPrice: 12, lotSize: 50, expiry: "2026-10-13", origin: "EXISTING_POSITION", currentMark: 10, currentMarkKnown: true, ...overrides });
+const railProps = { onToggle() {}, onShowAll() {}, showExpiry: false };
+
+test("legs show signed sides, each leg's own P/L, futures and purchased shares", () => {
+  const html = render(LegsRail, { ...railProps, excluded: new Set(), legs: [
+    railLeg(),
+    railLeg({ legId: "b", type: "PE", qty: 50, strike: 80, avgPrice: 5, currentMark: 4 }),
+    railLeg({ legId: "c", symbol: "TEST-FUT", type: "FUT", qty: 25, strike: 0, avgPrice: 100, currentMark: 103 }),
+    railLeg({ legId: "d", symbol: "TEST-SHARES", type: "EQ", qty: 10, strike: 0, avgPrice: 90, currentMark: null, currentMarkKnown: false, origin: "EXISTING_HOLDING" }),
   ] });
-  assert.equal((html.match(/<tr>/g) ?? []).length, 5);
-  assert.equal((html.match(/<th>/g) ?? []).length, 5);
-  assert.match(html, /Short 100/);
-  assert.match(html, /Long 50/);
-  assert.match(html, /Long 25/);
-  assert.match(html, /Shares/);
-  assert.equal((html.match(/<td>—<\/td>/g) ?? []).length, 2);
-  assert.doesNotMatch(html, /Short 5,000/);
+  assert.equal((html.match(/<li /g) ?? []).length, 4);
+  assert.match(html, /S 100/);
+  assert.match(html, /B 50/);
+  assert.match(html, /\+₹200/);
+  assert.match(html, /-₹50/);
+  assert.match(html, /TEST FUT/);
+  assert.match(html, /TEST shares/);
+  assert.match(html, /no price/);
+  assert.match(html, /4 of 4 on the graph/);
+  assert.doesNotMatch(html, /Show all/);
+});
+
+test("an unticked leg is marked off the graph, and the last ticked leg cannot be unticked", () => {
+  const html = render(LegsRail, { ...railProps, excluded: new Set(["b"]),
+    legs: [railLeg(), railLeg({ legId: "b", strike: 140 })] });
+  assert.match(html, /1 of 2 on the graph/);
+  assert.match(html, /not on graph/);
+  assert.match(html, /Show all/);
+  assert.equal((html.match(/disabled=""/g) ?? []).length, 1);
 });
 
 const toggleProps = { onToggle() {}, onQty() {}, onRetry() {}, loading: false, errored: false };

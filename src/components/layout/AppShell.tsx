@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Topbar } from "@/components/layout/Topbar";
 import { MobileTabBar } from "@/components/layout/MobileTabBar";
-import { LegalFooter } from "@/features/legal/LegalFooter";
 import { BrokerSessionBanner } from "@/features/session/BrokerSessionBanner";
 import { useBrokerDefinitions } from "@/features/brokers/hooks";
 import { BuilderHostContext } from "@/features/strategy-builder/builderHost";
@@ -68,7 +67,6 @@ export function AppShell() {
               </div>}
             </BuilderHostContext.Provider>
           </div>
-          <LegalFooter className="mt-8" />
         </main>
       </div>
 

@@ -9,6 +9,7 @@ import { Logo } from "@/components/Logo";
 import { primaryNavItems } from "@/components/layout/nav";
 import { BrokerStatusChips } from "@/features/session/BrokerStatusChips";
 import { useBrokerStatus, useLogout, useMe } from "@/features/session/hooks";
+import { legalDetails } from "@/features/legal/details";
 import { cn } from "@/lib/utils";
 
 function initials(name?: string) {
@@ -121,6 +122,11 @@ export function Topbar() {
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled>Option chain · Coming soon</DropdownMenuItem>
               <DropdownMenuItem disabled>Alerts · Coming soon</DropdownMenuItem>
+              {/* The signed-in pages have no footer, so the legal links live here. */}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild><Link to="/privacy">Privacy</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><Link to="/terms">Terms</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild><a href={`mailto:${legalDetails.contactEmail}`}>Contact · {legalDetails.contactEmail}</a></DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

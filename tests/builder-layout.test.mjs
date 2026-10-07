@@ -45,15 +45,17 @@ test("quantities distinguish complete lots, partial units and shares without rou
   assert.deepEqual(quantitySize(leg({ contract: { type: "EQ" }, qty: 20, lotSize: 20 })), { value: 20, unit: "units" });
 });
 
-test("baseline and draft tables retain seven columns and locked entry costs", () => {
+test("the compact baseline (5) and draft (6) tables keep aligned columns and locked entry costs", () => {
   const html = render(StrategyLegEditor, { ...callbacks, baseline: [leg()], drafts: [leg({ id: "draft" })], expiries: ["2026-09-24"], account: "Kite · Main" });
   assert.match(html, /1 locked/);
   assert.match(html, /Kite · Main/);
   const tables = [...html.matchAll(/<table\b[\s\S]*?<\/table>/g)].map(([table]) => table);
   assert.equal(tables.length, 2);
-  for (const table of tables) {
-    for (const [, row] of table.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)) assert.equal((row.match(/<(?:td|th)\b/g) ?? []).length, 7);
-  }
+  tables.forEach((table, index) => {
+    for (const [, row] of table.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)) assert.equal((row.match(/<(?:td|th)\b/g) ?? []).length, index === 0 ? 5 : 6);
+  });
+  assert.match(html, /Draft adjustments · 1 leg</);
+  assert.match(html, /aria-label="Change direction for/);
   assert.doesNotMatch(tables[0], /<input|<select/);
   assert.match(tables[0], /Unreal\. P&amp;L/);
 });

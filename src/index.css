@@ -404,8 +404,21 @@
 .builder-b-grid { display: grid; grid-template-columns: minmax(23.75rem, 27.5rem) minmax(0, 1fr); gap: 0.625rem; align-items: stretch; }
 .builder-b-legs { position: relative; display: flex; flex-direction: column; min-height: 32.5rem; overflow: hidden; }
 .builder-b-legs-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--gb-thumb) transparent; }
+.builder-leg-contract { display: inline-flex; align-items: center; gap: 0.375rem; min-width: 0; }
+.builder-leg-contract > span:not(.builder-side) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.builder-side { flex: none; display: inline-grid; place-items: center; min-width: 1.375rem; padding: 0.0625rem 0.3125rem; border-radius: 4px; font-size: 0.6875rem; font-weight: 700; }
+.builder-side-buy { background: #3FCB8522; color: #5AD89A; }
+.builder-side-sell { background: #FF6B5E22; color: #FF8A7F; }
+button.builder-side:hover { outline: 1px solid currentColor; }
+.builder-b .builder-baseline-table, .builder-b .builder-draft-table { min-width: 0; width: 100%; }
+.builder-b .builder-baseline-table th, .builder-b .builder-baseline-table td,
+.builder-b .builder-draft-table th, .builder-b .builder-draft-table td { padding-left: 0.375rem; padding-right: 0.375rem; white-space: nowrap; }
+.builder-b .builder-draft-table .builder-stepper input { width: 2rem; }
+.builder-b .builder-draft-table .builder-price-input { width: 3.75rem; }
+.builder-b .builder-contract-editor summary { white-space: nowrap; }
 .builder-baseline-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem 0.875rem; font-size: 0.8125rem; }
-.builder-switch { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; white-space: nowrap; }
+.builder-switch { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; white-space: nowrap; line-height: 1; }
+.builder-switch input { margin: 0; flex: none; }
 .builder-switch:has(input:disabled) { color: hsl(var(--muted-foreground)); cursor: not-allowed; }
 .builder-baseline-bar select { max-width: 14rem; padding: 0.25rem 0.5rem; border: 1px solid var(--gb-control-edge); border-radius: 4px; background: var(--gb-sunken); color: hsl(var(--foreground)); font-size: 0.8125rem; }
 .builder-baseline-account { font-size: 0.75rem; color: hsl(var(--muted-foreground)); }
@@ -526,7 +539,7 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 .builder-draft-table { min-width: 34.0625rem; }
 .builder-table-scroll th { position: sticky; top: 0; z-index: 1; padding: 0.625rem 0.375rem; background: var(--gb-header); color: hsl(var(--muted-foreground)); font-weight: 400; text-align: right; white-space: nowrap; }
 .builder-table-scroll td { padding: 0.5625rem 0.375rem; border-bottom: 1px solid hsl(var(--border)); text-align: right; vertical-align: top; white-space: nowrap; }
-.builder-table-scroll th:first-child, .builder-table-scroll td:first-child, .builder-draft-table :is(th,td):nth-child(3) { text-align: left; }
+.builder-table-scroll th:first-child, .builder-table-scroll td:first-child, .builder-draft-table :is(th,td):nth-child(2) { text-align: left; }
 .builder-table-scroll small { display: block; font-size: 0.5625rem; color: hsl(var(--muted-foreground)); }
 .builder-leg-disabled { opacity: .5; }
 .builder-draft-table .payoff-holdings-switch { width: 1.75rem; height: 1.0625rem; }

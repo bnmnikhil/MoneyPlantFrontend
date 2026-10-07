@@ -322,26 +322,32 @@
 .payoff-key-dashed { border-top: 2px dashed hsl(var(--muted-foreground)); }
 .builder-page-bar { min-height: 0; gap: 14px; }
 .payoff-chart-notes:empty { display: none; }
-/* Every signed-in page fits the window on a wide, tall enough screen. The page is a column as
-   tall as the window (120px = the 76px header plus the main area's 16px + 28px padding); its one
-   .fit-fill panel takes the height that is left and scrolls inside itself, so the page never
-   scrolls. Smaller windows keep normal page scrolling. .page-stack replaces space-y-6 so the
-   spacing is a gap that works in both modes. */
+/* Every signed-in page fits the window on a wide screen. AppShell measures where the page starts
+   (--fit-top: banner, header, padding) and the bottom padding (--fit-bottom), so the page is
+   exactly as tall as what is left. Its one .fit-fill panel takes the height left over and scrolls
+   inside itself. Each fill panel has a floor, so on a very short window the page scrolls a little
+   rather than squeezing a panel to a sliver. Below 1280px wide pages scroll as before.
+   .page-stack replaces space-y-6 so the spacing is a gap that works in both modes. */
 .page-stack { display: flex; flex-direction: column; gap: 1.5rem; }
-@media (min-width: 1280px) and (min-height: 680px) {
-  .page-fit { height: calc(100svh - 120px); display: flex; flex-direction: column; }
+@media (min-width: 1280px) {
+  .page-fit { height: calc(100svh - var(--fit-top, 136px) - var(--fit-bottom, 28px)); display: flex; flex-direction: column; gap: 14px; }
   .page-fit > * { flex-shrink: 0; }
-  .page-fit > .fit-fill { flex: 1 1 0; min-height: 0; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--gb-thumb) transparent; }
-  /* Overview: the two previews stretch to the space left and scroll their own rows. */
-  .page-fit > .overview-preview-grid.fit-fill { overflow: hidden; }
+  .page-fit > .fit-fill { flex: 1 1 0; min-height: 260px; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--gb-thumb) transparent; }
+  /* Overview: compact the two broker tables so the previews get the height. */
+  .page-fit .overview-summary { min-height: 0; padding-top: 10px; padding-bottom: 10px; }
+  .page-fit .overview-broker-grid .overview-panel-title { min-height: 0; padding: 8px 16px; font-size: 18px; }
+  .page-fit .overview-broker-grid .overview-table th, .page-fit .overview-broker-grid .overview-table td { height: 36px; padding-top: 4px; padding-bottom: 4px; font-size: 14px; }
+  .page-fit .overview-broker-grid .overview-table tfoot th, .page-fit .overview-broker-grid .overview-table tfoot td { height: 38px; font-size: 15px; }
+  .page-fit > .overview-preview-grid.fit-fill { overflow: hidden; min-height: 240px; }
   .page-fit .overview-preview { min-height: 0; display: flex; flex-direction: column; }
+  .page-fit .overview-preview .overview-panel-title { min-height: 0; padding: 8px 16px; font-size: 18px; }
   .page-fit .overview-preview-scroll { flex: 1 1 0; height: auto; min-height: 0; }
   /* Positions: the table scrolls under its toolbar; the notes stay in view. */
-  .page-fit > .positions-panel.fit-fill { overflow: hidden; display: flex; flex-direction: column; }
+  .page-fit > .positions-panel.fit-fill { overflow: hidden; display: flex; flex-direction: column; min-height: 320px; }
   .page-fit .positions-panel > * { flex-shrink: 0; }
   .page-fit .positions-panel > .positions-table-scroll { flex: 1 1 0; min-height: 0; max-height: none; }
   /* Builder: the three columns take the height left and each scrolls on its own. */
-  .page-fit > .builder-workspace { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+  .page-fit > .builder-workspace { flex: 1 1 0; min-height: 460px; display: flex; flex-direction: column; }
   .page-fit .builder-workspace > * { flex-shrink: 0; }
   .page-fit .builder-workspace > .builder-grid { flex: 1 1 0; min-height: 0; align-items: stretch; }
   .page-fit .builder-grid > * { min-height: 0; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--gb-thumb) transparent; }
@@ -351,10 +357,10 @@
    whatever height is left and the legs list scrolls inside its own panel, so the page itself
    never scrolls. 120px = the 76px header plus the main area's 16px top and 28px bottom padding.
    Smaller windows keep the normal scrolling layout. */
-@media (min-width: 1280px) and (min-height: 680px) {
-  .payoff-fit { height: calc(100svh - 120px); display: flex; flex-direction: column; }
+@media (min-width: 1280px) {
+  .payoff-fit { height: calc(100svh - var(--fit-top, 136px) - var(--fit-bottom, 28px)); display: flex; flex-direction: column; }
   .payoff-fit > * { flex-shrink: 0; }
-  .payoff-fit > .payoff-live-grid { flex: 1 1 0; min-height: 0; }
+  .payoff-fit > .payoff-live-grid { flex: 1 1 0; min-height: 420px; }
   .payoff-fit .payoff-chart-panel { display: flex; flex-direction: column; min-height: 0; }
   .payoff-fit .payoff-chart-panel > .payoff-chart-live { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
   .payoff-fit .payoff-chart-live > * { flex-shrink: 0; }

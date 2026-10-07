@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Topbar } from "@/components/layout/Topbar";
 import { MobileTabBar } from "@/components/layout/MobileTabBar";
@@ -37,6 +37,26 @@ export function AppShell() {
   }, [navigate]);
   const builderHost = useMemo(() => ({ openInBuilder }), [openInBuilder]);
 
+  // Pages that fit the window (.page-fit) size themselves from where the page
+  // content actually starts: the staging banner, the header (which can wrap) and
+  // the main area's padding all vary, so this is measured, not assumed.
+  const mainRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const main = mainRef.current;
+    if (!main) return;
+    const update = () => {
+      const style = getComputedStyle(main);
+      const top = main.getBoundingClientRect().top + window.scrollY + parseFloat(style.paddingTop);
+      main.style.setProperty("--fit-top", `${Math.round(top)}px`);
+      main.style.setProperty("--fit-bottom", style.paddingBottom);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(document.body);
+    window.addEventListener("resize", update);
+    return () => { observer.disconnect(); window.removeEventListener("resize", update); };
+  }, []);
+
   // Surface the banner whenever any /api call reports a broker that needs
   // authorising. Carries the brokerId so the banner names the right one.
   useEffect(() => {
@@ -52,7 +72,7 @@ export function AppShell() {
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
 
-        <main id="main-content" tabIndex={-1} className="flex-1 px-4 pb-24 pt-4 outline-none sm:px-6 lg:px-7 lg:pb-7">
+        <main ref={mainRef} id="main-content" tabIndex={-1} className="flex-1 px-4 pb-24 pt-4 outline-none sm:px-6 lg:px-7 lg:pb-7">
           <div className="mx-auto w-full space-y-4">
             {sessionLost && (
               <BrokerSessionBanner

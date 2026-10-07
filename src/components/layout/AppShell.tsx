@@ -37,6 +37,14 @@ export function AppShell() {
   }, [navigate]);
   const builderHost = useMemo(() => ({ openInBuilder }), [openInBuilder]);
 
+  // The signed-in app is drawn at 90% on a desktop-width window (index.css, html.app-dense): the
+  // owner found the 100% size too large. Set on <html> so rem-based sizes everywhere follow, and
+  // removed on the way out so the landing and legal pages keep their own size.
+  useLayoutEffect(() => {
+    document.documentElement.classList.add("app-dense");
+    return () => document.documentElement.classList.remove("app-dense");
+  }, []);
+
   // Pages that fit the window (.page-fit) size themselves from where the page
   // content actually starts: the staging banner, the header (which can wrap) and
   // the main area's padding all vary, so this is measured, not assumed.

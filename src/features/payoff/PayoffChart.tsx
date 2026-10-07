@@ -129,7 +129,7 @@ export function PayoffChart({
         </div>
       )}
     {styled && axisTitles && <p className="px-5 pt-2 text-sm text-muted-foreground">P&amp;L (₹)</p>}
-    <div className={styled ? "payoff-chart-canvas" : "h-[380px] w-full"}>
+    <div className={styled ? "payoff-chart-canvas" : "h-[23.75rem] w-full"}>
       <ResponsiveContainer width="100%" height="100%" onResize={(width) => setChartWidth(width)}>
         <ComposedChart
           data={points}

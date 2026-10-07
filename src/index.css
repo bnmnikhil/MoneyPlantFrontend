@@ -125,8 +125,6 @@
   content: ""; position: absolute; left: 0; top: 0; bottom: 0;
   width: 1px; background: hsl(var(--border));
 }
-.overview-broker-grid { display: grid; grid-template-columns: minmax(0, 1.46fr) minmax(0, 1fr); gap: 16px; }
-.overview-preview-grid { display: grid; grid-template-columns: minmax(0, 1.32fr) minmax(0, 1fr); gap: 14px; }
 .overview-panel { min-width: 0; overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: 7px; background: hsl(var(--card) / .7); }
 .overview-panel-title { display: flex; align-items: center; min-height: 54px; padding: 10px 18px; border-bottom: 1px solid hsl(var(--border)); font-size: 23px; line-height: 1.2; font-weight: 600; letter-spacing: -.025em; }
 .overview-table-scroll { overflow-x: auto; scrollbar-color: var(--gb-thumb) transparent; scrollbar-width: thin; }
@@ -139,24 +137,7 @@
 .overview-table tfoot { background: hsl(var(--secondary) / .25); }
 .overview-table tfoot th, .overview-table tfoot td { height: 51px; border-bottom: 0; font-weight: 600; }
 .overview-table tfoot th { color: hsl(var(--foreground)); font-size: 18px; }
-.overview-capital-table td { padding-left: 14px; padding-right: 14px; }
-.overview-capital-table td:last-child { min-width: 165px; }
-.overview-preview { min-height: 384px; }
-.overview-preview .overview-panel-title { min-height: 49px; }
-.overview-preview-scroll { height: 333px; overflow: auto; scrollbar-color: var(--gb-thumb) transparent; scrollbar-width: thin; }
-.overview-preview-scroll:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: -2px; }
-.overview-preview-table { font-size: 13px; }
-.overview-preview-table th, .overview-preview-table td { height: 32px; padding: 5px 12px; }
-.overview-preview-table th { font-size: 12px; position: sticky; top: 0; z-index: 1; background: var(--gb-header); }
-.overview-preview-table th:nth-child(2), .overview-preview-table td:nth-child(2) { text-align: left; }
-.overview-preview-table .overview-account-row td { height: 42px; background: hsl(var(--background) / .35); text-align: right; }
-.overview-preview-table .overview-account-row td:first-child { text-align: left; }
-.overview-preview-table .overview-account-row button { padding-block: 0; }
-.overview-tree-symbol { position: relative; padding-left: 24px; display: inline-block; }
-.overview-tree-symbol::before { content: ""; position: absolute; left: 7px; top: -10px; bottom: -10px; width: 1px; background: hsl(var(--border)); }
-.overview-tree-symbol::after { content: ""; position: absolute; left: 7px; top: 50%; width: 12px; height: 1px; background: hsl(var(--border)); }
 @media (max-width: 1279px) {
-  .overview-broker-grid, .overview-preview-grid { grid-template-columns: minmax(0, 1fr); }
   .overview-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px 0; }
   .overview-capital { grid-column: 1 / -1; }
   .overview-capital::before { display: none; }
@@ -333,15 +314,7 @@
   .page-fit { height: calc(100svh - var(--fit-top, 136px) - var(--fit-bottom, 28px)); display: flex; flex-direction: column; gap: 14px; }
   .page-fit > * { flex-shrink: 0; }
   .page-fit > .fit-fill { flex: 1 1 0; min-height: 260px; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--gb-thumb) transparent; }
-  /* Overview: compact the two broker tables so the previews get the height. */
   .page-fit .overview-summary { min-height: 0; padding-top: 10px; padding-bottom: 10px; }
-  .page-fit .overview-broker-grid .overview-panel-title { min-height: 0; padding: 8px 16px; font-size: 18px; }
-  .page-fit .overview-broker-grid .overview-table th, .page-fit .overview-broker-grid .overview-table td { height: 36px; padding-top: 4px; padding-bottom: 4px; font-size: 14px; }
-  .page-fit .overview-broker-grid .overview-table tfoot th, .page-fit .overview-broker-grid .overview-table tfoot td { height: 38px; font-size: 15px; }
-  .page-fit > .overview-preview-grid.fit-fill { overflow: hidden; min-height: 240px; }
-  .page-fit .overview-preview { min-height: 0; display: flex; flex-direction: column; }
-  .page-fit .overview-preview .overview-panel-title { min-height: 0; padding: 8px 16px; font-size: 18px; }
-  .page-fit .overview-preview-scroll { flex: 1 1 0; height: auto; min-height: 0; }
   /* Positions: the table scrolls under its toolbar; the notes stay in view. */
   .page-fit > .positions-panel.fit-fill { overflow: hidden; display: flex; flex-direction: column; min-height: 320px; }
   .page-fit .positions-panel > * { flex-shrink: 0; }
@@ -373,6 +346,54 @@
 @media (max-width: 767px) {
   .payoff-figures { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: 10px 16px; }
   .payoff-figure dd { font-size: 17px; }
+}
+
+/* Overview, concept A (OVERVIEW-REDESIGN.md): one accounts table and the Needs attention band. */
+.overview-panel-title h2 { font-size: inherit; font-weight: inherit; }
+.overview-accounts .overview-panel-title { flex-wrap: wrap; gap: 4px 16px; min-height: 0; padding: 10px 18px; font-size: 19px; }
+.overview-panel-sub { flex: 1 1 auto; font-size: 13px; font-weight: 400; letter-spacing: 0; color: hsl(var(--muted-foreground)); }
+.overview-accounts-table th, .overview-accounts-table td { height: 40px; padding-top: 6px; padding-bottom: 6px; font-size: 15px; }
+.overview-accounts-table tfoot th, .overview-accounts-table tfoot td { height: 42px; font-size: 15px; }
+.overview-accounts-table tfoot th { font-size: 15px; }
+.overview-accounts-table td:last-child { min-width: 160px; }
+.overview-col-group { border-left: 1px solid hsl(var(--border)); }
+.overview-idle td { color: hsl(var(--muted-foreground)); }
+.overview-idle td:first-child > span { opacity: .7; }
+.overview-idle-note { text-align: left !important; font-size: 13px; }
+.overview-tight { margin-top: 8px; font-size: 13px; color: hsl(var(--muted-foreground)); }
+.overview-tight-hot { display: inline-block; padding: 2px 9px; border: 1px solid #F0A43E55; border-radius: 99px; background: #F0A43E14; color: #F0A43E; }
+.overview-attention { display: grid; gap: 10px; }
+.overview-attention-title { font-size: 19px; font-weight: 600; letter-spacing: -.02em; }
+.overview-att-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; align-items: start; }
+.overview-att { position: relative; display: grid; gap: 10px; min-width: 0; padding: 12px 14px 12px 17px; border: 1px solid hsl(var(--border)); border-radius: 7px; background: hsl(var(--card) / .7); }
+.overview-att::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: hsl(var(--border)); }
+.overview-att-warn::before { background: #F0A43E; }
+.overview-att-info::before { background: #6AA8FF; }
+.overview-att-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.overview-att-head h3 { font-size: 15px; font-weight: 600; }
+.overview-att-count { padding: 2px 8px; border-radius: 99px; background: hsl(var(--secondary)); font-size: 12px; color: hsl(var(--muted-foreground)); white-space: nowrap; }
+.overview-att-warn .overview-att-count { background: #F0A43E22; color: #F0A43E; }
+.overview-att-body { display: grid; gap: 10px; }
+.overview-att-item { display: grid; gap: 5px; font-size: 14px; }
+.overview-att-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.overview-att-leg { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.overview-att-leg > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.overview-att-sub { font-size: 12px; color: hsl(var(--muted-foreground)); }
+.overview-att-link { justify-self: start; font-size: 13px; font-weight: 600; color: var(--gb-gold); }
+.overview-att-link:hover { text-decoration: underline; }
+.overview-att-button { padding: 4px 11px; border-radius: 5px; background: var(--gb-gold); color: var(--gb-on-gold); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.overview-att-button:disabled { opacity: .6; }
+.overview-side { display: inline-block; margin-right: 7px; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+.overview-side-short { background: #FF6B5E22; color: #FF8A7F; }
+.overview-side-long { background: #3FCB8522; color: #5AD89A; }
+.overview-days { display: inline-grid; place-items: center; min-width: 52px; padding: 2px 8px; border-radius: 6px; background: #F0A43E1A; color: #F0A43E; font-size: 12px; font-weight: 600; }
+.overview-clear { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border: 1px solid hsl(var(--border)); border-radius: 7px; background: hsl(var(--card) / .7); font-size: 14px; }
+.overview-clear-checks { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 3px; font-size: 12px; color: hsl(var(--muted-foreground)); }
+@media (max-width: 767px) {
+  /* On a phone, what needs doing comes before the account detail. */
+  .overview-attention { order: 2; }
+  .overview-accounts { order: 3; }
+  .overview-accounts-table th, .overview-accounts-table td { font-size: 13px; }
 }
 
 /* Strategy builder mockup: context bar, chain, legs and preview. */

@@ -79,7 +79,7 @@ export function PayoffPage() {
     if (activeCurve && data && legs.length) openInBuilder({ ...data, legs });
   };
 
-  return <div className="payoff-page">
+  return <div className="payoff-page payoff-fit">
     <h1 className="sr-only">Payoff</h1>
     {underlyings.isError && <div className="payoff-panel"><ErrorState title="Couldn't load payoff curves" onRetry={() => { void underlyings.refetch(); }} /></div>}
     {underlyings.data?.length === 0 && <div className="payoff-panel p-6 text-center">
@@ -132,8 +132,7 @@ export function PayoffPage() {
                 baseline={whatIf ? { payoff: data.payoff, legs: data.legs } : undefined} /> : null}
           {data && <div className="payoff-chart-notes">
             {whatIf && <p className="payoff-chart-key"><span className="payoff-key-line" />Ticked legs <span className="payoff-key-line payoff-key-dashed" />Your real position</p>}
-            <p className="flex items-start gap-2"><Info className="mt-0.5 size-4 shrink-0" /><span>{includeHoldings ? `Includes ${data.holding.includedQty} ${activeCurve.underlyingLabel} shares at purchase cost. ` : ""}Zoom changes the view only.</span></p>
-            {includeHoldings && <p>Shares are assumed held until expiry; pledged shares are counted once. This graph does not determine delivery eligibility or margin benefit.</p>}
+            {includeHoldings && <p className="flex items-start gap-2"><Info className="mt-0.5 size-4 shrink-0" /><span>Includes {data.holding.includedQty} {activeCurve.underlyingLabel} shares at purchase cost, assumed held until expiry; pledged shares are counted once. This graph does not determine delivery eligibility or margin benefit.</span></p>}
             {chartPayoff?.unboundedLoss && <p className="text-loss">Loss is unlimited beyond the plotted range.</p>}
             {chartPayoff?.unboundedProfit && <p>Profit continues beyond the plotted range.</p>}
             {whatIfScenario.isError && whatIf && <p className="text-loss">Couldn't recalculate the what-if limits and margin. The curve is drawn from the ticked legs.</p>}

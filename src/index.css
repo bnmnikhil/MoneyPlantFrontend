@@ -398,7 +398,13 @@
 /* Builder, layout B (owner's choice, 7 Oct 2026): context bar, then legs + summary on the left and a
    large payoff on the right; the option chain is a drawer over the legs. On a wide screen the page fits
    the window and each column scrolls inside itself; below that it stacks and the page scrolls. */
-.builder-b { display: flex; flex-direction: column; gap: 0.625rem; }
+/* Two classes, so it beats the older ".builder-workspace { display: grid }" that comes later in this
+   file: as a grid with a fixed height, the spare height was shared out and the context bar grew. */
+.builder-workspace.builder-b { display: flex; flex-direction: column; gap: 0.625rem; }
+.builder-workspace.builder-b > .builder-empty { flex: 1 1 auto; display: grid; place-items: center; }
+/* The search box sits inside its own bordered wrapper: ring the wrapper, not the bare input. */
+.builder-workspace #underlying-search:focus-visible { outline: none; }
+.builder-workspace div:has(> #underlying-search:focus-visible) { outline: 2px solid hsl(var(--ring)); outline-offset: 1px; }
 .builder-b .builder-context { padding: 0.5625rem 0.875rem 0.5rem; }
 .builder-hypo { padding: 0.25rem 0.625rem; border: 1px dashed hsl(var(--border)); border-radius: 99px; font-size: 0.75rem; color: hsl(var(--muted-foreground)); white-space: nowrap; }
 .builder-b-grid { display: grid; grid-template-columns: minmax(23.75rem, 27.5rem) minmax(0, 1fr); gap: 0.625rem; align-items: stretch; }

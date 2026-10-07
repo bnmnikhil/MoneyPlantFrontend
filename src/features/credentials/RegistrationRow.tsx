@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { AlertTriangle, CheckCircle2, Link2, Loader2, Pencil, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertTriangle, CheckCircle2, Link2, Loader2, Pencil, Trash2, Unlink, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CredentialFields, DeveloperPortalLink } from "@/features/credentials/CredentialFields";
@@ -8,13 +8,46 @@ import {
   useSaveBrokerCredential,
 } from "@/features/credentials/hooks";
 import { accountsFor, isComplete, toCredentialInput } from "@/features/credentials/model";
-import { useBrokerStatus, useConnectBroker } from "@/features/session/hooks";
+import { useBrokerStatus, useConnectBroker, useDisconnectBroker } from "@/features/session/hooks";
 import type { BrokerCredential, BrokerDefinition } from "@/types/api";
 
 /** The last four characters of a key, enough to tell two registrations apart. */
 function keyHint(apiKey: string | null) {
   if (!apiKey) return null;
   return apiKey.length <= 4 ? apiKey : `····${apiKey.slice(-4)}`;
+}
+
+/**
+ * Disconnects one account (C5). Two clicks: the first turns the icon into a "Disconnect?"
+ * confirmation that lapses after a few seconds, because reconnecting some brokers (Paytm's
+ * password and OTP) is real effort and a stray click should not cost that.
+ */
+function DisconnectButton({ connectionId, accountLabel }: { connectionId: string; accountLabel: string }) {
+  const disconnect = useDisconnectBroker();
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const timer = window.setTimeout(() => setArmed(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [armed]);
+
+  if (disconnect.isPending) {
+    return <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Loader2 className="size-3 animate-spin" />Disconnecting…</span>;
+  }
+  return <>
+    <button
+      type="button"
+      onClick={() => (armed ? disconnect.mutate(connectionId) : setArmed(true))}
+      className={armed
+        ? "rounded border border-loss/50 px-2 py-0.5 text-xs font-medium text-loss hover:bg-loss/10"
+        : "grid size-6 place-items-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground"}
+      aria-label={armed ? `Confirm: disconnect ${accountLabel}` : `Disconnect ${accountLabel}`}
+      title={armed ? undefined : "Disconnect this account"}
+    >
+      {armed ? "Disconnect?" : <Unlink className="size-3.5" />}
+    </button>
+    {disconnect.isError && <span role="status" className="text-xs text-loss">Couldn't disconnect. Try again.</span>}
+  </>;
 }
 
 /**
@@ -110,17 +143,20 @@ export function RegistrationRow({
             </Badge>
           ) : (
             accounts.map((account) =>
-              account.state === "connected" ? (
-                <Badge key={account.connectionId} variant="success" className="font-normal">
-                  <CheckCircle2 className="size-3" />
-                  {account.accountLabel} connected
-                </Badge>
-              ) : (
-                <Badge key={account.connectionId} variant="warning" className="font-normal">
-                  <AlertTriangle className="size-3" />
-                  {account.accountLabel} needs reconnect
-                </Badge>
-              )
+              <span key={account.connectionId} className="inline-flex items-center gap-1">
+                {account.state === "connected" ? (
+                  <Badge variant="success" className="font-normal">
+                    <CheckCircle2 className="size-3" />
+                    {account.accountLabel} connected
+                  </Badge>
+                ) : (
+                  <Badge variant="warning" className="font-normal">
+                    <AlertTriangle className="size-3" />
+                    {account.accountLabel} needs reconnect
+                  </Badge>
+                )}
+                <DisconnectButton connectionId={account.connectionId} accountLabel={account.accountLabel} />
+              </span>
             )
           )}
         </div>

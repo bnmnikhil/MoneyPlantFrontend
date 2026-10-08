@@ -5,156 +5,172 @@ import { legalDetails as d } from "@/features/legal/details";
 const sections: LegalSection[] = [
   {
     id: "agreement",
-    title: "Agreement",
+    title: "Using GoldenBook",
     body: (
       <p>
-        These terms are an agreement between you and {d.operatorName}, who operates GoldenBook. By
-        signing in you accept them and the <Link to="/privacy">privacy policy</Link>. If you do
-        not agree, do not use GoldenBook.
+        GoldenBook is operated by {d.operatorName}. These terms explain the conditions for using
+        the service. By signing in, you agree to these terms. Our <Link to="/privacy">privacy
+        policy</Link> explains how we handle your information. If you do not agree, please do
+        not use the service.
       </p>
     ),
   },
   {
     id: "eligibility",
-    title: "Who may use GoldenBook",
+    title: "Your account",
     body: (
       <p>
-        You must be at least 18, and you may connect only broker accounts that are your own. Use
-        your own Google account, and do not share your access with anyone else.
+        You must be 18 or older and use your own Google account. Connect only broker accounts
+        that belong to you. Keep your sign-in details, broker credentials and access tokens
+        private, and do not let anyone else use your GoldenBook account.
       </p>
     ),
   },
   {
     id: "service",
-    title: "What GoldenBook is — and is not",
+    title: "What the service does",
     body: (
       <>
         <p>
-          GoldenBook is a <strong>read-only</strong> tool. It brings together positions, holdings
-          and margins from the broker accounts you connect, and calculates payoff, margin and risk
-          figures from them.
+          GoldenBook brings positions, holdings and account balances from your connected brokers
+          into one place. It also calculates payoff scenarios, margin estimates and risk figures.
+          The Strategy Builder lets you explore hypothetical changes to a portfolio.
         </p>
-        <ul>
-          <li>
-            <strong>It places no orders</strong>, and it cannot modify or cancel orders or move
-            money.
-          </li>
-          <li>
-            <strong>It is not investment advice.</strong> We are not a SEBI-registered investment
-            adviser or research analyst. Nothing in GoldenBook is a recommendation to buy, sell or
-            hold anything. The Strategy Builder's templates are educational examples of common
-            option structures, not suggestions.
-          </li>
-          <li>Every decision you take, and its outcome, is yours.</li>
-        </ul>
+        <p>
+          <strong>GoldenBook is read-only.</strong> It does not submit, change or cancel orders,
+          and it does not transfer money. Changes you make in the Strategy Builder stay hypothetical.
+        </p>
+        <p>
+          <strong>GoldenBook does not provide investment advice.</strong> We are not a
+          SEBI-registered investment adviser or research analyst. Charts, calculations and strategy
+          templates are information for your own analysis, not recommendations to buy, sell or hold
+          an investment. You are responsible for your trading decisions and their outcomes.
+        </p>
       </>
     ),
   },
   {
     id: "estimates",
-    title: "Figures are estimates",
+    title: "Understanding the figures",
     body: (
       <>
         <p>
-          Margin, payoff, profit-and-loss and risk figures are <strong>computed by GoldenBook</strong>,
-          and they can differ from your broker's. In particular, the margin estimate is not the
-          exchange's SPAN calculation, and a payoff chart for positions with different expiries is
-          a simplified scenario. Data from brokers can be delayed, incomplete or wrong.
+          Some figures come from your broker; others are calculated by GoldenBook. Broker data
+          may arrive late, be incomplete or contain errors. Stored portfolio snapshots can also
+          be older than your current positions. A missing quote is not a price of zero.
         </p>
         <p>
-          <strong>Your broker is always the source of truth.</strong> Check your broker's figures
-          before acting on any number shown here.
+          Our margin estimate is not an exchange or broker margin quotation. Payoff charts rely
+          on assumptions about prices and expiry. When legs expire on different dates, the chart
+          shows a simplified common-price scenario; its displayed maximum loss is not a guaranteed
+          limit on losses across those dates. Trading costs and actual execution can also change
+          your result.
+        </p>
+        <p>
+          <strong>Check your broker before acting.</strong> Use your broker's records to confirm
+          positions, available funds, margin requirements and transaction details. GoldenBook's
+          calculations do not replace those records or guarantee a trading outcome.
         </p>
       </>
     ),
   },
   {
     id: "brokers",
-    title: "Your broker accounts and API apps",
+    title: "Connecting a broker",
     body: (
-      <ul>
-        <li>
-          You register your own developer app at each broker. You are responsible for following
-          that broker's API terms and paying any fees it charges.
-        </li>
-        <li>
-          You authorise GoldenBook to use the credentials you enter for one purpose only: fetching
-          your own data from that broker on your behalf.
-        </li>
-        <li>
-          You can revoke this at any time: delete the credentials in Settings, and delete or
-          regenerate the app at your broker.
-        </li>
-        <li>
-          Your broker may limit or end API access independently of us. GoldenBook is not
-          affiliated with or endorsed by Zerodha, Alice Blue or Paytm Money, whose names are
-          trademarks of their owners.
-        </li>
-      </ul>
+      <>
+        <ul>
+          <li>
+            Register your own API app where the broker requires one. You are responsible for
+            complying with the broker's terms and paying its API or market-data charges.
+          </li>
+          <li>
+            By connecting an account, you authorise GoldenBook to use the credentials and tokens
+            you provide to retrieve that account's data for the features described here.
+          </li>
+          <li>
+            To stop access, disconnect the account and remove its saved registration in Settings.
+            For revocation at the broker itself, use the broker's controls to revoke access or
+            regenerate credentials. Disconnecting does not erase previously stored portfolio data;
+            see the <Link to="/privacy#rights">privacy policy</Link> for deletion requests.
+          </li>
+          <li>
+            Available features depend on your broker and subscription. Some brokers do not supply
+            every price or balance, and API access can change or stop without our control.
+          </li>
+        </ul>
+        <p>
+          GoldenBook is independent of Zerodha, Alice Blue, Paytm Money, Upstox and Dhan. These
+          brokers do not endorse the service. Their names and trademarks belong to their owners.
+        </p>
+      </>
     ),
   },
   {
     id: "use",
-    title: "Acceptable use",
+    title: "Responsible use",
     body: (
       <p>
-        Do not try to reach another user's data, probe or overload the service, scrape it,
-        reverse-engineer it, or use it for anything unlawful. We may suspend an account that does.
+        Use GoldenBook lawfully. Do not attempt to access another person's account or data,
+        bypass security controls, overload the service, scrape it or reverse-engineer it. We may
+        suspend access if you misuse the service or put other users at risk.
       </p>
     ),
   },
   {
     id: "availability",
-    title: "Availability and price",
+    title: "Availability and charges",
     body: (
       <p>
-        {d.pricing} We will give notice before introducing any charge. GoldenBook is provided "as
-        is" and "as available": it may be unavailable at times — including during market hours —
-        and features may change or be withdrawn.
+        {d.pricing} We will give notice before introducing a charge. The service is provided
+        "as is" and "as available". We cannot promise uninterrupted access, including during
+        market hours. Features may change or be withdrawn, and broker outages may prevent us
+        from retrieving your data.
       </p>
     ),
   },
   {
     id: "liability",
-    title: "Liability",
+    title: "Limits on liability",
     body: (
       <p>
-        To the extent the law allows, we are not liable for trading losses, for decisions made
-        using GoldenBook, for errors or delays in data, or for brokers' outages. Our total liability
-        to you is limited to the amount you have paid us in the preceding twelve months. Nothing
-        in these terms limits any right you have that the law does not allow to be excluded.
+        To the extent permitted by law, we are not liable for trading losses, decisions you
+        make using the service, inaccurate or delayed data, or broker outages. Our total liability
+        to you is limited to the amount you paid us in the twelve months before the claim arose.
+        These terms do not exclude rights or liabilities that cannot legally be excluded.
       </p>
     ),
   },
   {
     id: "ending",
-    title: "Ending",
+    title: "Leaving the service",
     body: (
       <p>
-        You may stop using GoldenBook at any time and ask us to delete your data — see{" "}
-        <Link to="/privacy#rights">your rights</Link>. We may end or suspend access if you breach
-        these terms, or if we stop running the service, in which case we will give reasonable
-        notice where we can.
+        You can stop using GoldenBook at any time. To request account closure and deletion of
+        stored information, follow the <Link to="/privacy#rights">privacy policy</Link>. We may
+        suspend or end access for a breach of these terms, or close the service. Where possible,
+        we will give reasonable notice before closing it.
       </p>
     ),
   },
   {
     id: "law",
-    title: "Governing law",
+    title: "Law and disputes",
     body: (
       <p>
-        These terms are governed by the laws of India. The courts at {d.operatorLocation} have
-        jurisdiction over any dispute.
+        Indian law governs these terms. Subject to any mandatory legal protections, the courts
+        at {d.operatorLocation} have jurisdiction over disputes concerning the service.
       </p>
     ),
   },
   {
     id: "changes",
-    title: "Changes and contact",
+    title: "Updates and questions",
     body: (
       <p>
-        If we change these terms materially, you will be asked to accept the new version the next
-        time you sign in. Questions: <a href={`mailto:${d.contactEmail}`}>{d.contactEmail}</a>.
+        We may update these terms as the service changes. We will publish revisions here and
+        update the date and version shown above. Please read the current terms before continuing
+        to use GoldenBook. For questions, email <a href={`mailto:${d.contactEmail}`}>{d.contactEmail}</a>.
       </p>
     ),
   },
@@ -166,9 +182,9 @@ export function TermsPage() {
       title="Terms of use"
       summary={
         <>
-          <strong className="text-foreground">In short:</strong> GoldenBook shows you your own
-          broker data and calculates figures from it. It places no orders, it is not investment
-          advice, its figures are estimates, and your broker is the source of truth.
+          GoldenBook helps you review your broker accounts and explore portfolio scenarios.
+          It does not place trades or give investment advice. Check data and calculations with
+          your broker before making a decision.
         </>
       }
       sections={sections}

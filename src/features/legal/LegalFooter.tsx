@@ -17,9 +17,9 @@ export function LegalFooter({ className }: { className?: string }) {
       )}
     >
       <p className="text-pretty">
-        GoldenBook is a read-only viewer: it places no orders and is not
-        investment advice. All figures are estimates — your broker is the source
-        of truth.
+        GoldenBook shows portfolio data and analysis. It does not place orders or
+        provide investment advice. Calculated figures are estimates; confirm
+        positions, balances and margin requirements with your broker.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
         <span>© {new Date().getFullYear()} GoldenBook</span>

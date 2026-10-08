@@ -45,8 +45,8 @@ export function LegalLayout({
           >
             <TriangleAlert className="mt-0.5 size-4 shrink-0" />
             <span>
-              Draft: operator details are not filled in yet ({unfilled.join(", ")}).
-              This document is not in force.
+              Draft for review. Operator and contact details are incomplete.
+              This document is not yet in force.
             </span>
           </div>
         )}

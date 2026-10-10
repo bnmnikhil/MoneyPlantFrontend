@@ -10,8 +10,7 @@ const sections: LegalSection[] = [
     title: "Who handles your information",
     body: (
       <p>
-        {d.operatorName}, based in {d.operatorLocation}, operates GoldenBook and is responsible
-        for the personal information described in this policy. For privacy questions, write to{" "}
+        {d.operatorName} is responsible for the personal information described in this policy. For privacy questions, write to{" "}
         <a href={`mailto:${d.contactEmail}`}>{d.contactEmail}</a>.
       </p>
     ),
@@ -223,7 +222,7 @@ const sections: LegalSection[] = [
     title: "Contact for privacy concerns",
     body: (
       <p>
-        Direct privacy complaints to {d.grievanceOfficer}, {d.operatorLocation}, at{" "}
+        Send privacy complaints and grievances to{" "}
         <a href={`mailto:${d.contactEmail}`}>{d.contactEmail}</a>. Describe the concern and the
         account involved, but do not include passwords, API secrets or access tokens in your email.
       </p>

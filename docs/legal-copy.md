@@ -19,8 +19,12 @@ unfinished launch features. In particular:
 - Market prices may use a separate source; private portfolio records stay
   scoped to the user. All five broker integrations are named.
 
-Before publishing a final notice, fill in and verify the operator, location,
-contact, grievance contact, price, effective date and version. Recheck deployed
+**Filled on 10 Oct 2026 by owner decision:** operator `GoldenBook` (the brand, until a legal
+entity exists), contact and grievances `support@goldenbook.in`, no location (disputes go
+to the courts of India), no named grievance officer, price "currently free of charge",
+effective 10 October 2026, version `2026-10-10`. Revisit the operator, location and
+grievance officer if a legal entity is formed. Before publishing a final notice, verify
+those values. Recheck deployed
 data practices, including log retention and recovery copies. Bump the effective
 date and version when the final documents change materially; placeholders are
 deliberately retained during drafting. The rewrite does not close any legal,

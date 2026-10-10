@@ -10,12 +10,14 @@ import {
   YAxis,
 } from "recharts";
 import type { Payoff } from "@/types/api";
-import { useState, useId } from "react";
+import { useMemo, useState, useId } from "react";
 import { chartPoints, defaultRange, niceTicks, rangeAnchor, validRange } from "./chartRange";
 import type { ChartLeg, PriceRange } from "./chartRange";
 import { layoutReferenceLabels } from "./referenceLabels";
 import type { ReferenceLabel } from "./referenceLabels";
 import { PayoffTooltip } from "./PayoffTooltip";
+import { prepareProjection, projectedPnl } from "./projection";
+import type { ProjectionLeg } from "./projection";
 import { formatINRWhole, formatNumber, formatPrice } from "@/lib/format";
 
 const GREEN = "#3FCB85";
@@ -23,6 +25,10 @@ const RED = "#FF6B5E";
 const MUTED = "hsl(var(--muted-foreground))";
 // Spot is drawn in the text colour: amber would read as the brand gold.
 const SPOT = "#F2EDE3";
+// The today curve: blue, so it reads as neither profit, loss nor the brand gold.
+export const TODAY = "#6AA9FF";
+
+type CurveView = "both" | "today" | "expiry";
 
 function ChartReferenceLabel({ viewBox, marker, color }: {
   viewBox?: { x?: number; y?: number };
@@ -46,10 +52,11 @@ export function PayoffChart({
   variant = "default",
   labels = { baseline: "Existing positions", current: "After adjustments" },
   axisTitles = true,
+  todayAt,
 }: {
   payoff: Payoff;
   spot: number;
-  legs: ChartLeg[];
+  legs: ChartLeg[] | ProjectionLeg[];
   isIndex: boolean;
   baseline?: { payoff: Payoff; legs: ChartLeg[] };
   variant?: "default" | "live" | "builder";
@@ -57,6 +64,11 @@ export function PayoffChart({
   labels?: { baseline: string; current: string };
   /** False drops the "P&L (₹)" and "Underlying price (₹)" titles; the tick labels already carry the units. */
   axisTitles?: boolean;
+  /**
+   * When the legs were marked. Given, the chart also draws the "today" curve: the legs valued now
+   * at each spot (see projection.ts). Omitted, it draws the expiry payoff only.
+   */
+  todayAt?: Date;
 }) {
   const styled = variant !== "default";
   const [chartWidth, setChartWidth] = useState(0);
@@ -65,6 +77,10 @@ export function PayoffChart({
   const [draftLow, setDraftLow] = useState("");
   const [draftHigh, setDraftHigh] = useState("");
   const [editing, setEditing] = useState(false);
+  const [curveView, setCurveView] = useState<CurveView>("both");
+  const projection = useMemo(() => todayAt ? prepareProjection(legs, spot, todayAt) : null, [legs, spot, todayAt]);
+  const showToday = !!projection && curveView !== "expiry";
+  const showExpiry = !projection || curveView !== "today";
   const rangeLegs = baseline ? [...baseline.legs, ...legs] : legs;
   const anchor = rangeAnchor(spot, rangeLegs);
   const auto = defaultRange(spot, isIndex, rangeLegs,
@@ -74,25 +90,35 @@ export function PayoffChart({
   // The plotting area excludes the 72px Y axis and the 8px/16px chart margins.
   const referenceLabels = layoutReferenceLabels([
     ...(spot > 0 ? [{ key: "spot", value: spot, text: `Spot ${formatPrice(spot)}` }] : []),
-    ...payoff.breakevens.map((be) => ({ key: `be-${be}`, value: be, text: formatPrice(be) })),
+    ...(showExpiry ? payoff.breakevens : []).map((be) => ({ key: `be-${be}`, value: be, text: formatPrice(be) })),
   ], [xMin, xMax], chartWidth - 96);
   const points = chartPoints(legs, [xMin, xMax], [
     ...payoff.breakevens,
     ...(baseline?.payoff.breakevens ?? []),
     spot,
-  ]).map((point) => baseline ? { ...point, baselinePnl: pnlAtSpot(baseline.legs, point.spot) } : point);
+  ]).map((point) => ({
+    ...point,
+    ...(baseline ? { baselinePnl: pnlAtSpot(baseline.legs, point.spot) } : {}),
+    ...(projection ? { todayPnl: projectedPnl(projection, point.spot) } : {}),
+  }));
   const id = useId().replace(/:/g, "");
   const fillId = `payoffFill${id}`, strokeId = `payoffStroke${id}`;
   const draftValid = draftLow.trim() !== "" && draftHigh.trim() !== "" && validRange(Number(draftLow), Number(draftHigh));
 
-  const pnls = points.flatMap((point) => [point.pnl,
-    "baselinePnl" in point ? point.baselinePnl : point.pnl]);
+  const pnls = points.flatMap((point) => [
+    ...(showExpiry ? [point.pnl] : []),
+    ...(point.baselinePnl !== undefined ? [point.baselinePnl] : []),
+    ...(showToday && point.todayPnl !== undefined ? [point.todayPnl] : []),
+  ]);
   const maxPnl = Math.max(...pnls, 0);
   const minPnl = Math.min(...pnls, 0);
 
-  // Fraction (from top) where P&L = 0 sits — used to split the gradient color.
+  // Fraction (from top) where P&L = 0 sits — used to split the gradient color. The gradient spans
+  // the expiry area's own bounding box, so only the expiry curve sets it.
+  const expiryMax = Math.max(...points.map((point) => point.pnl), 0);
+  const expiryMin = Math.min(...points.map((point) => point.pnl), 0);
   const gradientOffset =
-    maxPnl <= 0 ? 0 : minPnl >= 0 ? 1 : maxPnl / (maxPnl - minPnl);
+    expiryMax <= 0 ? 0 : expiryMin >= 0 ? 1 : expiryMax / (expiryMax - expiryMin);
 
   return (
     <div className={styled ? `payoff-chart-live ${variant === "builder" ? "builder-chart" : ""}` : "space-y-3"}>
@@ -122,6 +148,27 @@ export function PayoffChart({
       </form>}
       <p className={styled ? "payoff-range-caption" : "text-xs text-muted-foreground"}>{formatINRWhole(xMin)} – {formatINRWhole(xMax)}. {spot > 0 ? "" : "Spot unavailable; range centred on strategy prices. "}Zoom changes the view only; profit/loss limits remain unchanged.</p>
       </details>
+      {todayAt && (projection ? (
+        <div className="payoff-curve-bar">
+          <div role="group" aria-label="Curves shown" className="payoff-curve-toggle">
+            {(["both", "today", "expiry"] as const).map((view) => (
+              <button key={view} type="button" aria-pressed={curveView === view} onClick={() => setCurveView(view)}>
+                {view === "both" ? "Both" : view === "today" ? "Today" : "Expiry"}
+              </button>
+            ))}
+          </div>
+          <div className="payoff-curve-legend" aria-hidden>
+            {showToday && <span><i style={{ background: TODAY }} />Today (est.)</span>}
+            {showExpiry && <span><i className="payoff-curve-legend-expiry" />At expiry</span>}
+          </div>
+          <p className="payoff-curve-note">
+            Today: each option leg priced with Black-Scholes at the volatility implied by its current price, held as spot moves. An estimate, not a quote.
+            {projection.borrowedVol > 0 && ` ${projection.borrowedVol} leg${projection.borrowedVol > 1 ? "s" : ""} had no usable price and use${projection.borrowedVol > 1 ? "" : "s"} the nearest-the-money volatility.`}
+          </p>
+        </div>
+      ) : (
+        <p className="payoff-curve-note px-5 pt-2">Today curve unavailable: it needs a spot price and at least one option price to infer volatility from.</p>
+      ))}
       {baseline && (
         <div className="flex gap-4 text-xs">
           <span className="text-muted-foreground">- - {labels.baseline}</span>
@@ -173,11 +220,11 @@ export function PayoffChart({
           />
 
           <Tooltip
-            content={<PayoffTooltip referenceSpot={spot} />}
+            content={<PayoffTooltip referenceSpot={spot} showExpiry={showExpiry} showToday={showToday} />}
             cursor={{ stroke: MUTED, strokeDasharray: "3 3" }}
           />
 
-          <Area
+          {showExpiry && <Area
             type="linear"
             dataKey="pnl"
             stroke={`url(#${strokeId})`}
@@ -186,7 +233,11 @@ export function PayoffChart({
             dot={false}
             activeDot={styled ? { r: 6, stroke: GREEN, strokeWidth: 4, fill: "#F2EDE3" } : { r: 3 }}
             isAnimationActive={false}
-          />
+          />}
+          {showToday && (
+            <Line type="monotone" dataKey="todayPnl" stroke={TODAY} strokeWidth={2} dot={false}
+              activeDot={{ r: 5, stroke: TODAY, strokeWidth: 3, fill: "#F2EDE3" }} isAnimationActive={false} />
+          )}
           {baseline && (
             <Line type="linear" dataKey="baselinePnl" stroke={MUTED} strokeWidth={1.75}
               strokeDasharray="6 4" dot={false} activeDot={false} isAnimationActive={false} />
@@ -196,7 +247,7 @@ export function PayoffChart({
           <ReferenceLine y={0} stroke={MUTED} strokeWidth={1.25} strokeDasharray={styled ? "5 4" : undefined} />
 
           {/* Breakevens */}
-          {payoff.breakevens.filter((be) => be >= xMin && be <= xMax).map((be) => (
+          {showExpiry && payoff.breakevens.filter((be) => be >= xMin && be <= xMax).map((be) => (
             <ReferenceLine
               key={be}
               x={be}

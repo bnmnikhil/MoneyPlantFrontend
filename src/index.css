@@ -604,3 +604,16 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
   .builder-workspace h2 { font-size: 1.1875rem; }
   .builder-target-values strong { font-size: 0.875rem; }
 }
+
+/* Payoff: the today curve's legend, view toggle and model note (projection.ts). */
+.payoff-curve-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; padding: 0.625rem 1.25rem 0; font-size: 0.8125rem; }
+.payoff-curve-legend { display: flex; gap: 1rem; color: hsl(var(--foreground)); }
+.payoff-curve-legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.payoff-curve-legend i { display: inline-block; width: 1.25rem; height: 2px; border-radius: 1px; }
+.payoff-curve-legend i.payoff-curve-legend-expiry { background: linear-gradient(90deg, #3FCB85 50%, #FF6B5E 50%); }
+.payoff-curve-toggle { display: inline-flex; border: 1px solid hsl(var(--border)); border-radius: 5px; overflow: hidden; }
+.payoff-curve-toggle button { padding: 0.3rem 0.75rem; background: var(--gb-sunken); color: hsl(var(--muted-foreground)); }
+.payoff-curve-toggle button + button { border-left: 1px solid hsl(var(--border)); }
+.payoff-curve-toggle button[aria-pressed="true"] { background: var(--gb-gold-soft); color: hsl(var(--foreground)); }
+.payoff-curve-toggle button:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: -2px; }
+.payoff-curve-note { flex-basis: 100%; margin: 0; font-size: 0.75rem; color: hsl(var(--muted-foreground)); }

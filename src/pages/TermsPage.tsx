@@ -8,8 +8,7 @@ const sections: LegalSection[] = [
     title: "Using GoldenBook",
     body: (
       <p>
-        GoldenBook is operated by {d.operatorName}. These terms explain the conditions for using
-        the service. By signing in, you agree to these terms. Our <Link to="/privacy">privacy
+        These terms explain the conditions for using {d.operatorName}. By signing in, you agree to these terms. Our <Link to="/privacy">privacy
         policy</Link> explains how we handle your information. If you do not agree, please do
         not use the service.
       </p>
@@ -159,7 +158,7 @@ const sections: LegalSection[] = [
     body: (
       <p>
         Indian law governs these terms. Subject to any mandatory legal protections, the courts
-        at {d.operatorLocation} have jurisdiction over disputes concerning the service.
+        of India have jurisdiction over disputes concerning the service.
       </p>
     ),
   },

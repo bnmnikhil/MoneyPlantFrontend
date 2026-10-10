@@ -8,18 +8,14 @@
  */
 export const legalDetails = {
   /** Shown as the operator and Data Fiduciary. A legal name, not a brand. */
-  operatorName: "[Operator's full legal name]",
-  /** City and state; also the seat of the courts named in the terms. */
-  operatorLocation: "[City], [State], India",
+  operatorName: "GoldenBook",
   /** One monitored address for support, privacy requests and grievances. */
-  contactEmail: "[support@your-domain]",
-  /** The person who answers grievances under the DPDP Act. */
-  grievanceOfficer: "[Grievance officer's name]",
+  contactEmail: "support@goldenbook.in",
   /** Bump both whenever a document changes materially; L4 re-prompts on a new version. */
-  effectiveDate: "[DD Month 2026]",
-  termsVersion: "[YYYY-MM-DD]",
+  effectiveDate: "10 October 2026",
+  termsVersion: "2026-10-10",
   /** Plain statement of price; the terms promise notice before this changes. */
-  pricing: "[GoldenBook is currently free of charge.]",
+  pricing: "GoldenBook is currently free of charge.",
 } as const;
 
 export type LegalDetailKey = keyof typeof legalDetails;

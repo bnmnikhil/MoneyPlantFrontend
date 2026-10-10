@@ -13,18 +13,22 @@ import {
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { LegalFooter } from "@/features/legal/LegalFooter";
+import { supportedBrokers } from "@/features/landing/supportedBrokers";
 
 /*
  * Every line on this page is a claim a stranger will hold us to, and the terms
  * of use promise read-only and not-advice. Describe only what ships; when a
  * feature is added or removed, this copy changes in the same PR.
+ *
+ * Broker names appear only through `supportedBrokers`; no other line names a
+ * broker, so adding one never means rewriting this page.
  */
 
 const features: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: Layers,
     title: "Every broker, one screen",
-    body: "Positions, holdings and margins from Zerodha Kite, Alice Blue and Paytm Money, account by account — with P&L since entry and today's move side by side.",
+    body: "Positions, holdings and margins from every broker account you connect, account by account — with P&L since entry and today's move side by side.",
   },
   {
     icon: TrendingUp,
@@ -33,8 +37,8 @@ const features: { icon: LucideIcon; title: string; body: string }[] = [
   },
   {
     icon: Gauge,
-    title: "Margin and risk, explained",
-    body: "A bottom-up SPAN-and-exposure estimate for each position, shown beside your broker's actual bill, plus exposure grouped by expiry.",
+    title: "Margin, explained",
+    body: "A bottom-up SPAN-and-exposure estimate for each position, shown beside your broker's actual bill.",
   },
   {
     icon: Wrench,
@@ -50,11 +54,11 @@ const steps: { title: string; body: string }[] = [
   },
   {
     title: "Create your own API app at each broker",
-    body: "GoldenBook has no shared broker app — each user registers their own. Kite Connect's personal tier is free; Alice Blue's team must activate the app; Paytm Money asks for your password and OTP at every login.",
+    body: "GoldenBook has no shared broker app — each user registers their own on the broker's developer site. Brokers differ: some charge for API access, some approve new apps by hand, some ask for an OTP at every login.",
   },
   {
-    title: "Paste the key and secret, then connect",
-    body: "Do it once per app in Settings. Broker logins expire daily, so you reconnect each trading day.",
+    title: "Add the app in Settings, then connect",
+    body: "Settings asks for exactly what your broker needs and links to its developer site. Broker logins expire daily, so you reconnect each trading day.",
   },
 ];
 
@@ -85,10 +89,10 @@ export function LandingPage() {
         <section className="flex flex-col items-center gap-6 pt-16 text-center sm:pt-24">
           <span className="inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs text-muted-foreground">
             <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-            NSE F&amp;O · Zerodha Kite · Alice Blue · Paytm Money
+            NSE F&amp;O · read-only · {supportedBrokers.length} brokers
           </span>
           <h1 className="max-w-3xl text-balance text-4xl font-semibold tracking-tight sm:text-6xl">
-            All your F&amp;O positions, on one screen
+            All your F&amp;O Positions, Holdings and Margins on one screen
           </h1>
           <p className="max-w-2xl text-balance text-lg text-muted-foreground">
             GoldenBook brings your positions, holdings and margins from every
@@ -105,6 +109,19 @@ export function LandingPage() {
             <Button asChild size="lg" variant="ghost">
               <a href="#setup">What setup involves</a>
             </Button>
+          </div>
+          <div className="mt-4 flex max-w-2xl flex-col items-center gap-3">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">Works with</p>
+            <ul aria-label="Supported brokers" className="flex flex-wrap justify-center gap-2">
+              {supportedBrokers.map((name) => (
+                <li
+                  key={name}
+                  className="rounded-full border border-border bg-card/60 px-3 py-1 text-sm text-foreground/90"
+                >
+                  {name}
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
@@ -195,7 +212,7 @@ export function LandingPage() {
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground text-pretty">
             A one-time job per broker, done mostly on the broker's own developer
-            site. Alice Blue's activation can take a while, so start there.
+            site. Some brokers take a while to approve a new app, so start early.
           </p>
           <ol className="mt-6 grid gap-4 sm:grid-cols-3">
             {steps.map((s, i) => (

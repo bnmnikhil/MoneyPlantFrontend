@@ -38,6 +38,8 @@ export function PayoffPage() {
   const data = payoff.isError ? undefined : payoff.data;
   const holding = holdingView(includeHoldings, positionsPayoff.data?.holding, data?.holding);
   const mixedExpiries = (data?.expiries.length ?? 0) > 1;
+  // The today curve values legs as of when their marks were fetched, not as of each render.
+  const markedAt = useMemo(() => data ? new Date(data.retrievedAt) : undefined, [data?.retrievedAt]);
 
   // Unticked legs (a what-if). Cleared whenever the curve or the holdings choice changes, so the
   // page never opens on a what-if; kept across the 30-second refresh while the same legs return.
@@ -120,7 +122,7 @@ export function PayoffPage() {
         <section className="payoff-panel payoff-chart-panel" aria-labelledby="live-payoff-title">
           <div className="payoff-chart-header">
             <div className="payoff-chart-title">
-              <h2 id="live-payoff-title">{mixedExpiries ? "Combined expiry scenario" : "Payoff at expiry"}</h2>
+              <h2 id="live-payoff-title">{mixedExpiries ? "Combined expiry scenario" : "Payoff"}</h2>
               {data && <span>{data.expiries.map(expiryLabel).join(" / ")}{whatIf ? ` · ${legs.length} of ${data.legs.length} legs` : ""}</span>}
             </div>
             {shown ? <PositionFigures shown={shown} real={whatIf ? real : undefined} mixedExpiries={mixedExpiries} />
@@ -129,6 +131,7 @@ export function PayoffPage() {
           {payoff.isLoading ? <Skeleton className="m-4 h-[26.875rem]" />
             : payoff.isError ? <ErrorState title={includeHoldings ? "Couldn't include holdings in payoff" : "Couldn't load payoff"} description={includeHoldings ? "Check the share quantity and retry, or turn off Holdings to view positions only." : undefined} onRetry={() => { void payoff.refetch(); }} />
             : chartPayoff && data ? <PayoffChart variant="live" key={viewKey} payoff={chartPayoff} spot={data.spot} legs={legs} isIndex={data.isIndex}
+                todayAt={markedAt}
                 baseline={whatIf ? { payoff: data.payoff, legs: data.legs } : undefined}
                 labels={{ baseline: "Your real position", current: "Ticked legs" }} /> : null}
           {data && <div className="payoff-chart-notes">

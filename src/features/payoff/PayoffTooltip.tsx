@@ -2,6 +2,9 @@ import { formatINRWhole } from "@/lib/format";
 
 const GREEN = "#3FCB85";
 const RED = "#FF6B5E";
+const TODAY = "#6AA9FF";
+
+const signed = (value: number) => `${value >= 0 ? "+" : ""}${formatINRWhole(value)}`;
 
 export function spotChangeLabel(hoveredSpot: number, referenceSpot: number): string | null {
   if (!Number.isFinite(hoveredSpot) || !Number.isFinite(referenceSpot) || referenceSpot <= 0) {
@@ -13,13 +16,16 @@ export function spotChangeLabel(hoveredSpot: number, referenceSpot: number): str
   return `${rounded > 0 ? "+" : ""}${rounded.toFixed(2)}%`;
 }
 
-export function PayoffTooltip({ active, payload, referenceSpot }: {
+export function PayoffTooltip({ active, payload, referenceSpot, showExpiry = true, showToday = false }: {
   active?: boolean;
-  payload?: Array<{ payload: { spot: number; pnl: number; baselinePnl?: number } }>;
+  payload?: Array<{ payload: { spot: number; pnl: number; baselinePnl?: number; todayPnl?: number } }>;
   referenceSpot: number;
+  showExpiry?: boolean;
+  showToday?: boolean;
 }) {
   if (!active || !payload?.length) return null;
-  const { spot, pnl, baselinePnl } = payload[0].payload;
+  const { spot, pnl, baselinePnl, todayPnl } = payload[0].payload;
+  const today = showToday ? todayPnl : undefined;
   const change = spotChangeLabel(spot, referenceSpot);
 
   return (
@@ -27,13 +33,17 @@ export function PayoffTooltip({ active, payload, referenceSpot }: {
       <p className="font-medium text-foreground">
         Spot {formatINRWhole(spot)}{change !== null && <span className="text-muted-foreground"> ({change})</span>}
       </p>
-      <p
-        className="tabular-nums"
-        style={{ color: pnl >= 0 ? GREEN : RED }}
-      >
-        P&amp;L {pnl >= 0 ? "+" : ""}
-        {formatINRWhole(pnl)}
-      </p>
+      {today !== undefined && (
+        <p className="tabular-nums" style={{ color: TODAY }}>Today {signed(today)}</p>
+      )}
+      {showExpiry && (
+        <p
+          className="tabular-nums"
+          style={{ color: pnl >= 0 ? GREEN : RED }}
+        >
+          {today !== undefined ? "At expiry" : "P&L"} {signed(pnl)}
+        </p>
+      )}
       {baselinePnl !== undefined && (
         <>
           <p className="tabular-nums text-muted-foreground">

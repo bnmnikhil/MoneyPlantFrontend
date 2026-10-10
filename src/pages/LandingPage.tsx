@@ -92,7 +92,7 @@ export function LandingPage() {
             NSE F&amp;O · read-only · {supportedBrokers.length} brokers
           </span>
           <h1 className="max-w-3xl text-balance text-4xl font-semibold tracking-tight sm:text-6xl">
-            All your F&amp;O positions, holdings and margins, on one screen
+            All your F&amp;O Positions, Holdings and Margins on one screen
           </h1>
           <p className="max-w-2xl text-balance text-lg text-muted-foreground">
             GoldenBook brings your positions, holdings and margins from every

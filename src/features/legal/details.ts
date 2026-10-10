@@ -12,7 +12,7 @@ export const legalDetails = {
   /** City and state; also the seat of the courts named in the terms. */
   operatorLocation: "[City], [State], India",
   /** One monitored address for support, privacy requests and grievances. */
-  contactEmail: "[support@your-domain]",
+  contactEmail: "support@goldenbook.in",
   /** The person who answers grievances under the DPDP Act. */
   grievanceOfficer: "[Grievance officer's name]",
   /** Bump both whenever a document changes materially; L4 re-prompts on a new version. */

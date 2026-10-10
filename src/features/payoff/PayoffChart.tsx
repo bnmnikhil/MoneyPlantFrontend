@@ -90,7 +90,7 @@ export function PayoffChart({
   // The plotting area excludes the 72px Y axis and the 8px/16px chart margins.
   const referenceLabels = layoutReferenceLabels([
     ...(spot > 0 ? [{ key: "spot", value: spot, text: `Spot ${formatPrice(spot)}` }] : []),
-    ...payoff.breakevens.map((be) => ({ key: `be-${be}`, value: be, text: formatPrice(be) })),
+    ...(showExpiry ? payoff.breakevens : []).map((be) => ({ key: `be-${be}`, value: be, text: formatPrice(be) })),
   ], [xMin, xMax], chartWidth - 96);
   const points = chartPoints(legs, [xMin, xMax], [
     ...payoff.breakevens,
@@ -150,16 +150,16 @@ export function PayoffChart({
       </details>
       {todayAt && (projection ? (
         <div className="payoff-curve-bar">
-          <div className="payoff-curve-legend" aria-hidden>
-            {showToday && <span><i style={{ background: TODAY }} />Today (est.)</span>}
-            {showExpiry && <span><i className="payoff-curve-legend-expiry" />At expiry</span>}
-          </div>
           <div role="group" aria-label="Curves shown" className="payoff-curve-toggle">
             {(["both", "today", "expiry"] as const).map((view) => (
               <button key={view} type="button" aria-pressed={curveView === view} onClick={() => setCurveView(view)}>
                 {view === "both" ? "Both" : view === "today" ? "Today" : "Expiry"}
               </button>
             ))}
+          </div>
+          <div className="payoff-curve-legend" aria-hidden>
+            {showToday && <span><i style={{ background: TODAY }} />Today (est.)</span>}
+            {showExpiry && <span><i className="payoff-curve-legend-expiry" />At expiry</span>}
           </div>
           <p className="payoff-curve-note">
             Today: each option leg priced with Black-Scholes at the volatility implied by its current price, held as spot moves. An estimate, not a quote.
@@ -247,7 +247,7 @@ export function PayoffChart({
           <ReferenceLine y={0} stroke={MUTED} strokeWidth={1.25} strokeDasharray={styled ? "5 4" : undefined} />
 
           {/* Breakevens */}
-          {payoff.breakevens.filter((be) => be >= xMin && be <= xMax).map((be) => (
+          {showExpiry && payoff.breakevens.filter((be) => be >= xMin && be <= xMax).map((be) => (
             <ReferenceLine
               key={be}
               x={be}

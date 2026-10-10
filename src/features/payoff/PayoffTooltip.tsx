@@ -47,10 +47,10 @@ export function PayoffTooltip({ active, payload, referenceSpot, showExpiry = tru
       {baselinePnl !== undefined && (
         <>
           <p className="tabular-nums text-muted-foreground">
-            Existing {baselinePnl >= 0 ? "+" : ""}{formatINRWhole(baselinePnl)}
+            Existing{today !== undefined ? " at expiry" : ""} {signed(baselinePnl)}
           </p>
           <p className="tabular-nums font-medium">
-            Change {pnl - baselinePnl >= 0 ? "+" : ""}{formatINRWhole(pnl - baselinePnl)}
+            Change{today !== undefined ? " at expiry" : ""} {signed(pnl - baselinePnl)}
           </p>
         </>
       )}

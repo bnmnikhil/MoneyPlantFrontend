@@ -50,7 +50,7 @@ export function LoginPage() {
               Sign in to GoldenBook
             </h1>
             <p className="text-sm text-muted-foreground">
-              Continue to your trading terminal.
+              Review your portfolio and explore payoff scenarios.
             </p>
           </div>
 
@@ -78,16 +78,16 @@ export function LoginPage() {
           </Button>
 
           <p className="text-xs leading-relaxed text-muted-foreground text-pretty">
-            By continuing you agree to the{" "}
+            By signing in, you agree to the{" "}
             <Link to="/terms" className="underline underline-offset-2 hover:text-foreground">
               Terms
-            </Link>{" "}
-            and{" "}
+            </Link>
+            . Read our{" "}
             <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
               Privacy policy
             </Link>
-            . GoldenBook is read-only, places no orders and is not investment
-            advice.
+            {" "}to learn how we handle your data. GoldenBook does not place orders
+            or provide investment advice.
           </p>
         </CardContent>
       </Card>

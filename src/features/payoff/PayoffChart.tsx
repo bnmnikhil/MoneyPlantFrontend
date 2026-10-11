@@ -130,8 +130,8 @@ export function PayoffChart({
     expiryMax <= 0 ? 0 : expiryMin >= 0 ? 1 : expiryMax / (expiryMax - expiryMin);
 
   return (
-    <div className={styled ? `payoff-chart-live ${variant === "builder" ? "builder-chart" : ""}` : "space-y-3"}>
-      {variant === "live" ? <>
+    <div className={styled ? `payoff-chart-live${variant === "builder" ? " builder-chart" : ""}` : "space-y-3"}>
+      {styled ? <>
         <div className="payoff-toolbar">
           <div role="group" aria-label="Price range" className="payoff-toolbar-range">
             {[0.05, 0.10, 0.15].map((percent) => (
@@ -169,8 +169,8 @@ export function PayoffChart({
         {!draftValid && <span role="status">Enter a nonnegative minimum and a larger maximum.</span>}
       </form>}
       </> : <>
-      <details open={variant === "builder" ? undefined : true} className={variant === "builder" ? "builder-range-menu" : "contents"}>
-      <summary className={variant === "builder" ? "" : "hidden"}>Price range · {formatINRWhole(xMin)} – {formatINRWhole(xMax)}</summary>
+      <details open className="contents">
+      <summary className="hidden">Price range · {formatINRWhole(xMin)} – {formatINRWhole(xMax)}</summary>
       <div className={styled ? "payoff-range-controls" : "flex flex-wrap items-center gap-2 text-xs"}>
         <span className="text-muted-foreground">Price range</span>
         {[0.05, 0.10, 0.15].map((percent) => (
@@ -316,7 +316,7 @@ export function PayoffChart({
       </ResponsiveContainer>
     </div>
     {styled && axisTitles && <p className="pb-2 text-center text-sm text-muted-foreground">Underlying price (₹)</p>}
-    {variant === "live" && projection && (
+    {styled && projection && (
       <div className="payoff-target">
         {maxDays > 0 && <>
           <button type="button" className="payoff-target-today" onClick={() => setTargetDays(0)}>Today</button>

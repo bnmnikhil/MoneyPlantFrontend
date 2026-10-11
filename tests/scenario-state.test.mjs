@@ -5,6 +5,7 @@ import {
   baselineFromPayoff,
   changeDraftContract,
   chartLeg,
+  projectionLeg,
   closeDraft,
   draftFromChain,
   useLatestPrice,
@@ -117,4 +118,23 @@ test('closing is an opposite trade and retains its link to the immutable leg', (
   const partial = closeDraft(existing, 7, 600);
   assert.equal(partial.qty, 600);
   assert.equal(Math.sign(partial.qty), -Math.sign(existing.qty));
+});
+
+test('projection legs carry the expiry and the current price, and say when there is none', () => {
+  const quoted = projectionLeg(draftFromChain(chain, chain.rows[1], 'CE', 'SELL', 'q'));
+  assert.deepEqual(quoted, { type: 'CE', strike: 450, qty: -1600, avgPrice: 12, expiry: '2026-09-24', currentMark: 12, currentMarkKnown: true });
+  const moved = projectionLeg(changeDraftContract(draftFromChain(chain, chain.rows[1], 'CE', 'BUY', 'm'), { strike: 460 }, 1600));
+  assert.equal(moved.currentMark, null);
+  assert.equal(moved.currentMarkKnown, false);
+});
+
+test('a strategy built from chain quotes is flat today at spot: entry is the current price', async () => {
+  const { prepareProjection, projectedPnl } = await import('../src/features/payoff/projection.ts');
+  const legs = [
+    draftFromChain(chain, chain.rows[1], 'CE', 'SELL', 'a'),
+    draftFromChain(chain, chain.rows[2], 'CE', 'BUY', 'b'),
+  ].map(projectionLeg);
+  const projection = prepareProjection(legs, chain.spot, new Date('2026-09-10T06:00:00Z'));
+  assert.ok(projection);
+  assert.equal(projectedPnl(projection, chain.spot), 0);
 });

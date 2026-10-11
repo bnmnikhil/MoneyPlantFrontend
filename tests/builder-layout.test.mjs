@@ -16,7 +16,7 @@ function components(name) {
 }
 const { StrategyLegEditor } = components("StrategyLegEditor");
 const { OptionChainPicker } = components("OptionChainPicker");
-const { BuilderMetrics, PnlLadder, TargetInspector } = components("BuilderMetrics");
+const { BuilderMetrics, PnlLadder } = components("BuilderMetrics");
 const render = (Component, props) => renderToStaticMarkup(React.createElement(Component, props));
 const observation = (value, priceKnown = true) => ({ value, priceKnown, fetchedAt: "2026-09-12T05:00:00Z", sourceConnectionId: "quote-account", status: "AVAILABLE" });
 const leg = (overrides = {}) => ({ id: "leg-a", contract: { underlying: "TEST", type: "CE", expiry: "2026-09-24", strike: 100 },
@@ -136,24 +136,10 @@ test("the P&L table lists round prices around spot, marks the nearest, and compa
   assert.match(render(PnlLadder, { spot: null, isIndex: false, baseline: [], combined: spread }), /needs the current spot/);
 });
 
-test("target inspector allows manual prices without inventing an unknown spot or P&L", () => {
-  const html = render(TargetInspector, { spot: null, target: null, metrics: null, onTarget() {} });
-  assert.match(html, /Target underlying price/);
-  assert.doesNotMatch(html, /type="range"|₹0/);
-  const ranged = render(TargetInspector, { spot: 100, target: 120, metrics: { existing: -100, combined: 50, change: 150 }, onTarget() {} });
-  assert.match(ranged, /min="90" max="120"/);
-  assert.match(ranged, /After adjustments/);
-});
-
 test("big figures drop their paise; small ones keep them", () => {
   const html = render(BuilderMetrics, { comparison: { combined: { ...payoff, maxProfit: 1223520, maxLoss: -480 }, expiries: ["2026-10-27"], adjustmentCashflow: -480 } });
   assert.match(html, /\+₹12,23,520</);
   assert.match(html, /-₹480\.00/);
-});
-
-test("the target box shows paise, never a raw slider value", () => {
-  const html = render(TargetInspector, { spot: 429, target: 430.240788, metrics: null, onTarget() {} });
-  assert.match(html, /aria-label="Target underlying price"[^>]*value="430\.24"/);
 });
 
 test("with no existing positions the locked section is not drawn at all", () => {

@@ -18,7 +18,7 @@ import type { ReferenceLabel } from "./referenceLabels";
 import { PayoffTooltip } from "./PayoffTooltip";
 import { daysToLastExpiry, prepareProjection, projectedBreakevens, projectedPnl, targetMoment } from "./projection";
 import type { ProjectionLeg } from "./projection";
-import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { InfoTip } from "./InfoTip";
 import { formatINRWhole, formatNumber, formatPrice } from "@/lib/format";
 
@@ -80,6 +80,7 @@ export function PayoffChart({
   const [targetDays, setTargetDays] = useState(0);
   const maxDays = useMemo(() => todayAt ? daysToLastExpiry(legs, todayAt) : 0, [legs, todayAt]);
   const days = Math.min(targetDays, maxDays);
+  const pct = maxDays > 0 ? days / maxDays * 100 : 0;
   const target = useMemo(() => todayAt ? targetMoment(todayAt, days) : undefined, [todayAt, days]);
   const projection = useMemo(() => todayAt && target ? prepareProjection(legs, spot, todayAt, target) : null, [legs, spot, todayAt, target]);
   const showToday = !!projection;
@@ -318,18 +319,19 @@ export function PayoffChart({
     {variant === "live" && projection && (
       <div className="payoff-target">
         {maxDays > 0 && <>
-          <span className="payoff-target-label">Target</span>
-          <span className="payoff-target-step">
-            <button type="button" aria-label="One day earlier" disabled={days === 0} onClick={() => setTargetDays(days - 1)}>
-              <ChevronLeft className="size-4" aria-hidden /></button>
-            <output htmlFor={`target-${id}`} aria-live="polite">{targetCaption(days, maxDays, target)}</output>
-            <button type="button" aria-label="One day later" disabled={days === maxDays} onClick={() => setTargetDays(days + 1)}>
-              <ChevronRight className="size-4" aria-hidden /></button>
-          </span>
-          <input id={`target-${id}`} type="range" aria-label="Target date" min={0} max={maxDays} step={1} value={days}
-            aria-valuetext={targetCaption(days, maxDays, target)} onChange={(e) => setTargetDays(Number(e.target.value))} />
-          <span className="payoff-target-end">{todayAt && dayMonth(targetMoment(todayAt, maxDays))}</span>
-          <button type="button" className="payoff-target-today" disabled={days === 0} onClick={() => setTargetDays(0)}>Today</button>
+          <button type="button" className="payoff-target-today" onClick={() => setTargetDays(0)}>Today</button>
+          <div className="payoff-target-track">
+            {/* The label rides the thumb: 10px is half the thumb, and the label's own shift keeps it inside the track at both ends. */}
+            <output htmlFor={`target-${id}`} className="payoff-target-bubble"
+              style={{ left: `calc(${pct}% + ${10 - pct * 0.2}px)`, transform: `translateX(-${pct}%)` }}>
+              <i style={{ background: TODAY }} aria-hidden />{targetCaption(days, maxDays, target)}
+            </output>
+            <input id={`target-${id}`} type="range" aria-label="Target date" min={0} max={maxDays} step={1} value={days}
+              aria-valuetext={targetCaption(days, maxDays, target)} onChange={(e) => setTargetDays(Number(e.target.value))}
+              style={{ background: `linear-gradient(90deg, var(--gb-gold) ${pct}%, hsl(var(--border)) ${pct}%) center / 100% 4px no-repeat` }} />
+          </div>
+          <span className="payoff-target-end">{todayAt && dayMonth(targetMoment(todayAt, maxDays))} · expiry</span>
+          <span className="payoff-target-divider" aria-hidden />
         </>}
         <span className="payoff-target-breakevens"><i style={{ background: TODAY }} aria-hidden />Breakevens
           <b>{targetBreakevens.length ? targetBreakevens.map(formatPrice).join(" · ") : "none in the default range"}</b></span>

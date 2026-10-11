@@ -16,12 +16,14 @@ export function spotChangeLabel(hoveredSpot: number, referenceSpot: number): str
   return `${rounded > 0 ? "+" : ""}${rounded.toFixed(2)}%`;
 }
 
-export function PayoffTooltip({ active, payload, referenceSpot, showExpiry = true, showToday = false }: {
+export function PayoffTooltip({ active, payload, referenceSpot, showExpiry = true, showToday = false, todayLabel = "Today" }: {
   active?: boolean;
   payload?: Array<{ payload: { spot: number; pnl: number; baselinePnl?: number; todayPnl?: number } }>;
   referenceSpot: number;
   showExpiry?: boolean;
   showToday?: boolean;
+  /** The projected curve's name: "Today", or its target date. */
+  todayLabel?: string;
 }) {
   if (!active || !payload?.length) return null;
   const { spot, pnl, baselinePnl, todayPnl } = payload[0].payload;
@@ -34,7 +36,7 @@ export function PayoffTooltip({ active, payload, referenceSpot, showExpiry = tru
         Spot {formatINRWhole(spot)}{change !== null && <span className="text-muted-foreground"> ({change})</span>}
       </p>
       {today !== undefined && (
-        <p className="tabular-nums" style={{ color: TODAY }}>Today {signed(today)}</p>
+        <p className="tabular-nums" style={{ color: TODAY }}>{todayLabel} {signed(today)}</p>
       )}
       {showExpiry && (
         <p

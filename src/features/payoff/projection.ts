@@ -1,8 +1,8 @@
 import type { ChartLeg } from "./chartRange";
 
 /**
- * The "today" curve: what the open legs would be worth now, at each hypothetical spot, rather
- * than at expiry.
+ * The projected curve: what the open legs would be worth now, or on a chosen target date, at each
+ * hypothetical spot, rather than at expiry.
  *
  * Each option leg is priced with Black-Scholes at the implied volatility solved from its own
  * current mark, and keeps that volatility as spot moves (sticky strike; the smile does not shift).
@@ -116,21 +116,28 @@ type Valued =
   | { kind: "linear"; leg: ProjectionLeg; offset: number };
 
 export interface Projection {
+  /** The moment the legs are valued at: now for the today curve, or a target date. */
+  at: Date;
   legs: Valued[];
   /** Option legs priced at a volatility borrowed from another leg, because their own mark gave none. */
   borrowedVol: number;
 }
 
 /**
- * Prepare the legs for the today curve, or null when it cannot be drawn: no spot, or an open
+ * Prepare the legs for the projected curve, or null when it cannot be drawn: no spot, or an open
  * option leg for which no volatility can be found anywhere in the book.
+ *
+ * Volatility is solved at `now`, when the marks were taken; the legs are then valued at `at`
+ * (default `now`), so a later target date keeps each leg's volatility and only shortens its time.
+ * A leg already past its own expiry at `at` is worth its intrinsic value, which is what makes a
+ * mixed-expiry book come out right; at the last expiry the curve is the expiry payoff.
  *
  * A leg whose own mark yields no volatility (unpriced, or trading at intrinsic) borrows the
  * volatility of the nearest-the-money solved leg, preferring one with the same expiry; the count
- * is reported so the chart can say so. Futures and shares move one-for-one with spot, keeping
- * today's basis, so they too pass through their current mark.
+ * is reported so the chart can say so. Futures and shares move one-for-one with spot. A future
+ * keeps today's basis, shrunk in proportion to its remaining time so that it is nil at expiry.
  */
-export function prepareProjection(legs: ProjectionLeg[], spot: number, now: Date): Projection | null {
+export function prepareProjection(legs: ProjectionLeg[], spot: number, now: Date, at: Date = now): Projection | null {
   if (!(spot > 0)) return null;
   const open = legs.filter((leg) => leg.qty !== 0);
   const markOf = (leg: ProjectionLeg) =>
@@ -160,7 +167,7 @@ export function prepareProjection(legs: ProjectionLeg[], spot: number, now: Date
   for (let i = 0; i < open.length; i++) {
     const leg = open[i];
     if (leg.type === "CE" || leg.type === "PE") {
-      const years = leg.expiry ? yearsToExpiry(leg.expiry, now) : 0;
+      const years = leg.expiry ? yearsToExpiry(leg.expiry, at) : 0;
       let vol = solved[i];
       if (vol === null && years > 0) {
         vol = borrow(leg);
@@ -170,14 +177,18 @@ export function prepareProjection(legs: ProjectionLeg[], spot: number, now: Date
       valued.push({ kind: "option", leg, call: leg.type === "CE", years, vol: vol ?? 0 });
     } else {
       const mark = markOf(leg);
-      valued.push({ kind: "linear", leg, offset: mark === null ? 0 : mark - spot });
+      let offset = mark === null ? 0 : mark - spot;
+      if (leg.type === "FUT" && leg.expiry) {
+        const left = yearsToExpiry(leg.expiry, now);
+        offset = left > 0 ? offset * yearsToExpiry(leg.expiry, at) / left : 0;
+      }
+      valued.push({ kind: "linear", leg, offset });
     }
   }
-  return { legs: valued, borrowedVol };
+  return { at, legs: valued, borrowedVol };
 }
 
-/** Open P&L at `spot` today, in rupees, rounded to paise like the expiry curve. */
-export function projectedPnl(projection: Projection, spot: number): number {
+function openPnl(projection: Projection, spot: number): number {
   let total = 0;
   for (const v of projection.legs) {
     const value = v.kind === "option"
@@ -185,5 +196,68 @@ export function projectedPnl(projection: Projection, spot: number): number {
       : spot + v.offset;
     total += (value - v.leg.avgPrice) * v.leg.qty;
   }
-  return Math.round(100 * total) / 100;
+  return total;
+}
+
+/** Open P&L at `spot` on the projection's date, in rupees, rounded to paise like the expiry curve. */
+export function projectedPnl(projection: Projection, spot: number): number {
+  return Math.round(100 * openPnl(projection, spot)) / 100;
+}
+
+/**
+ * Where the projected curve crosses zero inside [low, high]: a sign change on an even grid,
+ * refined by bisection to the paisa. The curve is smooth, so a grid far finer than any strike
+ * spacing finds every crossing a reader could see.
+ */
+export function projectedBreakevens(projection: Projection, [low, high]: [number, number], samples = 400): number[] {
+  if (!(high > low)) return [];
+  const roots: number[] = [];
+  let x0 = low, y0 = openPnl(projection, low);
+  for (let i = 1; i <= samples; i++) {
+    const x1 = low + (high - low) * i / samples, y1 = openPnl(projection, x1);
+    if (y0 === 0) roots.push(Math.round(100 * x0) / 100);
+    else if (y0 * y1 < 0) {
+      let a = x0, b = x1, ya = y0;
+      while (b - a > 0.005) {
+        const mid = 0.5 * (a + b), ym = openPnl(projection, mid);
+        if (ya * ym <= 0) b = mid; else { a = mid; ya = ym; }
+      }
+      roots.push(Math.round(100 * 0.5 * (a + b)) / 100);
+    }
+    x0 = x1; y0 = y1;
+  }
+  return roots;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+/** The calendar date in India at `moment`, as an ISO date. */
+export function istDate(moment: Date): string {
+  return new Date(moment.getTime() + IST_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/**
+ * Whole calendar days from today (in India) to the latest open expiry: the slider's last stop.
+ * 0 when nothing open expires after today.
+ */
+export function daysToLastExpiry(legs: ProjectionLeg[], now: Date): number {
+  const today = Date.parse(`${istDate(now)}T00:00:00Z`);
+  let days = 0;
+  for (const leg of legs) {
+    if (leg.qty === 0 || !leg.expiry) continue;
+    const expiry = Date.parse(`${leg.expiry}T00:00:00Z`);
+    if (Number.isFinite(expiry)) days = Math.max(days, Math.round((expiry - today) / DAY_MS));
+  }
+  return days;
+}
+
+/**
+ * The moment a target `days` ahead is valued at: `now` itself for day 0, otherwise that day's
+ * market close, 15:30 IST. On an expiry day that is the moment the contract expires.
+ */
+export function targetMoment(now: Date, days: number): Date {
+  if (days <= 0) return now;
+  const date = new Date(Date.parse(`${istDate(now)}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
+  return new Date(`${date}T10:00:00Z`);
 }

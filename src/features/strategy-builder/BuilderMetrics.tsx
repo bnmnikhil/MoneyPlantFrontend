@@ -39,28 +39,6 @@ export function BuilderMetrics({ comparison, linearTrades = false }: { compariso
   </div>)}</div>;
 }
 
-export function TargetInspector({ spot, target, metrics, onTarget }: {
-  spot: number | null; target: number | null;
-  metrics: { existing: number; combined: number; change: number } | null;
-  onTarget: (value: number | null) => void;
-}) {
-  const hasSpot = spot !== null && spot > 0;
-  const low = hasSpot ? Math.min(spot * 0.9, target ?? spot) : 0;
-  const high = hasSpot ? Math.max(spot * 1.1, target ?? spot) : 0;
-  return <section className="builder-target" aria-label="Target spot inspector">
-    <span className="builder-target-label">If it expires at</span>
-    <input aria-label="Target underlying price" type="number" min={0} step="any" value={target === null ? "" : Math.round(target * 100) / 100}
-      onChange={(event) => { const value = event.target.value === "" ? null : Number(event.target.value); if (value === null || (Number.isFinite(value) && value >= 0)) onTarget(value); }} />
-    {hasSpot && <div className="builder-target-slider">
-      <input aria-label="Target price slider" type="range" min={low} max={high} step="any" value={target ?? spot}
-        onChange={(event) => onTarget(Math.round(Number(event.target.value) * 100) / 100)} />
-      <div className="builder-target-scale"><span>{((low / spot - 1) * 100).toFixed(0)}%</span><span>Spot {formatPrice(spot)}</span><span>+{((high / spot - 1) * 100).toFixed(0)}%</span></div>
-    </div>}
-    <div className="builder-target-values">{([['Existing', metrics?.existing], ['After adjustments', metrics?.combined], ['Change', metrics?.change]] as const).map(([label, value]) =>
-      <div key={label}><p>{label}</p><strong className={value === undefined ? "" : value < 0 ? "text-loss" : "text-profit"}>{value === undefined ? "—" : formatSignedINR(value)}</strong></div>)}</div>
-  </section>;
-}
-
 export interface LadderLeg { type: string; strike: number; price: number; qty: number }
 
 /** Expiry P&L of a set of legs at one underlying price, to the paisa. */

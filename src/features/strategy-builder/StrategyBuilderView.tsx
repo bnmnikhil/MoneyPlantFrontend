@@ -25,6 +25,7 @@ import {
   baselineFromPayoff,
   changeDraftContract,
   chartLeg,
+  projectionLeg,
   closeDraft,
   draftFromChain,
   draftKey,
@@ -32,8 +33,7 @@ import {
   validDraft,
   withManualPrice,
 } from "./scenarioState";
-import { legPnlAtSpot } from "./payoffMath";
-import { BuilderMetrics, PnlLadder, TargetInspector } from "./BuilderMetrics";
+import { BuilderMetrics, PnlLadder } from "./BuilderMetrics";
 import { CustomLegForm } from "./CustomLegForm";
 import { draftCashflow } from "./legFigures";
 import { expiryLabel } from "@/features/payoff/expiry";
@@ -62,7 +62,6 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
   const [comparisonSnapshot, setComparisonSnapshot] = useState<{ inputKey: string; result: PayoffComparisonResponse } | null>(null);
   const [compareError, setCompareError] = useState<string | null>(null);
   const [isComparing, setIsComparing] = useState(false);
-  const [targetSpot, setTargetSpot] = useState<number | null>(null);
   const [recipeMessage, setRecipeMessage] = useState<string | null>(null);
   // The baseline is switched on and off from the legs panel: existing positions, holdings, or both,
   // from one account. `baselineAccount` is the account chosen when more than one holds this
@@ -119,7 +118,6 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
     setActiveKey(key);
     setStrikeCount(10);
     setRecipeMessage(null);
-    setTargetSpot(response.spot > 0 ? response.spot : null);
   }, []);
 
   useEffect(() => {
@@ -243,10 +241,6 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
     return () => { window.clearTimeout(timer); controller.abort(); };
   }, [comparisonInputKey]);
 
-  useEffect(() => {
-    if (targetSpot === null && spot !== null) setTargetSpot(spot);
-  }, [spot, targetSpot]);
-
   const chooseUnderlying = (item: UnderlyingSearchItem) => {
     const key = draftKey(item.code, null);
     setContexts((current) => current[key] ? current : {
@@ -256,7 +250,6 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
     setActiveKey(key);
     setStrikeCount(10);
     setRecipeMessage(null);
-    setTargetSpot(null);
     setImportError(null);
   };
 
@@ -325,15 +318,9 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
   };
 
   const enabledCombined = useMemo(() => [...baseline, ...drafts.filter((leg) => leg.enabled && validDraft(leg))], [baseline, drafts]);
-  const target = targetSpot ?? spot;
-  const targetMetrics = useMemo(() => {
-    if (target === null) return null;
-    const pnl = (legs: ScenarioLeg[]) => Math.round(100 * legs.reduce((sum, leg) => sum + legPnlAtSpot({
-      type: leg.contract.type, strike: leg.contract.strike, price: leg.entryPrice ?? 0, qty: leg.qty,
-    }, target), 0)) / 100;
-    const existing = pnl(baseline), combinedPnl = pnl(enabledCombined);
-    return { existing, combined: combinedPnl, change: combinedPnl - existing };
-  }, [target, baseline, enabledCombined]);
+  // The projected curve values every leg from its current price, as of when this scenario was calculated.
+  const markedAt = useMemo(() => comparison ? new Date() : undefined, [comparison]);
+  const projectionLegs = useMemo(() => enabledCombined.map(projectionLeg), [enabledCombined]);
 
   const account = context?.baselineResponse ? `${brokerLabel(context.baselineResponse.brokerId)} · ${positionCurve?.accountLabel ?? "Imported account"}` : undefined;
   const netCashflow = draftCashflow(drafts);
@@ -376,7 +363,7 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
         </div>
       </div>
       {positionCurves.isError && <p role="alert" className="text-xs text-loss">Could not list existing positions. <button type="button" className="underline" onClick={() => positionCurves.refetch()}>Retry</button></p>}
-      {Object.keys(contexts).length > 1 && <div className="builder-session-drafts"><span>Session drafts:</span>{Object.entries(contexts).map(([key, saved]) => <button key={key} type="button" aria-pressed={key === activeKey} onClick={() => { setActiveKey(key); setTargetSpot(null); }}>
+      {Object.keys(contexts).length > 1 && <div className="builder-session-drafts"><span>Session drafts:</span>{Object.entries(contexts).map(([key, saved]) => <button key={key} type="button" aria-pressed={key === activeKey} onClick={() => setActiveKey(key)}>
         {saved.selection.symbol}{saved.positionConnectionId ? ` · ${positionCurves.data?.find((curve) => curve.connectionId === saved.positionConnectionId && curve.underlying === saved.selection.code)?.accountLabel ?? "imported positions"}` : " · new"} ({saved.drafts.length})
       </button>)}</div>}
     </section>
@@ -428,21 +415,20 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
         </section>
         <section className="builder-panel builder-b-chart" aria-labelledby="builder-preview-title">
           <div className="builder-panel-heading">
-            <h2 id="builder-preview-title">Payoff at expiry</h2>
+            <h2 id="builder-preview-title">Payoff</h2>
             <div className="builder-chart-tabs" role="tablist" aria-label="Payoff view">
               <button type="button" role="tab" aria-selected={chartTab === "chart"} onClick={() => setChartTab("chart")}>Chart</button>
               <button type="button" role="tab" aria-selected={chartTab === "table"} onClick={() => setChartTab("table")}>P&amp;L table</button>
             </div>
-            <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground" role="status">{isComparing ? "Calculating…" : comparison ? "Calculated · expiry" : "Awaiting valid legs"}
+            <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground" role="status">{isComparing ? "Calculating…" : comparison ? "Calculated" : "Awaiting valid legs"}
               {comparison?.assumptions.length ? <Info className="size-3.5" aria-label={comparison.assumptions.join(" ")}><title>{comparison.assumptions.join(" ")}</title></Info> : null}</span>
           </div>
           {compareError && <p role="alert" className="p-3 text-sm text-loss">{compareError}</p>}
           {comparison ? <>
             {chartTab === "chart"
-              ? <PayoffChart variant="builder" axisTitles={false} key={activeKey} payoff={comparison.combined} spot={comparison.spot ?? 0} legs={enabledCombined.map(chartLeg)} isIndex={selection.isIndex}
+              ? <PayoffChart variant="builder" axisTitles={false} key={activeKey} payoff={comparison.combined} spot={comparison.spot ?? 0} legs={projectionLegs} isIndex={selection.isIndex} todayAt={markedAt}
                   baseline={baseline.length ? { payoff: comparison.baseline, legs: baseline.map(chartLeg) } : undefined} />
               : <PnlLadder spot={comparison.spot} isIndex={selection.isIndex} baseline={baseline.map(ladderLeg)} combined={enabledCombined.map(ladderLeg)} />}
-            <TargetInspector spot={spot} target={target} metrics={targetMetrics} onTarget={setTargetSpot} />
           </> : <div className="builder-empty builder-preview-empty">{isComparing ? "Calculating this scenario…" : "Add legs from the chain or a recipe to see the expiry payoff."}</div>}
         </section>
       </div>

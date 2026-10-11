@@ -158,6 +158,17 @@ export function chartLeg(leg: ScenarioLeg) {
   };
 }
 
+/** A leg for the projected curve: the chart leg plus its expiry and its current price, if any. */
+export function projectionLeg(leg: ScenarioLeg) {
+  const mark = leg.currentMark;
+  return {
+    ...chartLeg(leg),
+    expiry: leg.contract.expiry,
+    currentMark: mark?.priceKnown ? mark.value : null,
+    currentMarkKnown: !!mark?.priceKnown && mark.value !== null,
+  };
+}
+
 export function draftKey(underlying: string, positionConnectionId?: string | null) {
   return `${positionConnectionId ?? "new"}:${underlying}`;
 }

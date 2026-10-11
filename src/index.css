@@ -620,7 +620,7 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 .payoff-target { display: flex; flex-basis: 100%; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; }
 .payoff-target label { color: hsl(var(--muted-foreground)); }
 .payoff-target input[type="range"] { flex: 1 1 12rem; min-width: 8rem; max-width: 26rem; accent-color: #6AA9FF; }
-.payoff-target-value { min-width: 13.5rem; font-variant-numeric: tabular-nums; color: hsl(var(--foreground)); }
+.payoff-target-value { min-width: 17.5rem; font-variant-numeric: tabular-nums; color: hsl(var(--foreground)); }
 .payoff-target button { padding: 0.3rem 0.75rem; border: 1px solid hsl(var(--border)); border-radius: 5px; background: var(--gb-sunken); color: hsl(var(--muted-foreground)); }
 .payoff-target button:disabled { opacity: 0.45; }
 .payoff-target-breakevens { color: hsl(var(--foreground)); font-variant-numeric: tabular-nums; }

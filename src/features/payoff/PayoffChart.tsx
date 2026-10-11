@@ -189,7 +189,8 @@ export function PayoffChart({
             </p>
           )}
           <p className="payoff-curve-note">
-            {curveName === "Today" ? "Today" : "Projected"}: each option leg priced with Black-Scholes at the volatility implied by its current price, held as spot{days > 0 ? " and time move; a leg past its own expiry counts at intrinsic value" : " moves"}. An estimate, not a quote.
+            {/* One sentence for every target date, so moving the slider never reflows the chart. */}
+            Each option leg is priced with Black-Scholes at the volatility implied by its current price, held as spot and date move; a leg past its own expiry counts at intrinsic value. An estimate, not a quote.
             {projection.borrowedVol > 0 && ` ${projection.borrowedVol} leg${projection.borrowedVol > 1 ? "s" : ""} had no usable price and use${projection.borrowedVol > 1 ? "" : "s"} the nearest-the-money volatility.`}
           </p>
         </div>

@@ -18,6 +18,8 @@ import type { ReferenceLabel } from "./referenceLabels";
 import { PayoffTooltip } from "./PayoffTooltip";
 import { daysToLastExpiry, prepareProjection, projectedBreakevens, projectedPnl, targetMoment } from "./projection";
 import type { ProjectionLeg } from "./projection";
+import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { InfoTip } from "./InfoTip";
 import { formatINRWhole, formatNumber, formatPrice } from "@/lib/format";
 
 const GREEN = "#3FCB85";
@@ -27,8 +29,6 @@ const MUTED = "hsl(var(--muted-foreground))";
 const SPOT = "#F2EDE3";
 // The today curve: blue, so it reads as neither profit, loss nor the brand gold.
 export const TODAY = "#6AA9FF";
-
-type CurveView = "both" | "today" | "expiry";
 
 function ChartReferenceLabel({ viewBox, marker, color }: {
   viewBox?: { x?: number; y?: number };
@@ -77,14 +77,12 @@ export function PayoffChart({
   const [draftLow, setDraftLow] = useState("");
   const [draftHigh, setDraftHigh] = useState("");
   const [editing, setEditing] = useState(false);
-  const [curveView, setCurveView] = useState<CurveView>("both");
   const [targetDays, setTargetDays] = useState(0);
   const maxDays = useMemo(() => todayAt ? daysToLastExpiry(legs, todayAt) : 0, [legs, todayAt]);
   const days = Math.min(targetDays, maxDays);
   const target = useMemo(() => todayAt ? targetMoment(todayAt, days) : undefined, [todayAt, days]);
   const projection = useMemo(() => todayAt && target ? prepareProjection(legs, spot, todayAt, target) : null, [legs, spot, todayAt, target]);
-  const showToday = !!projection && curveView !== "expiry";
-  const showExpiry = !projection || curveView !== "today";
+  const showToday = !!projection;
   // The projected curve's name: "Today", or its target date.
   const curveName = days === 0 || !target ? "Today" : shortDate(target);
   const rangeLegs = baseline ? [...baseline.legs, ...legs] : legs;
@@ -95,14 +93,12 @@ export function PayoffChart({
   const [autoLow, autoHigh] = auto;
   const targetBreakevens = useMemo(() => projection ? projectedBreakevens(projection, [autoLow, autoHigh]) : [],
     [projection, autoLow, autoHigh]);
-  const drawTargetBreakevens = showToday && !showExpiry;
   const [xMin, xMax] = mode === "custom" && custom ? custom
     : typeof mode === "number" ? [anchor * (1 - mode), anchor * (1 + mode)] : auto;
   // The plotting area excludes the 72px Y axis and the 8px/16px chart margins.
   const referenceLabels = layoutReferenceLabels([
     ...(spot > 0 ? [{ key: "spot", value: spot, text: `Spot ${formatPrice(spot)}` }] : []),
-    ...(showExpiry ? payoff.breakevens : []).map((be) => ({ key: `be-${be}`, value: be, text: formatPrice(be) })),
-    ...(drawTargetBreakevens ? targetBreakevens : []).map((be) => ({ key: `tbe-${be}`, value: be, text: formatPrice(be) })),
+    ...payoff.breakevens.map((be) => ({ key: `be-${be}`, value: be, text: formatPrice(be) })),
   ], [xMin, xMax], chartWidth - 96);
   const points = chartPoints(legs, [xMin, xMax], [
     ...payoff.breakevens,
@@ -118,7 +114,7 @@ export function PayoffChart({
   const draftValid = draftLow.trim() !== "" && draftHigh.trim() !== "" && validRange(Number(draftLow), Number(draftHigh));
 
   const pnls = points.flatMap((point) => [
-    ...(showExpiry ? [point.pnl] : []),
+    point.pnl,
     ...(point.baselinePnl !== undefined ? [point.baselinePnl] : []),
     ...(showToday && point.todayPnl !== undefined ? [point.todayPnl] : []),
   ]);
@@ -134,6 +130,44 @@ export function PayoffChart({
 
   return (
     <div className={styled ? `payoff-chart-live ${variant === "builder" ? "builder-chart" : ""}` : "space-y-3"}>
+      {variant === "live" ? <>
+        <div className="payoff-toolbar">
+          <div role="group" aria-label="Price range" className="payoff-toolbar-range">
+            {[0.05, 0.10, 0.15].map((percent) => (
+              <button key={percent} type="button" aria-pressed={mode === percent} disabled={anchor <= 0}
+                onClick={() => { setMode(percent); setEditing(false); }}>±{percent * 100}%</button>
+            ))}
+            <button type="button" aria-pressed={mode === "custom" || editing}
+              onClick={() => { setDraftLow(xMin.toFixed(2)); setDraftHigh(xMax.toFixed(2)); setEditing(true); }}>Custom</button>
+            <button type="button" aria-label="Reset the price range" title="Reset" disabled={mode === "auto" && !editing}
+              onClick={() => { setMode("auto"); setEditing(false); }}><RotateCcw className="size-3.5" aria-hidden /></button>
+            <InfoTip label="About the price range">
+              {formatINRWhole(xMin)} – {formatINRWhole(xMax)}. {mode === "auto" ? `Auto: ${isIndex ? "index ±10%" : "stock ±15%"} around spot, widened to include strikes and breakevens.` : "Selected view."}{spot > 0 ? "" : " Spot unavailable; range centred on strategy prices."} Zoom changes the view only; profit/loss limits remain unchanged.
+            </InfoTip>
+          </div>
+          <div className="payoff-curve-legend">
+            {baseline && <span className="text-muted-foreground"><i className="payoff-curve-legend-baseline" />{labels.baseline}</span>}
+            {todayAt && (projection ? <>
+              <span><i style={{ background: TODAY }} />{curveName} (est.)</span>
+              <InfoTip label="How the projected curve is estimated" align="end">
+                Each option leg is priced with Black-Scholes at the volatility implied by its current price, held as spot and date move; a leg past its own expiry counts at intrinsic value. An estimate, not a quote.
+                {projection.borrowedVol > 0 && ` ${projection.borrowedVol} leg${projection.borrowedVol > 1 ? "s" : ""} had no usable price and use${projection.borrowedVol > 1 ? "" : "s"} the nearest-the-money volatility.`}
+              </InfoTip>
+            </> : <span className="text-muted-foreground">Projected curve unavailable
+              <InfoTip label="Why the projected curve is unavailable" align="end">It needs a spot price and at least one option price to infer volatility from.</InfoTip></span>)}
+            <span><i className="payoff-curve-legend-expiry" />{baseline ? labels.current : "Expiry"}</span>
+          </div>
+        </div>
+  {editing && <form className="flex flex-wrap items-end gap-2 text-xs" onSubmit={(e) => {
+        e.preventDefault();
+        if (draftValid) { setCustom([Number(draftLow), Number(draftHigh)]); setMode("custom"); setEditing(false); }
+      }}>
+        <label>Minimum price<input aria-label="Minimum price" type="number" min="0" step="any" value={draftLow} onChange={(e) => setDraftLow(e.target.value)} className="ml-2 w-28 rounded border border-border bg-background p-1.5" /></label>
+        <label>Maximum price<input aria-label="Maximum price" type="number" min="0" step="any" value={draftHigh} onChange={(e) => setDraftHigh(e.target.value)} className="ml-2 w-28 rounded border border-border bg-background p-1.5" /></label>
+        <button type="submit" disabled={!draftValid} className="rounded border border-border p-1.5 disabled:opacity-40">Apply</button>
+        {!draftValid && <span role="status">Enter a nonnegative minimum and a larger maximum.</span>}
+      </form>}
+      </> : <>
       <details open={variant === "builder" ? undefined : true} className={variant === "builder" ? "builder-range-menu" : "contents"}>
       <summary className={variant === "builder" ? "" : "hidden"}>Price range · {formatINRWhole(xMin)} – {formatINRWhole(xMax)}</summary>
       <div className={styled ? "payoff-range-controls" : "flex flex-wrap items-center gap-2 text-xs"}>
@@ -160,49 +194,13 @@ export function PayoffChart({
       </form>}
       <p className={styled ? "payoff-range-caption" : "text-xs text-muted-foreground"}>{formatINRWhole(xMin)} – {formatINRWhole(xMax)}. {spot > 0 ? "" : "Spot unavailable; range centred on strategy prices. "}Zoom changes the view only; profit/loss limits remain unchanged.</p>
       </details>
-      {todayAt && (projection ? (
-        <div className="payoff-curve-bar">
-          <div role="group" aria-label="Curves shown" className="payoff-curve-toggle">
-            {(["both", "today", "expiry"] as const).map((view) => (
-              <button key={view} type="button" aria-pressed={curveView === view} onClick={() => setCurveView(view)}>
-                {view === "both" ? "Both" : view === "today" ? "Projected" : "Expiry"}
-              </button>
-            ))}
-          </div>
-          <div className="payoff-curve-legend" aria-hidden>
-            {showToday && <span><i style={{ background: TODAY }} />{curveName} (est.)</span>}
-            {showExpiry && <span><i className="payoff-curve-legend-expiry" />At expiry</span>}
-          </div>
-          {showToday && maxDays > 0 && (
-            <div className="payoff-target">
-              <label htmlFor={`target-${id}`}>Target date</label>
-              <input id={`target-${id}`} type="range" min={0} max={maxDays} step={1} value={days}
-                aria-valuetext={targetCaption(days, maxDays, target)}
-                onChange={(e) => setTargetDays(Number(e.target.value))} />
-              <span className="payoff-target-value">{targetCaption(days, maxDays, target)}</span>
-              <button type="button" disabled={days === 0} onClick={() => setTargetDays(0)}>Today</button>
-            </div>
-          )}
-          {showToday && (
-            <p className="payoff-curve-note payoff-target-breakevens">
-              Breakevens{days === 0 ? " today" : ` on ${curveName}`}: {targetBreakevens.length ? targetBreakevens.map(formatPrice).join(" · ") : "none in the default range"}
-            </p>
-          )}
-          <p className="payoff-curve-note">
-            {/* One sentence for every target date, so moving the slider never reflows the chart. */}
-            Each option leg is priced with Black-Scholes at the volatility implied by its current price, held as spot and date move; a leg past its own expiry counts at intrinsic value. An estimate, not a quote.
-            {projection.borrowedVol > 0 && ` ${projection.borrowedVol} leg${projection.borrowedVol > 1 ? "s" : ""} had no usable price and use${projection.borrowedVol > 1 ? "" : "s"} the nearest-the-money volatility.`}
-          </p>
-        </div>
-      ) : (
-        <p className="payoff-curve-note px-5 pt-2">Today curve unavailable: it needs a spot price and at least one option price to infer volatility from.</p>
-      ))}
       {baseline && (
         <div className="flex gap-4 text-xs">
           <span className="text-muted-foreground">- - {labels.baseline}</span>
           <span className="font-medium text-primary">— {labels.current}</span>
         </div>
       )}
+      </>}
     {styled && axisTitles && <p className="px-5 pt-2 text-sm text-muted-foreground">P&amp;L (₹)</p>}
     <div className={styled ? "payoff-chart-canvas" : "h-[23.75rem] w-full"}>
       <ResponsiveContainer width="100%" height="100%" onResize={(width) => setChartWidth(width)}>
@@ -248,11 +246,11 @@ export function PayoffChart({
           />
 
           <Tooltip
-            content={<PayoffTooltip referenceSpot={spot} showExpiry={showExpiry} showToday={showToday} todayLabel={curveName} />}
+            content={<PayoffTooltip referenceSpot={spot} showToday={showToday} todayLabel={curveName} />}
             cursor={{ stroke: MUTED, strokeDasharray: "3 3" }}
           />
 
-          {showExpiry && <Area
+          <Area
             type="linear"
             dataKey="pnl"
             stroke={`url(#${strokeId})`}
@@ -261,7 +259,7 @@ export function PayoffChart({
             dot={false}
             activeDot={styled ? { r: 6, stroke: GREEN, strokeWidth: 4, fill: "#F2EDE3" } : { r: 3 }}
             isAnimationActive={false}
-          />}
+          />
           {showToday && (
             <Line type="monotone" dataKey="todayPnl" stroke={TODAY} strokeWidth={2} dot={false}
               activeDot={{ r: 5, stroke: TODAY, strokeWidth: 3, fill: "#F2EDE3" }} isAnimationActive={false} />
@@ -275,7 +273,7 @@ export function PayoffChart({
           <ReferenceLine y={0} stroke={MUTED} strokeWidth={1.25} strokeDasharray={styled ? "5 4" : undefined} />
 
           {/* Breakevens */}
-          {showExpiry && payoff.breakevens.filter((be) => be >= xMin && be <= xMax).map((be) => (
+          {payoff.breakevens.filter((be) => be >= xMin && be <= xMax).map((be) => (
             <ReferenceLine
               key={be}
               x={be}
@@ -286,22 +284,6 @@ export function PayoffChart({
                 value: formatPrice(be),
                 position: "insideBottom",
                 fill: MUTED,
-                fontSize: 10,
-              }}
-            />
-          ))}
-
-          {drawTargetBreakevens && targetBreakevens.filter((be) => be >= xMin && be <= xMax).map((be) => (
-            <ReferenceLine
-              key={`t${be}`}
-              x={be}
-              stroke={TODAY}
-              strokeDasharray="3 3"
-              strokeOpacity={0.7}
-              label={styled ? <ChartReferenceLabel marker={referenceLabels.find((label) => label.key === `tbe-${be}`)} color={TODAY} /> : {
-                value: formatPrice(be),
-                position: "insideBottom",
-                fill: TODAY,
                 fontSize: 10,
               }}
             />
@@ -333,6 +315,26 @@ export function PayoffChart({
       </ResponsiveContainer>
     </div>
     {styled && axisTitles && <p className="pb-2 text-center text-sm text-muted-foreground">Underlying price (₹)</p>}
+    {variant === "live" && projection && (
+      <div className="payoff-target">
+        {maxDays > 0 && <>
+          <span className="payoff-target-label">Target</span>
+          <span className="payoff-target-step">
+            <button type="button" aria-label="One day earlier" disabled={days === 0} onClick={() => setTargetDays(days - 1)}>
+              <ChevronLeft className="size-4" aria-hidden /></button>
+            <output htmlFor={`target-${id}`} aria-live="polite">{targetCaption(days, maxDays, target)}</output>
+            <button type="button" aria-label="One day later" disabled={days === maxDays} onClick={() => setTargetDays(days + 1)}>
+              <ChevronRight className="size-4" aria-hidden /></button>
+          </span>
+          <input id={`target-${id}`} type="range" aria-label="Target date" min={0} max={maxDays} step={1} value={days}
+            aria-valuetext={targetCaption(days, maxDays, target)} onChange={(e) => setTargetDays(Number(e.target.value))} />
+          <span className="payoff-target-end">{todayAt && dayMonth(targetMoment(todayAt, maxDays))}</span>
+          <button type="button" className="payoff-target-today" disabled={days === 0} onClick={() => setTargetDays(0)}>Today</button>
+        </>}
+        <span className="payoff-target-breakevens"><i style={{ background: TODAY }} aria-hidden />Breakevens
+          <b>{targetBreakevens.length ? targetBreakevens.map(formatPrice).join(" · ") : "none in the default range"}</b></span>
+      </div>
+    )}
     </div>
   );
 }
@@ -341,9 +343,13 @@ function shortDate(moment: Date) {
   return moment.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
 }
 
+function dayMonth(moment: Date) {
+  return moment.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
+}
+
 function targetCaption(days: number, maxDays: number, target: Date | undefined) {
-  if (days === 0 || !target) return "Today, now";
-  return `T+${days} · ${shortDate(target)}, 15:30${days === maxDays ? " · last expiry" : ""}`;
+  if (days === 0 || !target) return "Today";
+  return `${shortDate(target)} · ${days === maxDays ? "expiry" : `T+${days}`}`;
 }
 
 function pnlAtSpot(legs: ChartLeg[], spot: number) {

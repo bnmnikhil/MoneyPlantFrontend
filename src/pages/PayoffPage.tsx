@@ -131,7 +131,7 @@ export function PayoffPage() {
           {payoff.isLoading ? <Skeleton className="m-4 h-[26.875rem]" />
             : payoff.isError ? <ErrorState title={includeHoldings ? "Couldn't include holdings in payoff" : "Couldn't load payoff"} description={includeHoldings ? "Check the share quantity and retry, or turn off Holdings to view positions only." : undefined} onRetry={() => { void payoff.refetch(); }} />
             : chartPayoff && data ? <PayoffChart variant="live" key={viewKey} payoff={chartPayoff} spot={data.spot} legs={legs} isIndex={data.isIndex}
-                todayAt={markedAt}
+                todayAt={markedAt} axisTitles={false}
                 baseline={whatIf ? { payoff: data.payoff, legs: data.legs } : undefined}
                 labels={{ baseline: "Your real position", current: "Ticked legs" }} /> : null}
           {data && <div className="payoff-chart-notes">

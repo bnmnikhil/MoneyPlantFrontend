@@ -162,3 +162,23 @@ test("unavailable holdings cannot be added", () => {
   assert.match(html, /None available/);
   assert.doesNotMatch(html, /Shares to include/);
 });
+
+test("the builder chart is the Payoff chart: one toolbar, the projected curve and the target-date slider", () => {
+  const PayoffChart = component("PayoffChart");
+  const leg = (type, strike, qty, avgPrice, currentMark) =>
+    ({ type, strike, qty, avgPrice, expiry: "2026-10-27", currentMark, currentMarkKnown: true });
+  const legs = [leg("PE", 56700, -35, 376.6, 237.55), leg("PE", 56200, 35, 261.45, 157.25),
+    leg("CE", 58700, -35, 495, 630.05), leg("CE", 59200, 35, 359.15, 456.8)];
+  const props = { variant: "builder", axisTitles: false, payoff: { ...response().payoff, breakevens: [56449, 58951] },
+    spot: 58164, legs, isIndex: true, todayAt: new Date("2026-10-11T06:30:00Z") };
+  const html = render(PayoffChart, props);
+  assert.match(html, /role="group" aria-label="Price range"/);
+  assert.match(html, /Today \(est\.\)/);
+  assert.match(html, /type="range"[^>]*aria-label="Target date"|aria-label="Target date"[^>]*type="range"/);
+  assert.match(html, /Breakevens/);
+  assert.doesNotMatch(html, /If it expires at|Curves shown/);
+
+  const withBaseline = render(PayoffChart, { ...props, baseline: { payoff: props.payoff, legs: legs.slice(0, 2) } });
+  assert.match(withBaseline, /Existing positions/);
+  assert.match(withBaseline, /After adjustments/);
+});

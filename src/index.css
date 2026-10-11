@@ -607,6 +607,7 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 .payoff-target-track input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--gb-gold); border: 3px solid hsl(var(--card)); box-shadow: 0 0 0 5px rgb(232 181 71 / 0.18); }
 .payoff-target-track input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px hsl(var(--foreground)); }
 .payoff-target-track input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px hsl(var(--foreground)); }
+.builder-workspace .payoff-target-track input[type="range"]:focus-visible { outline: none; } /* the thumb carries the focus ring */
 .payoff-target-end { color: hsl(var(--muted-foreground)); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .payoff-target-divider { width: 1px; height: 1.5rem; background: hsl(var(--border)); }
 .payoff-target-breakevens { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; color: hsl(var(--muted-foreground)); }

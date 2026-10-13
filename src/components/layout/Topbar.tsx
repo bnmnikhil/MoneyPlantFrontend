@@ -9,6 +9,7 @@ import { Logo } from "@/components/Logo";
 import { primaryNavItems } from "@/components/layout/nav";
 import { BrokerStatusChips } from "@/features/session/BrokerStatusChips";
 import { useBrokerStatus, useLogout, useMe } from "@/features/session/hooks";
+import { sessionStatusLabel } from "@/features/session/dailyLogin";
 import { legalDetails } from "@/features/legal/details";
 import { cn } from "@/lib/utils";
 
@@ -30,10 +31,11 @@ export function Topbar() {
   );
   const allConnected = brokerIds.size > 0 && connectedIds.size === brokerIds.size &&
     status.connections.every((connection) => connection.connected);
-  const statusLabel = status.isPending ? "Checking" : status.isError ? "Unavailable" :
-    allConnected ? "Live" : status.anyConnected ? "Partial" : "Offline";
-  const dotClass = status.isPending || status.isError ? "bg-muted-foreground" :
-    allConnected ? "bg-profit" : "bg-orange-400";
+  const { label: statusLabel, tone } = sessionStatusLabel({
+    pending: status.isPending, error: status.isError, configured: brokerIds.size > 0,
+    allConnected, anyConnected: status.anyConnected,
+  });
+  const dotClass = tone === "live" ? "bg-profit" : tone === "partial" ? "bg-orange-400" : "bg-muted-foreground";
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">

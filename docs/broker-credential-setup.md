@@ -49,6 +49,22 @@ Inline rather than a dialog on purpose: the one case needing surrounding context
 is naming a second registration, and that is exactly when the names already in
 use should stay visible.
 
+## Setup steps (N14)
+
+Once a broker is chosen, `SetupGuide` shows how to get its values: **Before you
+start** notes (costs, waits, prerequisites) first, so nobody finds a cost at the
+end; then numbered steps, with the developer-portal link in step 1; then the
+**redirect URL** with a Copy button. It is open for a user's first registration at
+that broker and folded to one line when they already have one
+(`guideStartsOpen`); the Replace form shows it folded.
+
+The text and the URL come from the backend catalogue (`BrokerDefinition.setup`,
+`redirectUrl`). The URL is built from the deployment's own origin, so staging
+shows staging's, and it is never written inside a step. The catalogue will not
+start without steps for every broker. Both fields are optional in `types/api.ts`
+only so a frontend served against an older backend shows no guide instead of
+crashing.
+
 ## Fields come from the catalogue
 
 `CredentialFields` iterates `BrokerDefinition.credentialFields` — label, `secret`

@@ -60,6 +60,14 @@ export function addableBrokers(definitions: BrokerDefinition[]): BrokerDefinitio
 }
 
 /** Labels already used at this broker — the set a new registration must avoid. */
+/**
+ * The setup steps start open the first time a user adds this broker, and folded
+ * when they already have a registration there: they have done it before.
+ */
+export function guideStartsOpen(credentials: BrokerCredential[], brokerId: string): boolean {
+  return labelsFor(credentials, brokerId).length === 0;
+}
+
 export function labelsFor(credentials: BrokerCredential[], brokerId: string): string[] {
   return credentials
     .filter((credential) => credential.configured && credential.brokerId === brokerId)

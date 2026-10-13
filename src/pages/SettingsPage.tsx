@@ -120,7 +120,7 @@ export function SettingsPage() {
                   <EmptyState
                     icon={<KeyRound />}
                     title="No broker registrations yet"
-                    description="Register a developer app at your broker, then choose Add broker to store its key and secret here."
+                    description="Choose Add broker and pick your broker. The form shows how to get its key and secret, step by step."
                     action={
                       <Button onClick={() => setAdding(true)}>
                         <Plus />

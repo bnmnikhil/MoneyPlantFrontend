@@ -20,6 +20,13 @@ export interface CredentialField {
   required: boolean;
 }
 
+/** How to get one broker's key and secret (N14). The redirect URL is never inside the steps. */
+export interface SetupGuide {
+  /** Costs, waits and prerequisites, shown before the steps. May be empty. */
+  notes: string[];
+  steps: string[];
+}
+
 /** Backend-owned product metadata; contains no user credentials or sessions. */
 export interface BrokerDefinition {
   id: string;
@@ -29,6 +36,13 @@ export interface BrokerDefinition {
   credentialFields: CredentialField[];
   capabilities: BrokerCapability[];
   availability: BrokerAvailability;
+  /**
+   * Optional only so a frontend served against an older backend shows no guide
+   * instead of crashing; the backend always sends both.
+   */
+  setup?: SetupGuide;
+  /** The URL to register at the broker, for this deployment's host. */
+  redirectUrl?: string;
 }
 
 /** One linked broker account. Keyed by connectionId, like every other contract. */

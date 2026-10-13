@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle2, Link2, Loader2, Pencil, Trash2, Unlink, X 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CredentialFields, DeveloperPortalLink } from "@/features/credentials/CredentialFields";
+import { SetupGuide } from "@/features/credentials/SetupGuide";
 import {
   useDeleteBrokerCredential,
   useSaveBrokerCredential,
@@ -202,6 +203,7 @@ export function RegistrationRow({
 
       {editing && (
         <form onSubmit={submit} className="mt-4 space-y-4 rounded-md border border-border bg-background/40 p-4">
+          <SetupGuide definition={definition} defaultOpen={false} />
           <CredentialFields
             definition={definition}
             idPrefix={`edit-${brokerId}-${label}`}
@@ -213,7 +215,7 @@ export function RegistrationRow({
           />
 
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <DeveloperPortalLink definition={definition} />
+            {definition.setup ? <span /> : <DeveloperPortalLink definition={definition} />}
             <div className="flex items-center gap-3">
               {save.isError && isThis(save.variables) && (
                 <p className="text-sm text-destructive">

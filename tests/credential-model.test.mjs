@@ -4,6 +4,7 @@ import {
   accountsFor,
   addableBrokers,
   groupRegistrations,
+  guideStartsOpen,
   isComplete,
   labelProblem,
   labelsFor,
@@ -190,4 +191,11 @@ test("the client id goes on the wire only when typed, and trimmed", () => {
   const kiteBody = toCredentialInput({ apiKey: "k", apiSecret: "s" });
   assert.equal("clientId" in kiteBody, false);
   assert.equal("clientId" in toCredentialInput({ apiKey: "k", apiSecret: "s", clientId: "" }), false);
+});
+
+test("setup steps open for a first registration at a broker and fold for a second", () => {
+  assert.equal(guideStartsOpen(credentials, "paytm"), true);
+  assert.equal(guideStartsOpen(credentials, "kite"), false);
+  // An unconfigured placeholder row is not a registration the user has made.
+  assert.equal(guideStartsOpen([{ brokerId: "dhan", label: "default", apiKey: "", configured: false }], "dhan"), true);
 });

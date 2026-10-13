@@ -12,9 +12,11 @@ import {
 import { BrokerMark } from "@/features/brokers/BrokerMark";
 import { CredentialFields, DeveloperPortalLink } from "@/features/credentials/CredentialFields";
 import { useSaveBrokerCredential } from "@/features/credentials/hooks";
+import { SetupGuide } from "@/features/credentials/SetupGuide";
 import {
   DEFAULT_LABEL,
   addableBrokers,
+  guideStartsOpen,
   isComplete,
   labelProblem,
   labelsFor,
@@ -176,6 +178,15 @@ export function AddRegistrationPanel({
         )}
 
         {definition && (
+          // Keyed by broker so choosing another one starts its guide in its own state.
+          <SetupGuide
+            key={definition.id}
+            definition={definition}
+            defaultOpen={guideStartsOpen(credentials, definition.id)}
+          />
+        )}
+
+        {definition && (
           <CredentialFields
             definition={definition}
             idPrefix="add-registration"
@@ -187,7 +198,9 @@ export function AddRegistrationPanel({
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-background/40 px-4 py-3">
         {definition ? (
-          <DeveloperPortalLink definition={definition} />
+          // The guide carries the portal link in its first step; keep this one only
+          // for a backend that sends no guide.
+          definition.setup ? <span /> : <DeveloperPortalLink definition={definition} />
         ) : (
           <p className="text-xs text-muted-foreground">
             Pick a broker to see the fields it needs.

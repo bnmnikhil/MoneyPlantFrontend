@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { ChevronLeft, KeyRound, Plus } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,9 @@ export function SettingsPage() {
   const credentials = useBrokerCredentials();
   const definitions = useBrokerDefinitions();
   const status = useBrokerStatus();
-  const [adding, setAdding] = useState(false);
+  // ?add=1 opens the add form at once: the Overview's first-run checklist links here.
+  const [searchParams] = useSearchParams();
+  const [adding, setAdding] = useState(() => searchParams.get("add") === "1");
 
   const loading = credentials.isLoading || definitions.isLoading;
   const failed = credentials.isError || definitions.isError;

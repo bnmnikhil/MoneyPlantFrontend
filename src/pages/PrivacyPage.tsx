@@ -155,6 +155,10 @@ const sections: LegalSection[] = [
             they are deleted as part of account closure.
           </li>
           <li>
+            <strong>Your GoldenBook sign-in session</strong> is stored on our server, so an update
+            to GoldenBook does not sign you out. It is deleted within a day of ending.
+          </li>
+          <li>
             <strong>Broker sessions</strong> are stored in encrypted form. Only sessions created
             on the current India calendar date are restored after a restart. This does not mean
             every stored token is erased at midnight.

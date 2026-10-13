@@ -47,7 +47,7 @@ export function LoginPage() {
 
           <div className="space-y-1.5">
             <h1 className="text-lg font-semibold tracking-tight">
-              Sign in to GoldenBook
+              Sign in or sign up to GoldenBook
             </h1>
             <p className="text-sm text-muted-foreground">
               Review your portfolio and explore payoff scenarios.

@@ -80,7 +80,7 @@ export function LandingPage() {
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
         <Logo />
         <Button asChild variant="ghost" size="sm">
-          <Link to="/login">Sign in</Link>
+          <Link to="/login">Sign in / Sign up</Link>
         </Button>
       </header>
 
@@ -102,7 +102,7 @@ export function LandingPage() {
           <div className="mt-2 flex flex-col items-center gap-3 sm:flex-row">
             <Button asChild size="lg">
               <Link to="/login">
-                Sign in with Google
+                Sign in / Sign up with Google
                 <ArrowRight />
               </Link>
             </Button>
@@ -245,7 +245,7 @@ export function LandingPage() {
           <h2 className="text-2xl font-semibold tracking-tight">See your whole book at a glance</h2>
           <Button asChild size="lg">
             <Link to="/login">
-              Sign in with Google
+              Sign in / Sign up with Google
               <ArrowRight />
             </Link>
           </Button>

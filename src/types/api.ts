@@ -365,8 +365,8 @@ export interface PayoffResponse {
   spot: number;
   /**
    * Broker id of the caller's own connection that quoted `spot` ("paytm",
-   * "aliceblue"), or null when nothing could (then `spot` is 0). Never another
-   * user's: spot is fetched and cached per user (L18).
+   * "aliceblue"), "shared" when GoldenBook's shared feed answered, or null when
+   * nothing could (then `spot` is 0). Never another user's session (L18).
    */
   spotSource: string | null;
   legs: PayoffLeg[];

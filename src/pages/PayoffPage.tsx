@@ -135,6 +135,7 @@ export function PayoffPage() {
                 baseline={whatIf ? { payoff: data.payoff, legs: data.legs } : undefined}
                 labels={{ baseline: "Your real position", current: "Ticked legs" }} /> : null}
           {data && <div className="payoff-chart-notes">
+            {data.spotSource === "shared" && <p className="flex items-start gap-2"><Info className="mt-0.5 size-4 shrink-0" /><span>Spot is from GoldenBook's shared price feed, because none of your connected brokers can quote it.</span></p>}
             {includeHoldings && <p className="flex items-start gap-2"><Info className="mt-0.5 size-4 shrink-0" /><span>Includes {data.holding.includedQty} {activeCurve.underlyingLabel} shares at purchase cost, assumed held until expiry; pledged shares are counted once. This graph does not determine delivery eligibility or margin benefit.</span></p>}
             {chartPayoff?.unboundedLoss && <p className="text-loss">Loss is unlimited beyond the plotted range.</p>}
             {chartPayoff?.unboundedProfit && <p>Profit continues beyond the plotted range.</p>}

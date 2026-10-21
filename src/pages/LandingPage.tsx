@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
-  Gauge,
   KeyRound,
   Layers,
   Lock,
@@ -24,26 +23,66 @@ import { supportedBrokers } from "@/features/landing/supportedBrokers";
  * broker, so adding one never means rewriting this page.
  */
 
-const features: { icon: LucideIcon; title: string; body: string }[] = [
+/*
+ * Screenshots. Captured from the real app against synthetic data, never from a
+ * user's book; retake one when its page changes visibly. Each feature image is
+ * cropped to that feature at 1100px wide, so its text stays readable at half
+ * the page's width. Phones get the app's own narrow layout instead.
+ */
+interface Shot {
+  /** Desktop image, and the phone image served below 640px. */
+  src: string;
+  phoneSrc: string;
+  /** Pixel sizes, so the browser reserves the space before the image loads. */
+  size: [number, number];
+  phoneSize: [number, number];
+  alt: string;
+}
+
+const overview: Shot = {
+  src: "/landing/overview.webp",
+  phoneSrc: "/landing/overview-phone.webp",
+  size: [2400, 1500],
+  phoneSize: [780, 1688],
+  alt: "GoldenBook's Overview: total, positions, holdings and day P&L, capital utilisation, and one row per broker account with its P&L and margin.",
+};
+
+const features: { icon: LucideIcon; title: string; body: string; shot: Shot }[] = [
   {
     icon: Layers,
-    title: "Every broker, one screen",
-    body: "Positions, holdings and margins from every broker account you connect, account by account — with P&L since entry and today's move side by side.",
+    title: "Positions, and the margin each one uses",
+    body: "Positions from every broker account you connect, grouped by account and underlying, with premium left, P&L since entry and today's move. Each group carries a bottom-up SPAN-and-exposure margin estimate, shown beside your broker's actual bill.",
+    shot: {
+      src: "/landing/positions-row.webp",
+      phoneSrc: "/landing/positions-rowphone.webp",
+      size: [2136, 1336],
+      phoneSize: [780, 1400],
+      alt: "GoldenBook's Positions page: positions grouped by account and underlying, with premium left, estimated margin, P&L and day P&L.",
+    },
   },
   {
     icon: TrendingUp,
     title: "Payoff of what you actually hold",
-    body: "Expiry payoff charts built from your live positions, per account and underlying: breakevens, maximum profit and loss, optionally with the shares you own.",
-  },
-  {
-    icon: Gauge,
-    title: "Margin, explained",
-    body: "A bottom-up SPAN-and-exposure estimate for each position, shown beside your broker's actual bill.",
+    body: "Payoff charts built from your live positions, per account and underlying: an estimate for today and the payoff at expiry, breakevens, maximum profit and loss, optionally with the shares you own.",
+    shot: {
+      src: "/landing/payoff-row.webp",
+      phoneSrc: "/landing/payoff-rowphone.webp",
+      size: [2136, 1140],
+      phoneSize: [780, 1400],
+      alt: "GoldenBook's payoff chart for a NIFTY iron condor: current P&L, margin used, maximum profit and loss, and the today and expiry payoff curves.",
+    },
   },
   {
     icon: Wrench,
     title: "Strategy Builder",
-    body: "Try adjustments before you trade: start from your positions or a template, edit legs and see the new payoff. Live premiums need an Alice Blue connection.",
+    body: "Try adjustments before you trade: start from your positions or a template, edit legs and see the new payoff beside the one you hold. Live premiums need an Alice Blue connection.",
+    shot: {
+      src: "/landing/builder-row.webp",
+      phoneSrc: "/landing/builder-rowphone.webp",
+      size: [2136, 1364],
+      phoneSize: [780, 1400],
+      alt: "GoldenBook's Strategy Builder: a NIFTY iron condor imported from an account, a draft put-spread adjustment, and the payoff before and after it.",
+    },
   },
 ];
 
@@ -67,6 +106,23 @@ const limits = [
   "Payoff charts mixing several expiries are a single simplified scenario, and are labelled as such.",
   "No Greeks, implied-volatility history or alerts yet.",
 ];
+
+function Screenshot({ shot, eager = false }: { shot: Shot; eager?: boolean }) {
+  return (
+    <picture>
+      <source media="(max-width: 639px)" srcSet={shot.phoneSrc} width={shot.phoneSize[0]} height={shot.phoneSize[1]} />
+      <img
+        src={shot.src}
+        width={shot.size[0]}
+        height={shot.size[1]}
+        loading={eager ? "eager" : "lazy"}
+        decoding="async"
+        alt={shot.alt}
+        className="block h-auto w-full"
+      />
+    </picture>
+  );
+}
 
 export function LandingPage() {
   return (
@@ -125,10 +181,7 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/*
-         * Product preview. Captured from the real app against broker-sim, never
-         * from a user's book; retake it when the payoff page changes visibly.
-         */}
+        {/* Product preview: the Overview, the first screen after sign-in. */}
         <figure className="relative mt-14 sm:mt-16">
           <div
             aria-hidden
@@ -140,40 +193,38 @@ export function LandingPage() {
               <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
               <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/30" />
             </div>
-            {/* Phones get the app's own narrow layout, cropped to the figures and the chart, so the numbers stay legible. */}
-            <picture>
-              <source media="(max-width: 639px)" srcSet="/landing/payoff-phone.webp" width={1336} height={1708} />
-              <img
-                src="/landing/payoff.webp"
-                width={2400}
-                height={1500}
-                decoding="async"
-                alt="GoldenBook's payoff page for a BANKNIFTY iron condor: spot, maximum profit and loss, two breakevens and the expiry payoff chart."
-                className="block h-auto w-full"
-              />
-            </picture>
+            <Screenshot shot={overview} eager />
           </div>
           <figcaption className="mt-3 text-center text-xs text-muted-foreground">
-            Simulated account and prices. The expiry payoff of an iron condor held in one account.
+            Every broker account's P&amp;L and capital on one screen. Simulated accounts and prices on this page.
           </figcaption>
         </figure>
 
-        {/* Features */}
-        <section aria-labelledby="features" className="mt-20">
+        {/* Features: one row per launch feature, text and screenshot alternating sides. */}
+        <section aria-labelledby="features" className="mt-24 flex flex-col gap-16 sm:gap-20">
           <h2 id="features" className="sr-only">
             What GoldenBook does
           </h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {features.map(({ icon: Icon, title, body }) => (
-              <div key={title} className="rounded-xl border border-border bg-card/50 p-6">
+          {features.map(({ icon: Icon, title, body, shot }, i) => (
+            <div
+              key={title}
+              className={
+                "grid items-center gap-6 lg:gap-12 " +
+                (i % 2 === 1 ? "lg:grid-cols-[3fr_2fr]" : "lg:grid-cols-[2fr_3fr]")
+              }
+            >
+              <div className={i % 2 === 1 ? "lg:order-2" : undefined}>
                 <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary/12 text-primary ring-1 ring-inset ring-primary/25 [&_svg]:size-5">
                   <Icon />
                 </span>
-                <h3 className="mt-4 text-sm font-semibold">{title}</h3>
-                <p className="mt-1.5 text-sm text-muted-foreground text-pretty">{body}</p>
+                <h3 className="mt-4 text-balance text-xl font-semibold tracking-tight">{title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground text-pretty sm:text-base">{body}</p>
               </div>
-            ))}
-          </div>
+              <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xl shadow-black/40">
+                <Screenshot shot={shot} />
+              </div>
+            </div>
+          ))}
         </section>
 
         {/* Read-only by design */}

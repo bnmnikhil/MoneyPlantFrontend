@@ -1,4 +1,6 @@
 import type {
+  FutureRow,
+  FuturesResponse,
   OptionChainResponse,
   OptionChainRow,
   PayoffLeg,
@@ -61,6 +63,31 @@ export function draftFromChain(
     priceBasis: quote.priceKnown ? "QUOTE_SNAPSHOT" : "MANUAL",
     entryQuote: quote.priceKnown ? quote : null,
     currentMark: quote.priceKnown ? quote : null,
+    origin: "DRAFT_TRADE",
+    enabled: true,
+    closesLegId: null,
+  };
+}
+
+/** One lot of a future, priced at the source's quote when it has one. */
+export function draftFromFuture(
+  futures: FuturesResponse,
+  row: FutureRow,
+  direction: "BUY" | "SELL",
+  id: string = crypto.randomUUID()
+): ScenarioLeg {
+  const quote = row.price;
+  const known = quote.priceKnown && quote.value !== null;
+  return {
+    id,
+    contract: { underlying: futures.underlying, expiry: row.expiry, strike: 0, type: "FUT" },
+    exchange: futures.exchange,
+    lotSize: row.lotSize,
+    qty: (direction === "BUY" ? 1 : -1) * row.lotSize,
+    entryPrice: known ? quote.value : null,
+    priceBasis: known ? "QUOTE_SNAPSHOT" : "MANUAL",
+    entryQuote: known ? quote : null,
+    currentMark: known ? quote : null,
     origin: "DRAFT_TRADE",
     enabled: true,
     closesLegId: null,

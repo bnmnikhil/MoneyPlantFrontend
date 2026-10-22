@@ -470,6 +470,23 @@ export interface OptionChainResponse {
   warnings: string[];
 }
 
+/** One live future, priced by the same source as the option chain. */
+export interface FutureRow {
+  expiry: string;
+  tradingSymbol: string;
+  lotSize: number;
+  price: PriceObservation;
+}
+
+export interface FuturesResponse {
+  underlying: string;
+  exchange: string;
+  sourceConnectionId: string;
+  spot: number | null;
+  rows: FutureRow[];
+  warnings: string[];
+}
+
 export type ScenarioPriceBasis = "POSITION_AVERAGE" | "QUOTE_SNAPSHOT" | "MANUAL";
 export type ScenarioOrigin = "EXISTING_POSITION" | "EXISTING_HOLDING" | "DRAFT_TRADE";
 

@@ -19,6 +19,7 @@ import type {
   OptionExpiriesResponse,
   OptionContractsResponse,
   OptionChainResponse,
+  FuturesResponse,
   Position,
   RiskSummaryReport,
   SessionStatus,
@@ -282,6 +283,11 @@ export const api = {
     request<OptionChainResponse>(
       `/api/market-data/option-chain?underlying=${encodeURIComponent(underlying)}&expiry=${encodeURIComponent(expiry)}&exchange=${encodeURIComponent(exchange)}&sourceConnectionId=${encodeURIComponent(sourceConnectionId)}&strikeCount=${strikeCount}` +
         (positionConnectionId ? `&positionConnectionId=${encodeURIComponent(positionConnectionId)}` : ""),
+      { signal }
+    ),
+  futures: (underlying: string, exchange: string, sourceConnectionId: string, signal?: AbortSignal) =>
+    request<FuturesResponse>(
+      `/api/market-data/futures?underlying=${encodeURIComponent(underlying)}&exchange=${encodeURIComponent(exchange)}&sourceConnectionId=${encodeURIComponent(sourceConnectionId)}`,
       { signal }
     ),
   // Per-user broker API credentials (3d). The GET never carries a secret; the

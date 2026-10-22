@@ -8,6 +8,7 @@ import {
   projectionLeg,
   closeDraft,
   draftFromChain,
+  draftFromFuture,
   useLatestPrice,
   validDraft,
   withManualPrice,
@@ -137,4 +138,21 @@ test('a strategy built from chain quotes is flat today at spot: entry is the cur
   const projection = prepareProjection(legs, chain.spot, new Date('2026-09-10T06:00:00Z'));
   assert.ok(projection);
   assert.equal(projectedPnl(projection, chain.spot), 0);
+});
+
+test('a future is one lot at the source quote, no strike, and unpriced when the source has no quote', () => {
+  const futures = { underlying: 'ITC', exchange: 'NSE', sourceConnectionId: 'alice', spot: 451, warnings: [], rows: [] };
+  const future = { expiry: '2026-09-24', tradingSymbol: 'ITC24SEP26F', lotSize: 1600, price: observation(452.5) };
+  const leg = draftFromFuture(futures, future, 'BUY', 'fut-1');
+  assert.deepEqual(leg.contract, { underlying: 'ITC', expiry: '2026-09-24', strike: 0, type: 'FUT' });
+  assert.equal(leg.qty, 1600);
+  assert.equal(leg.entryPrice, 452.5);
+  assert.equal(leg.priceBasis, 'QUOTE_SNAPSHOT');
+  assert.ok(validDraft(leg));
+
+  const unpriced = draftFromFuture(futures, { ...future, price: observation(null, false) }, 'SELL', 'fut-2');
+  assert.equal(unpriced.qty, -1600);
+  assert.equal(unpriced.entryPrice, null);
+  assert.equal(unpriced.priceBasis, 'MANUAL');
+  assert.equal(validDraft(unpriced), false);
 });

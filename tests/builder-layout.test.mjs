@@ -30,6 +30,7 @@ test("draft cashflow uses exact signed units and excludes disabled trades withou
   assert.equal(draftCashflow([leg(), leg({ enabled: false, entryPrice: null })]), 1200);
   assert.equal(draftCashflow([leg(), leg({ entryPrice: null })]), null);
   assert.equal(legCashflow(leg({ entryPrice: -1 })), null);
+  assert.equal(legCashflow(leg({ contract: { underlying: "TEST", type: "FUT", expiry: "2026-09-24", strike: 0 }, qty: 50, entryPrice: 25871 })), 0);
 });
 
 test("baseline unrealised P&L requires a known mark and preserves a genuine zero mark", () => {
@@ -146,4 +147,21 @@ test("with no existing positions the locked section is not drawn at all", () => 
   const html = render(StrategyLegEditor, { baseline: [], drafts: [leg({ id: "d1" })], expiries: ["2026-09-24"], ...callbacks });
   assert.doesNotMatch(html, /Existing positions/);
   assert.match(html, /Draft adjustments/);
+});
+
+test("the futures tab marks this expiry's month first, shows basis over spot, and names each Buy/Sell", () => {
+  const { FuturesPicker } = components("OptionChainPicker");
+  const price = (value) => ({ value, priceKnown: value !== null, fetchedAt: "2026-10-22T05:00:00Z", sourceConnectionId: "alice", status: "AVAILABLE" });
+  const html = render(FuturesPicker, {
+    futures: { underlying: "ITC", exchange: "NSE", sourceConnectionId: "alice", spot: 259.8, warnings: [], rows: [
+      { expiry: "2026-10-27", tradingSymbol: "ITC27OCT26F", lotSize: 1600, price: price(260.45) },
+      { expiry: "2026-11-24", tradingSymbol: "ITC24NOV26F", lotSize: 1600, price: price(null) },
+    ] },
+    isLoading: false, error: null, onRetry() {}, onAdd() {}, quantityFor: () => ({ existing: 0, draft: 0 }), builderExpiry: "2026-11-24",
+  });
+  assert.ok(html.indexOf("24 Nov") < html.indexOf("27 Oct"), "the Builder's expiry month leads");
+  assert.match(html, /this expiry/);
+  assert.match(html, /\+0\.65/);
+  assert.match(html, /No quote/);
+  assert.match(html, /aria-label="Buy 27 Oct FUT"/);
 });

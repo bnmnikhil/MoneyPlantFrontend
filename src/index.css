@@ -444,6 +444,7 @@ button.builder-side:hover { outline: 1px solid currentColor; }
 .builder-chart-tabs button[aria-selected="true"] { background: var(--gb-gold-soft); color: hsl(var(--foreground)); }
 .builder-chart-tabs button:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: -2px; }
 .builder-drawer { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; background: hsl(var(--card)); box-shadow: 18px 0 40px #000c; }
+.builder-drawer-tabs { flex: none; align-self: flex-start; margin: 0.5rem 0.625rem 0.25rem; }
 .builder-drawer .builder-chain { flex: 1 1 auto; min-height: 0; gap: 0; padding: 0; }
 .builder-chain > .builder-chain-head { display: flex; align-items: center; gap: 0.5rem; padding: 0.4375rem 0.625rem; border-bottom: 1px solid hsl(var(--border)); }
 .builder-chain-head p { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: hsl(var(--muted-foreground)); }

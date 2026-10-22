@@ -10,16 +10,17 @@ import { useBrokerStatus } from "@/features/session/hooks";
 import { api, ApiError } from "@/lib/api";
 import { formatPrice, formatSignedINR } from "@/lib/format";
 import type {
+  FutureRow,
   OptionChainRow,
   PayoffComparisonResponse,
   PayoffResponse,
   ScenarioLeg,
   UnderlyingSearchItem,
 } from "@/types/api";
-import { OptionChainPicker } from "./OptionChainPicker";
+import { FuturesPicker, OptionChainPicker } from "./OptionChainPicker";
 import { StrategyLegEditor } from "./StrategyLegEditor";
 import { UnderlyingSearch } from "./UnderlyingSearch";
-import { useOptionChain, useOptionExpiries, useOptionSources } from "./hooks";
+import { useFutures, useOptionChain, useOptionExpiries, useOptionSources } from "./hooks";
 import {
   applyRecipe,
   baselineFromPayoff,
@@ -28,6 +29,7 @@ import {
   projectionLeg,
   closeDraft,
   draftFromChain,
+  draftFromFuture,
   draftKey,
   useLatestPrice,
   validDraft,
@@ -73,6 +75,7 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
   // Layout B: the chain is a drawer over the legs, opened by "+ Add legs"; the payoff stays in
   // view beside it so each Buy or Sell visibly redraws the curve.
   const [chainOpen, setChainOpen] = useState(false);
+  const [chainTab, setChainTab] = useState<"options" | "futures">("options");
   const [chartTab, setChartTab] = useState<"chart" | "table">("chart");
   useEffect(() => {
     if (!chainOpen) return;
@@ -180,8 +183,11 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
 
   const chain = useOptionChain(selection?.code, pickerExpiry, selection?.exchange,
     sourceConnectionId || undefined, positionConnectionId, active, strikeCount);
-  const spot = context?.baselineResponse?.spot && context.baselineResponse.spot > 0
-    ? context.baselineResponse.spot : chain.data?.spot ?? null;
+  const futures = useFutures(selection?.code, selection?.exchange, sourceConnectionId || undefined, chainOpen && chainTab === "futures");
+  // Spot from the quotes source that prices the legs, so spot, options and futures agree; the
+  // payoff's own spot (which may come from another broker) only when that source has none.
+  const spot = chain.data?.spot && chain.data.spot > 0 ? chain.data.spot
+    : context?.baselineResponse?.spot && context.baselineResponse.spot > 0 ? context.baselineResponse.spot : null;
   // Never pair a prior account/draft result with the currently displayed legs.
   const comparisonInputKey = JSON.stringify([selection, baseline, drafts, spot, positionConnectionId, context?.baselineResponse]);
   const comparison = comparisonSnapshot?.inputKey === comparisonInputKey ? comparisonSnapshot.result : null;
@@ -258,6 +264,12 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
     if (draft) updateDrafts((current) => [...current, draft]);
   };
 
+  const addFuture = (row: FutureRow, direction: "BUY" | "SELL") => {
+    if (!futures.data) return;
+    const draft = draftFromFuture(futures.data, row, direction);
+    updateDrafts((current) => [...current, draft]);
+  };
+
   const setContract = (id: string, row: OptionChainRow, type: "CE" | "PE") => {
     if (!chain.data) return;
     updateDraft(id, (leg) => {
@@ -310,6 +322,16 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
 
   const quantityFor = (row: OptionChainRow, type: "CE" | "PE") => {
     const same = (leg: ScenarioLeg) => leg.contract.expiry === pickerExpiry && leg.contract.strike === row.strike && leg.contract.type === type;
+    return {
+      existing: baseline.filter(same).reduce((sum, leg) => sum + leg.qty, 0),
+      draft: drafts.filter((leg) => leg.enabled && same(leg)).reduce((sum, leg) => sum + leg.qty, 0),
+    };
+  };
+
+  const doneButton = <button type="button" className="builder-primary-button" autoFocus title="Tap Buy or Sell; the payoff on the right updates as you go. Esc also closes." onClick={() => setChainOpen(false)}>Done</button>;
+
+  const futureQuantityFor = (row: FutureRow) => {
+    const same = (leg: ScenarioLeg) => leg.contract.type === "FUT" && leg.contract.expiry === row.expiry;
     return {
       existing: baseline.filter(same).reduce((sum, leg) => sum + leg.qty, 0),
       draft: drafts.filter((leg) => leg.enabled && same(leg)).reduce((sum, leg) => sum + leg.qty, 0),
@@ -405,11 +427,19 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
             <div className="builder-legs-footer"><div className="ml-auto text-sm"><span className="text-muted-foreground">Net draft cashflow </span><strong className={netCashflow === null ? "" : netCashflow < 0 ? "text-loss" : "text-profit"}>{netCashflow === null ? "Incomplete" : formatSignedINR(netCashflow)}</strong></div></div>
           </div>
           {comparison && <BuilderMetrics comparison={comparison} linearTrades={drafts.some((leg) => leg.enabled && (leg.contract.type === "EQ" || leg.contract.type === "FUT"))} />}
-          {chainOpen && <div id="builder-chain-drawer" className="builder-drawer" role="dialog" aria-label="Add legs from the option chain">
-            <OptionChainPicker chain={chain.data} isLoading={chain.isLoading || chain.isFetching} error={chain.error}
-              onRetry={() => chain.refetch()} onExpand={() => setStrikeCount((value) => Math.min(50, value + 10))} canExpand={strikeCount < 50}
-              onAdd={addFromChain} quantityFor={quantityFor}
-              actions={<button type="button" className="builder-primary-button" autoFocus title="Tap Buy or Sell; the payoff on the right updates as you go. Esc also closes." onClick={() => setChainOpen(false)}>Done</button>} />
+          {chainOpen && <div id="builder-chain-drawer" className="builder-drawer" role="dialog" aria-label="Add legs">
+            {/* Options and futures both come from the selected quotes source, like spot. */}
+            <div className="builder-chart-tabs builder-drawer-tabs" role="tablist" aria-label="Contract kind">
+              <button type="button" role="tab" aria-selected={chainTab === "options"} onClick={() => setChainTab("options")}>Options</button>
+              <button type="button" role="tab" aria-selected={chainTab === "futures"} onClick={() => setChainTab("futures")}>Futures</button>
+            </div>
+            {chainTab === "options"
+              ? <OptionChainPicker chain={chain.data} isLoading={chain.isLoading || chain.isFetching} error={chain.error}
+                onRetry={() => chain.refetch()} onExpand={() => setStrikeCount((value) => Math.min(50, value + 10))} canExpand={strikeCount < 50}
+                onAdd={addFromChain} quantityFor={quantityFor} actions={doneButton} />
+              : <FuturesPicker futures={futures.data} isLoading={futures.isLoading || futures.isFetching} error={futures.error}
+                onRetry={() => futures.refetch()} onAdd={addFuture} quantityFor={futureQuantityFor} builderExpiry={pickerExpiry}
+                actions={doneButton} />}
           </div>}
         </section>
         <section className="builder-panel builder-b-chart" aria-labelledby="builder-preview-title">

@@ -1,6 +1,8 @@
 import type { ScenarioLeg } from "@/types/api";
 
+/** Premium paid or received. A future has none (it blocks margin), as the server counts it. */
 export function legCashflow(leg: ScenarioLeg): number | null {
+  if (leg.contract.type === "FUT") return 0;
   return leg.entryPrice !== null && Number.isFinite(leg.entryPrice) && leg.entryPrice >= 0
     ? -leg.qty * leg.entryPrice : null;
 }

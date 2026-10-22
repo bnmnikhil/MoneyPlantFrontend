@@ -59,3 +59,15 @@ export function useOptionChain(
     refetchIntervalInBackground: false,
   });
 }
+
+/** The underlying's futures from the chain's own source; fetched only while the Futures tab is open. */
+export function useFutures(underlying?: string, exchange = "NSE", sourceConnectionId?: string, active = true) {
+  return useQuery({
+    queryKey: ["futures", underlying, exchange, sourceConnectionId],
+    queryFn: ({ signal }) => api.futures(underlying!, exchange, sourceConnectionId!, signal),
+    enabled: active && !!underlying && !!sourceConnectionId,
+    staleTime: 5_000,
+    refetchInterval: active ? 15_000 : false,
+    refetchIntervalInBackground: false,
+  });
+}

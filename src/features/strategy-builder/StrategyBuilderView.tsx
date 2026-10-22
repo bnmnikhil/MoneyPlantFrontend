@@ -34,7 +34,6 @@ import {
   withManualPrice,
 } from "./scenarioState";
 import { BuilderMetrics, PnlLadder } from "./BuilderMetrics";
-import { CustomLegForm } from "./CustomLegForm";
 import { draftCashflow } from "./legFigures";
 import { expiryLabel } from "@/features/payoff/expiry";
 
@@ -71,7 +70,7 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
   const [importError, setImportError] = useState<string | null>(null);
   const holdingsQuery = useHoldings();
   const status = useBrokerStatus();
-  // Layout B: the chain is a drawer over the legs, opened by "+ Add from chain"; the payoff stays in
+  // Layout B: the chain is a drawer over the legs, opened by "+ Add legs"; the payoff stays in
   // view beside it so each Buy or Sell visibly redraws the curve.
   const [chainOpen, setChainOpen] = useState(false);
   const [chartTab, setChartTab] = useState<"chart" | "table">("chart");
@@ -378,7 +377,7 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
           <div className="builder-panel-heading">
             <h2 id="builder-legs-title">Strategy legs</h2>
             <div className="flex items-center gap-2">
-              <button type="button" className="builder-primary-button" aria-expanded={chainOpen} aria-controls="builder-chain-drawer" onClick={() => setChainOpen(true)}><Plus className="size-3.5" />Add from chain</button>
+              <button type="button" className="builder-primary-button" aria-expanded={chainOpen} aria-controls="builder-chain-drawer" onClick={() => setChainOpen(true)}><Plus className="size-3.5" />Add legs</button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild><Button variant="outline" size="sm" disabled={!chain.data || !metadata.data?.templates.length}>Recipes<ChevronDown className="size-3.5" /></Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="app-workspace max-h-80 overflow-auto">
@@ -403,7 +402,7 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
                 const remaining = Math.abs(leg.qty) - closing;
                 return remaining <= 0 ? current : [...current, closeDraft(leg, leg.currentMark?.value ?? null, remaining)];
               })} />
-            <div className="builder-legs-footer"><CustomLegForm chain={chain.data} onAdd={addFromChain} /><div className="text-sm"><span className="text-muted-foreground">Net draft cashflow </span><strong className={netCashflow === null ? "" : netCashflow < 0 ? "text-loss" : "text-profit"}>{netCashflow === null ? "Incomplete" : formatSignedINR(netCashflow)}</strong></div></div>
+            <div className="builder-legs-footer"><div className="ml-auto text-sm"><span className="text-muted-foreground">Net draft cashflow </span><strong className={netCashflow === null ? "" : netCashflow < 0 ? "text-loss" : "text-profit"}>{netCashflow === null ? "Incomplete" : formatSignedINR(netCashflow)}</strong></div></div>
           </div>
           {comparison && <BuilderMetrics comparison={comparison} linearTrades={drafts.some((leg) => leg.enabled && (leg.contract.type === "EQ" || leg.contract.type === "FUT"))} />}
           {chainOpen && <div id="builder-chain-drawer" className="builder-drawer" role="dialog" aria-label="Add legs from the option chain">

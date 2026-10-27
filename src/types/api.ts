@@ -87,6 +87,22 @@ export interface SessionStatus {
 }
 
 /**
+ * One underlying's spot for the header ticker (GET /api/market-data/spot).
+ *
+ * `price` is null when none of the user's brokers could quote it. `change` and
+ * `changePercent` are today's move and are null when the source does not report
+ * one (Alice Blue's chain spot), which is not the same as a flat day.
+ * `source` is a broker id, or "shared" for the shared feed.
+ */
+export interface SpotQuote {
+  underlying: string;
+  price: number | null;
+  change: number | null;
+  changePercent: number | null;
+  source: string | null;
+}
+
+/**
  * One broker's credential state on the settings screen.
  *
  * There is deliberately no secret field, in any form. The backend never returns

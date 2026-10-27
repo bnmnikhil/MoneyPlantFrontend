@@ -7,7 +7,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Logo } from "@/components/Logo";
 import { primaryNavItems } from "@/components/layout/nav";
-import { BrokerStatusChips } from "@/features/session/BrokerStatusChips";
+import { BrokerMenuList } from "@/features/session/BrokerMenuList";
+import { IndexStrip, IndexTicker } from "@/features/market/IndexTicker";
 import { useBrokerStatus, useLogout, useMe } from "@/features/session/hooks";
 import { sessionStatusLabel } from "@/features/session/dailyLogin";
 import { legalDetails } from "@/features/legal/details";
@@ -31,7 +32,7 @@ export function Topbar() {
   );
   const allConnected = brokerIds.size > 0 && connectedIds.size === brokerIds.size &&
     status.connections.every((connection) => connection.connected);
-  const { label: statusLabel, tone } = sessionStatusLabel({
+  const { tone } = sessionStatusLabel({
     pending: status.isPending, error: status.isError, configured: brokerIds.size > 0,
     allConnected, anyConnected: status.anyConnected,
   });
@@ -61,6 +62,8 @@ export function Topbar() {
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-3 xl:gap-6">
+          <IndexTicker className="hidden lg:flex" />
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button type="button" className="flex h-9 items-center gap-2 rounded-md border border-border bg-background/50 px-3 text-sm outline-none hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring xl:text-base">
@@ -75,21 +78,12 @@ export function Topbar() {
               {status.isError ? (
                 <DropdownMenuItem onSelect={() => { void status.refetch(); }}>Couldn't check brokers · Retry</DropdownMenuItem>
               ) : (
-                <div className="px-2 py-3">
-                  <BrokerStatusChips menu className="flex-col items-start" />
-                  {!status.isPending && brokerIds.size === 0 && <p className="text-sm text-muted-foreground">No brokers configured yet.</p>}
-                </div>
+                <BrokerMenuList />
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild><Link to="/app/settings"><KeyRound />Manage broker connections</Link></DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <div className="hidden items-center gap-2 border-l border-border pl-4 text-sm lg:flex xl:pl-6 xl:text-base"
-            title="Broker session status. Each page reports its own data freshness." aria-label={`Broker sessions: ${statusLabel}`}>
-            <span className={cn("size-3 rounded-full", dotClass)} />
-            {statusLabel}
-          </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -133,6 +127,7 @@ export function Topbar() {
           </DropdownMenu>
         </div>
       </div>
+      <IndexStrip className="lg:hidden" />
     </header>
   );
 }

@@ -23,6 +23,7 @@ import type {
   Position,
   RiskSummaryReport,
   SessionStatus,
+  SpotQuote,
   StrategyMetadata,
   StrategySimulationRequest,
   StrategySimulationResponse,
@@ -285,6 +286,8 @@ export const api = {
         (positionConnectionId ? `&positionConnectionId=${encodeURIComponent(positionConnectionId)}` : ""),
       { signal }
     ),
+  spot: (underlyings: readonly string[]) =>
+    request<SpotQuote[]>(`/api/market-data/spot?underlyings=${underlyings.map(encodeURIComponent).join(",")}`),
   futures: (underlying: string, exchange: string, sourceConnectionId: string, signal?: AbortSignal) =>
     request<FuturesResponse>(
       `/api/market-data/futures?underlying=${encodeURIComponent(underlying)}&exchange=${encodeURIComponent(exchange)}&sourceConnectionId=${encodeURIComponent(sourceConnectionId)}`,

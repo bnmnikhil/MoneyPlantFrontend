@@ -270,8 +270,8 @@ export function PayoffChart({
               strokeDasharray="6 4" dot={false} activeDot={false} isAnimationActive={false} />
           )}
 
-          {/* P&L baseline */}
-          <ReferenceLine y={0} stroke={MUTED} strokeWidth={1.25} strokeDasharray={styled ? "5 4" : undefined} />
+          {/* P&L baseline: solid and faint, so it never reads as one of the dashed curves or markers */}
+          <ReferenceLine y={0} stroke={MUTED} strokeWidth={1} strokeOpacity={0.7} />
 
           {/* Breakevens */}
           {payoff.breakevens.filter((be) => be >= xMin && be <= xMax).map((be) => (

@@ -35,28 +35,33 @@ export function tickerItems(
   quotes: SpotQuote[] | undefined,
   nameOf: (brokerId: string) => string,
 ): TickerItem[] {
-  return TICKER_INDICES.map((underlying) => {
-    const q = quotes?.find((quote) => quote.underlying === underlying);
-    if (!q || q.price === null || !Number.isFinite(q.price)) {
-      return {
-        underlying, price: "—", priceWhole: "—", change: null, tone: "flat",
-        title: "No index price: connect Paytm Money or Alice Blue to see it",
-      };
-    }
-    const pct = q.changePercent;
-    const known = pct !== null && Number.isFinite(pct);
-    const tone: TickerTone = !known || pct === 0 ? "flat" : pct > 0 ? "up" : "down";
-    const sign = known && pct > 0 ? "+" : known && pct < 0 ? "−" : "";
-    const moveText = q.change !== null && Number.isFinite(q.change)
-      ? ` · ${q.change > 0 ? "+" : q.change < 0 ? "−" : ""}${twoDp.format(Math.abs(q.change))} today`
-      : "";
-    return {
-      underlying,
-      price: twoDp.format(q.price),
-      priceWhole: whole.format(q.price),
-      change: known ? `(${sign}${Math.abs(pct).toFixed(2)}%)` : null,
-      tone,
-      title: `${underlying} spot${moveText} ${sourceText(q.source, nameOf)}`.trim(),
-    };
-  });
+  return TICKER_INDICES.map((underlying) =>
+    spotItem(underlying, quotes?.find((quote) => quote.underlying === underlying), nameOf));
+}
+
+/** One underlying's spot and day move, worded as the ticker words it. Also the payoff header's. */
+export function spotItem(
+  underlying: string,
+  q: SpotQuote | undefined,
+  nameOf: (brokerId: string) => string,
+  missingTitle = "No index price: connect Paytm Money or Alice Blue to see it",
+): TickerItem {
+  if (!q || q.price === null || !Number.isFinite(q.price)) {
+    return { underlying, price: "—", priceWhole: "—", change: null, tone: "flat", title: missingTitle };
+  }
+  const pct = q.changePercent;
+  const known = pct !== null && Number.isFinite(pct);
+  const tone: TickerTone = !known || pct === 0 ? "flat" : pct > 0 ? "up" : "down";
+  const sign = known && pct > 0 ? "+" : known && pct < 0 ? "−" : "";
+  const moveText = q.change !== null && Number.isFinite(q.change)
+    ? ` · ${q.change > 0 ? "+" : q.change < 0 ? "−" : ""}${twoDp.format(Math.abs(q.change))} today`
+    : "";
+  return {
+    underlying,
+    price: twoDp.format(q.price),
+    priceWhole: whole.format(q.price),
+    change: known ? `(${sign}${Math.abs(pct).toFixed(2)}%)` : null,
+    tone,
+    title: `${underlying} spot${moveText} ${sourceText(q.source, nameOf)}`.trim(),
+  };
 }

@@ -298,8 +298,6 @@
 .payoff-legs-footer { display: flex; justify-content: space-between; gap: 0.625rem; }
 .payoff-link { color: var(--gb-gold); font-weight: 600; cursor: pointer; background: none; border: 0; padding: 0; }
 .payoff-link:hover { text-decoration: underline; }
-.payoff-whatif { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; padding: 0.625rem 1rem; border: 1px solid #A58BFF66; border-radius: 6px; background: #A58BFF14; font-size: 0.875rem; }
-.payoff-whatif b { color: #B9A3FF; }
 .payoff-warning > summary { cursor: pointer; list-style: none; }
 .payoff-warning > summary::-webkit-details-marker { display: none; }
 .payoff-warning[open] > summary .payoff-link { display: none; }

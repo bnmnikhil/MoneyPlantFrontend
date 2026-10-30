@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { tickerItems } from "../src/features/market/tickerItems.ts";
+import { spotItem, tickerItems } from "../src/features/market/tickerItems.ts";
 import { brokerMenuRows } from "../src/features/session/brokerMenuRows.ts";
 
 const names = { paytm: "Paytm Money", aliceblue: "Alice Blue", kite: "Zerodha Kite" };
@@ -58,4 +58,11 @@ test("several accounts at one broker are told apart by account label", () => {
     { connectionId: "b", accountLabel: "ZR2", credentialLabel: "default", connected: false },
   ], pending: [], named: false }], nameOf);
   assert.deepEqual(rows.map((r) => r.title), ["Zerodha Kite · ZR1", "Zerodha Kite · ZR2"]);
+});
+
+test("the payoff header words a stock the same way, labelled with its display name", () => {
+  const hero = spotItem("HEROMOTOCO", { underlying: "HEROMOTOCO", price: 5142, change: 37, changePercent: 0.72, source: "paytm" }, nameOf, "No live price");
+  assert.deepEqual([hero.price, hero.change, hero.tone], ["5,142.00", "(+0.72%)", "up"]);
+  const unquoted = spotItem("M&M", { underlying: "MM", price: null, change: null, changePercent: null, source: null }, nameOf, "No live price");
+  assert.deepEqual([unquoted.price, unquoted.change, unquoted.title], ["—", null, "No live price"]);
 });

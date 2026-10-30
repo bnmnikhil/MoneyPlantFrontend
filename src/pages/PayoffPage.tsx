@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Inbox, Info, SlidersHorizontal, Wrench } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,8 +18,12 @@ import { openPnl, pruneExcluded, selectedLegs, toggleLeg } from "@/features/payo
 import { useLegScenario, usePayoff, usePayoffCurves } from "@/features/payoff/hooks";
 import { useBuilderHost } from "@/features/strategy-builder/builderHost";
 import { brokerLabel } from "@/components/BrokerBadge";
-import { brokerIdOf, isBrokerSessionError } from "@/lib/api";
+import { api, brokerIdOf, isBrokerSessionError } from "@/lib/api";
+import { spotItem } from "@/features/market/tickerItems";
+import { cn } from "@/lib/utils";
 import type { CurveRef } from "@/types/api";
+
+const spotToneClass = { up: "text-profit", down: "text-loss", flat: "text-muted-foreground" } as const;
 
 export function PayoffPage() {
   const underlyings = usePayoffCurves();
@@ -77,6 +82,19 @@ export function PayoffPage() {
     setExcludedState({ view: viewKey, keys: toggleLeg(excluded, key, data.legs) });
   };
   const showAll = () => setExcludedState({ view: viewKey, keys: new Set() });
+  // The underlying's live price and day move, from the ticker's endpoint; the payoff response has
+  // spot but no day change. Hidden until it answers rather than shown as a dash.
+  const spotQuote = useQuery({
+    queryKey: ["market-data", "spot", activeCurve?.underlying],
+    queryFn: () => api.spot([activeCurve!.underlying]),
+    enabled: !!activeCurve,
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+  });
+  const spotLine = activeCurve && spotQuote.data
+    ? spotItem(activeCurve.underlyingLabel, spotQuote.data[0], brokerLabel, "No live price for this underlying")
+    : undefined;
+
   const handleOpenInBuilder = () => {
     if (activeCurve && data && legs.length) openInBuilder({ ...data, legs });
   };
@@ -105,10 +123,6 @@ export function PayoffPage() {
 
     {activeCurve && isBrokerSessionError(payoff.error) && <BrokerSessionBanner brokerId={brokerIdOf(payoff.error)} />}
     {activeCurve && !isBrokerSessionError(payoff.error) && <>
-      {whatIf && <div className="payoff-whatif" role="status">
-        <span><b>What-if:</b> showing {legs.length} of {data!.legs.length} legs. This is not your real position.</span>
-        <button type="button" className="payoff-link" onClick={showAll}>Show all legs</button>
-      </div>}
       {data && (mixedExpiries || !data.complete || data.warnings.length > 0) && <details className="payoff-warning">
         <summary>
           {[mixedExpiries && "These legs have different expiries", !data.complete && "Some positions could not be included; this payoff is incomplete",
@@ -122,8 +136,11 @@ export function PayoffPage() {
         <section className="payoff-panel payoff-chart-panel" aria-labelledby="live-payoff-title">
           <div className="payoff-chart-header">
             <div className="payoff-chart-title">
-              <h2 id="live-payoff-title">{mixedExpiries ? "Combined expiry scenario" : "Payoff"}</h2>
-              {data && <span>{data.expiries.map(expiryLabel).join(" / ")}{whatIf ? ` · ${legs.length} of ${data.legs.length} legs` : ""}</span>}
+              <h2 id="live-payoff-title">{activeCurve.underlyingLabel}</h2>
+              {spotLine && <span className="tabular-nums" title={spotLine.title}>
+                <span className="font-semibold text-foreground">{spotLine.price}</span>
+                {spotLine.change && <span className={cn("ml-1.5 font-medium", spotToneClass[spotLine.tone])}>{spotLine.change}</span>}
+              </span>}
             </div>
             {shown ? <PositionFigures shown={shown} real={whatIf ? real : undefined} mixedExpiries={mixedExpiries} />
               : payoff.isLoading ? <Skeleton className="h-10 w-72" /> : null}

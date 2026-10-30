@@ -148,7 +148,7 @@ function FixRow({ fix, account, onConnect, credentialLabels, connecting }: {
       </div>;
     case "stale-estimates":
       return <div className="overview-att-item">
-        <div className="overview-att-line"><span>Margin estimates are {fix.freshness === "STALE" ? "stale" : "from a snapshot"}</span><Link to="/app/risk" className="overview-att-link">Risk →</Link></div>
+        <div className="overview-att-line"><span>Margin estimates are {fix.freshness === "STALE" ? "stale" : "from a snapshot"}</span><Link to="/app/positions" className="overview-att-link">Positions →</Link></div>
         <span className="overview-att-sub">Calculated from positions held {fix.asOf ? new Date(fix.asOf).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "at an unknown time"}. Live P&amp;L is current.</span>
       </div>;
   }

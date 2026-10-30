@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { AuthGuard } from "@/features/session/AuthGuard";
 import { AppShell } from "@/components/layout/AppShell";
 import { LandingPage } from "@/pages/LandingPage";
@@ -7,7 +7,6 @@ import { DashboardPage } from "@/pages/DashboardPage";
 import { PositionsPage } from "@/pages/PositionsPage";
 import { HoldingsPage } from "@/pages/HoldingsPage";
 import { PayoffPage } from "@/pages/PayoffPage";
-import { RiskPage } from "@/pages/RiskPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { AdminStatusPage } from "@/pages/AdminStatusPage";
 import { BuilderRoute } from "@/pages/BuilderPage";
@@ -36,7 +35,8 @@ export default function App() {
           <Route path="/app/holdings" element={<HoldingsPage />} />
           <Route path="/app/payoff" element={<PayoffPage />} />
           <Route path="/app/builder" element={<BuilderRoute />} />
-          <Route path="/app/risk" element={<RiskPage />} />
+          {/* Risk is hidden until it is defined; old bookmarks land on Positions, which carries the margin column. */}
+          <Route path="/app/risk" element={<Navigate to="/app/positions" replace />} />
           <Route path="/app/settings" element={<SettingsPage />} />
           <Route path="/app/admin" element={<AdminStatusPage />} />
         </Route>

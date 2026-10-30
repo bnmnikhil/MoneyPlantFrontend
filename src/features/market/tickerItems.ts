@@ -65,3 +65,12 @@ export function spotItem(
     title: `${underlying} spot${moveText} ${sourceText(q.source, nameOf)}`.trim(),
   };
 }
+
+/**
+ * A streamed quote folded into the polled list: replaces that underlying's entry,
+ * or adds it. A new array, so the query cache sees a change.
+ */
+export function mergeSpot(quotes: SpotQuote[] | undefined, tick: SpotQuote): SpotQuote[] {
+  const rest = (quotes ?? []).filter((quote) => quote.underlying !== tick.underlying);
+  return [...rest, tick];
+}

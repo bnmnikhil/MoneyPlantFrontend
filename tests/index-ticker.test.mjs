@@ -66,3 +66,23 @@ test("the payoff header words a stock the same way, labelled with its display na
   const unquoted = spotItem("M&M", { underlying: "MM", price: null, change: null, changePercent: null, source: null }, nameOf, "No live price");
   assert.deepEqual([unquoted.price, unquoted.change, unquoted.title], ["—", null, "No live price"]);
 });
+
+test("a streamed tick replaces its own underlying and leaves the other alone", async () => {
+  const { mergeSpot } = await import("../src/features/market/tickerItems.ts");
+  const polled = [
+    { underlying: "NIFTY", price: 24800, change: 90, changePercent: 0.36, source: "paytm" },
+    { underlying: "BANKNIFTY", price: 52140.8, change: -94.1, changePercent: -0.18, source: "paytm" },
+  ];
+  const merged = mergeSpot(polled, { underlying: "NIFTY", price: 24812.35, change: 102.35, changePercent: 0.41, source: "paytm" });
+  const [nifty, bank] = tickerItems(merged, nameOf);
+  assert.equal(nifty.price, "24,812.35");
+  assert.equal(bank.price, "52,140.80");
+  assert.notEqual(merged, polled);
+});
+
+test("a tick before any poll still shows", async () => {
+  const { mergeSpot } = await import("../src/features/market/tickerItems.ts");
+  const [nifty, bank] = tickerItems(mergeSpot(undefined, { underlying: "NIFTY", price: 24812.35, change: null, changePercent: null, source: "paytm" }), nameOf);
+  assert.equal(nifty.price, "24,812.35");
+  assert.equal(bank.price, "—");
+});

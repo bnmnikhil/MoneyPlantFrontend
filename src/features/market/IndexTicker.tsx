@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { brokerLabel } from "@/components/BrokerBadge";
-import { SPOT_QUERY_KEY, useLiveSpots } from "@/features/market/spotStream";
+import { SPOT_QUERY_KEY, useLiveSpots } from "@/features/market/quoteStream";
 import { TICKER_INDICES, tickerItems, type TickerItem } from "@/features/market/tickerItems";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 /**
- * NIFTY and BANKNIFTY spot. Streamed tick by tick from the user's Paytm socket
- * when there is one (spotStream.ts, which writes into this same query); otherwise
+ * NIFTY and BANKNIFTY spot. Pushed once a second from the user's Paytm socket
+ * when there is one (quoteStream.ts, which writes into this same query); otherwise
  * polled every 30s like the other live figures, and the poll resumes whenever the
  * stream stops. One query shared by the header and the mobile strip.
  */

@@ -86,3 +86,19 @@ test("a tick before any poll still shows", async () => {
   assert.equal(nifty.price, "24,812.35");
   assert.equal(bank.price, "—");
 });
+
+test("a pushed batch updates the ticker's spots and ignores the book's contracts", async () => {
+  const { applySpotQuotes } = await import("../src/features/market/tickerItems.ts");
+  const polled = [
+    { underlying: "NIFTY", price: 24800, change: 90, changePercent: 0.36, source: "paytm" },
+    { underlying: "BANKNIFTY", price: 52140.8, change: -94.1, changePercent: -0.18, source: "paytm" },
+  ];
+  const merged = applySpotQuotes(polled, {
+    "NIFTY|SPOT": { price: 24812.35, change: 102.35, changePercent: 0.41, source: "paytm" },
+    "NIFTY|2026-11-25|23000|CE": { price: 98.2, change: -4.1, changePercent: -4.01, source: "paytm" },
+  });
+  assert.equal(merged.length, 2);
+  const [nifty, bank] = tickerItems(merged, nameOf);
+  assert.equal(nifty.price, "24,812.35");
+  assert.equal(bank.price, "52,140.80");
+});

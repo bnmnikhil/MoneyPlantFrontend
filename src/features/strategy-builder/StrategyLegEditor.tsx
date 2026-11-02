@@ -1,11 +1,15 @@
-import { LockKeyhole, Minus, Plus, Trash2 } from "lucide-react";
+import { LockKeyhole, Minus, Plus, Trash2, X } from "lucide-react";
 import { formatINR, formatNumber, formatSignedINR, formatSignedINRWhole } from "@/lib/format";
 import type { OptionChainResponse, OptionChainRow, ScenarioLeg } from "@/types/api";
 import { legCashflow, markedPnl, quantitySize } from "./legFigures";
 
-export function StrategyLegEditor({ baseline, drafts, expiries, chain, account, onToggle, onRemove,
+export function StrategyLegEditor({ baseline, drafts, expiries, chain, account, underlying, netCashflow, onToggle, onRemove,
   onDirection, onQuantity, onPrice, onLatest, onExpiry, onContract, onClose }: {
   baseline: ScenarioLeg[]; drafts: ScenarioLeg[]; expiries: string[]; chain?: OptionChainResponse; account?: string;
+  /** Named once in the column headers, so rows read "23 Nov 860 PE". */
+  underlying?: string;
+  /** The enabled drafts' net cashflow, or null while a leg is incomplete. */
+  netCashflow?: number | null;
   onToggle: (id: string) => void; onRemove: (id: string) => void; onDirection: (id: string) => void;
   onQuantity: (id: string, units: number) => void; onPrice: (id: string, price: number | null) => void;
   onLatest: (id: string) => void; onExpiry: (id: string, expiry: string) => void;
@@ -15,36 +19,46 @@ export function StrategyLegEditor({ baseline, drafts, expiries, chain, account, 
     {baseline.length > 0 && <section aria-label="Existing positions">
       <div className="builder-section-heading"><h3>Existing positions{account ? ` · ${account}` : ""}</h3><span><LockKeyhole className="size-3.5" />{baseline.length} locked</span></div>
       {baseline.length ? <div className="builder-table-scroll" tabIndex={0} role="region" aria-label="Existing position legs">
-        <table className="builder-baseline-table"><thead><tr><th>Contract</th><th>Qty</th><th>Entry → LTP</th><th title="Unrealised P&L at the imported mark; realised P&L is not included">Unreal. P&amp;L</th><th><span className="sr-only">Action</span></th></tr></thead>
+        <table className="builder-baseline-table"><thead><tr><th>Contract{underlying ? ` · ${underlying}` : ""}</th><th>Qty</th><th>Entry → LTP</th><th title="Unrealised P&L at the imported mark; realised P&L is not included">P&amp;L</th><th><span className="sr-only">Action</span></th></tr></thead>
           <tbody>{baseline.map((leg) => {
             const pnl = markedPnl(leg), size = quantitySize(leg);
             const ltp = leg.currentMark?.priceKnown && leg.currentMark.value !== null ? formatINR(leg.currentMark.value) : "—";
             return <tr key={leg.id}>
-              <td><span className="builder-leg-contract" title={`${contractLabel(leg)} · Immutable baseline`}><Side qty={leg.qty} /><span>{contractLabel(leg)}</span><LockKeyhole className="size-3 shrink-0 text-muted-foreground" /></span></td>
+              <td><span className="builder-leg-contract" title={`${contractLabel(leg)} · Immutable baseline`}><Side qty={leg.qty} /><span>{shortLabel(leg)}</span><LockKeyhole className="size-3 shrink-0 text-muted-foreground" /></span></td>
               <td title={`${leg.qty} units`}>{formatNumber(size.value)} <small>{size.unit === "lots" ? (size.value === 1 ? "lot" : "lots") : "units"}</small></td>
               <td title={leg.currentMark ? `Imported ${new Date(leg.currentMark.fetchedAt).toLocaleString("en-IN")}` : "Quote unavailable"}>{leg.entryPrice === null ? "—" : formatINR(leg.entryPrice)} → {ltp}</td>
               <td className={pnl === null ? "" : pnl < 0 ? "text-loss" : "text-profit"}>{pnl === null ? "—" : money(pnl)}</td>
-              <td><button type="button" className="builder-small-button" aria-label={`Close or reduce ${contractLabel(leg)}`} onClick={() => onClose(leg)}>Close</button></td>
+              <td><button type="button" className="builder-icon-button" aria-label={`Close or reduce ${contractLabel(leg)}`} title="Close in the draft" onClick={() => onClose(leg)}><X className="size-3.5" /></button></td>
             </tr>;
           })}</tbody>
         </table></div> : null}
     </section>}
     <section aria-label="Draft adjustments">
-      <div className="builder-section-heading"><h3>Draft adjustments · {drafts.length} leg{drafts.length === 1 ? "" : "s"}</h3><span>{drafts.filter((leg) => leg.enabled).length} enabled · assumed prices</span></div>
+      <div className="builder-section-heading"><h3>Draft adjustments · {drafts.length} leg{drafts.length === 1 ? "" : "s"}</h3><span title={`${drafts.filter((leg) => leg.enabled).length} enabled · assumed prices`}>{drafts.length > 0 && <>Net <b className={netCashflow == null ? "" : netCashflow < 0 ? "text-loss" : "text-profit"}>{netCashflow == null ? "incomplete" : money(netCashflow)}</b></>}</span></div>
       {!drafts.length ? <p className="builder-empty">Add Buy/Sell legs from the chain or choose a quick recipe.</p> :
         <div className="builder-table-scroll" tabIndex={0} role="region" aria-label="Draft trade legs">
-          <table className="builder-draft-table"><thead><tr><th><span className="sr-only">On</span></th><th>Contract</th><th>Qty</th><th>Price</th><th>Cashflow</th><th><span className="sr-only">Remove</span></th></tr></thead>
+          <table className="builder-draft-table"><thead><tr><th><span className="sr-only">On</span></th><th>Contract{underlying ? ` · ${underlying}` : ""}</th><th>Qty</th><th>Price</th><th>Cashflow</th><th><span className="sr-only">Remove</span></th></tr></thead>
             <tbody>{drafts.map((leg) => {
               const size = quantitySize(leg), cashflow = legCashflow(leg);
               const option = leg.contract.type === "CE" || leg.contract.type === "PE";
               const rows = chain?.expiry === leg.contract.expiry ? chain.rows : [];
+              // The strike buttons step through the chain's own strikes, so the step is the
+              // underlying's interval and stops at the first and last listed strike.
+              const usable = rows.filter((row) => !row.metadataConflict && row.lotSize).sort((a, b) => a.strike - b.strike);
+              const lower = [...usable].reverse().find((row) => row.strike < leg.contract.strike);
+              const higher = usable.find((row) => row.strike > leg.contract.strike);
               const changeSize = (value: number) => {
                 if (Number.isInteger(value) && value >= 1) onQuantity(leg.id, size.unit === "lots" ? value * leg.lotSize! : value);
               };
               return <tr key={leg.id} className={leg.enabled ? "" : "builder-leg-disabled"}>
                 <td><input className="payoff-holdings-switch" role="switch" aria-label={`Enable ${contractLabel(leg)}`} type="checkbox" checked={leg.enabled} onChange={() => onToggle(leg.id)} /></td>
                 <td><div className="builder-leg-contract"><button type="button" aria-label={`Change direction for ${contractLabel(leg)}`} title="Switch between buy and sell" onClick={() => onDirection(leg.id)} className={`builder-side ${leg.qty < 0 ? "builder-side-sell" : "builder-side-buy"}`}>{leg.qty < 0 ? "S" : "B"}</button>
-                  <details className="builder-contract-editor"><summary title="Edit contract and price source">{contractLabel(leg)}</summary>
+                  {option && <span className="builder-strike-step">
+                    <button type="button" aria-label={`Previous strike for ${contractLabel(leg)}`} title={lower ? formatNumber(lower.strike) : "First strike in the chain"} disabled={!lower} onClick={() => lower && onContract(leg.id, lower, leg.contract.type as "CE" | "PE")}><Minus className="size-3" /></button>
+                    <b>{formatNumber(leg.contract.strike)}</b>
+                    <button type="button" aria-label={`Next strike for ${contractLabel(leg)}`} title={higher ? formatNumber(higher.strike) : "Last strike in the chain"} disabled={!higher} onClick={() => higher && onContract(leg.id, higher, leg.contract.type as "CE" | "PE")}><Plus className="size-3" /></button>
+                  </span>}
+                  <details className="builder-contract-editor"><summary title="Edit contract and price source">{option ? `${shortExpiry(leg)} ${leg.contract.type}` : shortLabel(leg)}</summary>
                   <div className="builder-contract-fields">
                     {option && <>
                       <label>Option type<select aria-label="Option type" value={leg.contract.type} disabled={!rows.some((row) => row.strike === leg.contract.strike)} onChange={(event) => { const row = rows.find((candidate) => candidate.strike === leg.contract.strike); if (row) onContract(leg.id, row, event.target.value as "CE" | "PE"); }}><option value="CE">CE</option><option value="PE">PE</option></select></label>
@@ -83,6 +97,16 @@ function money(value: number) {
 /** The small B / S tag the payoff legs list uses: green for bought, red for sold. */
 function Side({ qty }: { qty: number }) {
   return <span className={`builder-side ${qty < 0 ? "builder-side-sell" : "builder-side-buy"}`}>{qty < 0 ? "S" : "B"}</span>;
+}
+
+function shortExpiry(leg: ScenarioLeg) {
+  return leg.contract.expiry ? new Date(`${leg.contract.expiry}T00:00:00`).toLocaleDateString("en-IN", { day: "2-digit", month: "short" }) : "";
+}
+
+/** The label without the underlying, which the column header names once. */
+function shortLabel(leg: ScenarioLeg) {
+  if (leg.contract.type === "EQ") return "Shares";
+  return `${shortExpiry(leg)} ${leg.contract.type === "FUT" ? "FUT" : `${formatNumber(leg.contract.strike)} ${leg.contract.type}`}`;
 }
 
 function contractLabel(leg: ScenarioLeg) {

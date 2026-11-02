@@ -8,7 +8,7 @@ import { usePayoffCurves, useStrategyMetadata } from "@/features/payoff/hooks";
 import { useHoldings } from "@/features/holdings/hooks";
 import { useBrokerStatus } from "@/features/session/hooks";
 import { api, ApiError } from "@/lib/api";
-import { formatPrice, formatSignedINR } from "@/lib/format";
+import { formatPrice } from "@/lib/format";
 import type {
   FutureRow,
   OptionChainRow,
@@ -20,7 +20,7 @@ import type {
 import { FuturesPicker, OptionChainPicker } from "./OptionChainPicker";
 import { StrategyLegEditor } from "./StrategyLegEditor";
 import { UnderlyingSearch } from "./UnderlyingSearch";
-import { useFutures, useOptionChain, useOptionExpiries, useOptionSources } from "./hooks";
+import { useDayMove, useFutures, useOptionChain, useOptionExpiries, useOptionSources } from "./hooks";
 import {
   applyRecipe,
   baselineFromPayoff,
@@ -188,6 +188,7 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
   // payoff's own spot (which may come from another broker) only when that source has none.
   const spot = chain.data?.spot && chain.data.spot > 0 ? chain.data.spot
     : context?.baselineResponse?.spot && context.baselineResponse.spot > 0 ? context.baselineResponse.spot : null;
+  const dayMove = useDayMove(selection?.code).data ?? null;
   // Never pair a prior account/draft result with the currently displayed legs.
   const comparisonInputKey = JSON.stringify([selection, baseline, drafts, spot, positionConnectionId, context?.baselineResponse]);
   const comparison = comparisonSnapshot?.inputKey === comparisonInputKey ? comparisonSnapshot.result : null;
@@ -350,16 +351,18 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
   return <div className="builder-workspace builder-b">
     <section className="builder-panel builder-context" aria-label="Strategy context">
       <div className="builder-context-fields">
-        <UnderlyingSearch selected={selection} onSelect={chooseUnderlying} />
-        <label>Expiry<select value={pickerExpiry} disabled={!expiries.data?.expiries.length} onChange={(event) => setPickerExpiry(event.target.value)}>
+        <UnderlyingSearch selected={selection} onSelect={chooseUnderlying} price={spot !== null && <>
+          <b>{formatPrice(spot)}</b>
+          {dayMove !== null && <span className={dayMove < 0 ? "text-loss" : "text-profit"} title="Today's move">({dayMove > 0 ? "+" : ""}{dayMove.toFixed(2)}%)</span>}
+        </>} />
+        <label className="builder-inline-field"><span>Expiry</span><select value={pickerExpiry} disabled={!expiries.data?.expiries.length} onChange={(event) => setPickerExpiry(event.target.value)}>
           {!expiries.data?.expiries.length && <option value="">No expiry available</option>}
           {expiries.data?.expiries.map((expiry) => <option key={expiry} value={expiry}>{expiryLabel(expiry)}</option>)}
         </select></label>
-        <label title={quotesNote}>Quotes source<select value={sourceConnectionId} disabled={!availableSources.length} onChange={(event) => setSourceConnectionId(event.target.value)}>
+        <label className="builder-inline-field" title={quotesNote}><span>Quotes</span><select value={sourceConnectionId} disabled={!availableSources.length} onChange={(event) => setSourceConnectionId(event.target.value)}>
           {!availableSources.length && <option value="">No usable source</option>}
           {sources.data?.sources.map((source) => <option key={source.connectionId} value={source.connectionId} disabled={!source.available}>{brokerLabel(source.brokerId)} · {source.accountLabel}{source.policyRestricted ? " (restricted)" : ""}</option>)}
         </select></label>
-        <div className="builder-spot"><p>Spot</p><strong>{spot !== null && spot > 0 ? formatPrice(spot) : "—"}</strong></div>
         <div className="builder-context-actions">
           {selection && selection.hasOptions !== false && <div className="builder-baseline-bar" aria-label="Existing positions and holdings">
             <label className="builder-switch" title={positionAccounts.length ? "Add this account's open positions as a locked baseline" : `No open ${selection.symbol} positions in any account`}>
@@ -379,8 +382,9 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
             {baselineAccounts.length === 1 && (positionsOn || holdingsOn) && <span className="builder-baseline-account">{accountName(baselineAccounts[0])}</span>}
             {baselineBusy && <span className="builder-baseline-account">Loading…</span>}
           </div>}
-          <span className="builder-hypo" title="A what-if workspace: nothing here is sent to a broker.">Hypothetical · no orders</span>
-          <Button variant="outline" disabled={!drafts.length} title="Remove the draft legs; existing positions and holdings stay" onClick={() => updateDrafts(() => [])}><RotateCcw className="size-3.5" />Reset</Button>
+          <button type="button" className="builder-primary-button builder-reset" disabled={!drafts.length}
+            title="Remove the draft legs; existing positions and holdings stay. The builder is a what-if workspace: nothing here is sent to a broker."
+            onClick={() => updateDrafts(() => [])}><RotateCcw className="size-3.5" />Reset</button>
         </div>
       </div>
       {positionCurves.isError && <p role="alert" className="text-xs text-loss">Could not list existing positions. <button type="button" className="underline" onClick={() => positionCurves.refetch()}>Retry</button></p>}
@@ -412,6 +416,7 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
           {recipeMessage && <p role="status" className="builder-legs-note">{recipeMessage}</p>}
           <div className="builder-b-legs-scroll">
             <StrategyLegEditor baseline={baseline} drafts={drafts} expiries={expiries.data?.expiries ?? []} chain={chain.data} account={account}
+              underlying={selection.symbol} netCashflow={netCashflow}
               onToggle={(id) => updateDraft(id, (leg) => ({ ...leg, enabled: !leg.enabled }))}
               onRemove={(id) => updateDrafts((current) => current.filter((leg) => leg.id !== id))}
               onDirection={(id) => updateDraft(id, (leg) => ({ ...leg, qty: -leg.qty, closesLegId: null }))}
@@ -424,9 +429,7 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
                 const remaining = Math.abs(leg.qty) - closing;
                 return remaining <= 0 ? current : [...current, closeDraft(leg, leg.currentMark?.value ?? null, remaining)];
               })} />
-            <div className="builder-legs-footer"><div className="ml-auto text-sm"><span className="text-muted-foreground">Net draft cashflow </span><strong className={netCashflow === null ? "" : netCashflow < 0 ? "text-loss" : "text-profit"}>{netCashflow === null ? "Incomplete" : formatSignedINR(netCashflow)}</strong></div></div>
           </div>
-          {comparison && <BuilderMetrics comparison={comparison} linearTrades={drafts.some((leg) => leg.enabled && (leg.contract.type === "EQ" || leg.contract.type === "FUT"))} />}
           {chainOpen && <div id="builder-chain-drawer" className="builder-drawer" role="dialog" aria-label="Add legs">
             {/* Options and futures both come from the selected quotes source, like spot. */}
             <div className="builder-chart-tabs builder-drawer-tabs" role="tablist" aria-label="Contract kind">
@@ -449,8 +452,11 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
               <button type="button" role="tab" aria-selected={chartTab === "chart"} onClick={() => setChartTab("chart")}>Chart</button>
               <button type="button" role="tab" aria-selected={chartTab === "table"} onClick={() => setChartTab("table")}>P&amp;L table</button>
             </div>
-            <span className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground" role="status">{isComparing ? "Calculating…" : comparison ? "Calculated" : "Awaiting valid legs"}
-              {comparison?.assumptions.length ? <Info className="size-3.5" aria-label={comparison.assumptions.join(" ")}><title>{comparison.assumptions.join(" ")}</title></Info> : null}</span>
+            {comparison
+              ? <BuilderMetrics comparison={comparison} busy={isComparing}
+                  linearTrades={drafts.some((leg) => leg.enabled && (leg.contract.type === "EQ" || leg.contract.type === "FUT"))}
+                  info={comparison.assumptions.length ? <Info className="ml-1 inline size-3" aria-label={comparison.assumptions.join(" ")}><title>{comparison.assumptions.join(" ")}</title></Info> : null} />
+              : <span className="ml-auto text-xs text-muted-foreground" role="status">{isComparing ? "Calculating…" : "Awaiting valid legs"}</span>}
           </div>
           {compareError && <p role="alert" className="p-3 text-sm text-loss">{compareError}</p>}
           {comparison ? <>

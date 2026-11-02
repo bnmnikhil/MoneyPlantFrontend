@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { Search } from "lucide-react";
 import { useUnderlyingSearch } from "./hooks";
 import type { UnderlyingSearchItem } from "@/types/api";
 
-export function UnderlyingSearch({ selected, onSelect }: {
+export function UnderlyingSearch({ selected, onSelect, price }: {
   selected: UnderlyingSearchItem | null;
   onSelect: (item: UnderlyingSearchItem) => void;
+  /** Shown inside the box after the symbol: the spot and its day move. */
+  price?: ReactNode;
 }) {
   const [query, setQuery] = useState(selected?.symbol ?? "");
   const [open, setOpen] = useState(false);
@@ -25,7 +28,7 @@ export function UnderlyingSearch({ selected, onSelect }: {
 
   return (
     <div className="builder-underlying relative" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
-      <label className="mb-1 block text-xs font-medium text-muted-foreground" htmlFor="underlying-search">
+      <label className="sr-only" htmlFor="underlying-search">
         Underlying
       </label>
       <div className="flex items-center rounded-md border border-border bg-background px-3">
@@ -42,7 +45,7 @@ export function UnderlyingSearch({ selected, onSelect }: {
           spellCheck={false}
           value={query}
           placeholder="Symbol or company name"
-          className="w-full bg-transparent px-2 py-2 text-sm outline-none"
+          className="w-full min-w-0 bg-transparent px-2 py-2 text-sm font-semibold outline-none placeholder:font-normal"
           onFocus={() => setOpen(query.trim().length > 0)}
           onChange={(event) => { setQuery(event.target.value); setOpen(true); setActiveIndex(0); }}
           onKeyDown={(event) => {
@@ -53,6 +56,7 @@ export function UnderlyingSearch({ selected, onSelect }: {
             if (event.key === "Escape") setOpen(false);
           }}
         />
+        {price && !open && <span className="builder-underlying-price">{price}</span>}
       </div>
 
       {open && query.trim() && (

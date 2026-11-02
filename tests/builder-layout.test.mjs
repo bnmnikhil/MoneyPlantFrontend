@@ -58,7 +58,20 @@ test("the compact baseline (5) and draft (6) tables keep aligned columns and loc
   assert.match(html, /Draft adjustments · 1 leg</);
   assert.match(html, /aria-label="Change direction for/);
   assert.doesNotMatch(tables[0], /<input|<select/);
-  assert.match(tables[0], /Unreal\. P&amp;L/);
+  assert.match(tables[0], /title="Unrealised P&amp;L[^"]*">P&amp;L</);
+  assert.match(tables[0], /title="Close in the draft"/);
+});
+
+test("rows name the underlying once, and a draft option steps through the chain's own strikes", () => {
+  const row = (strike, conflict = false) => ({ strike, lotSize: conflict ? null : 75, metadataConflict: conflict, call: null, put: null });
+  const chain = { expiry: "2026-09-24", rows: [row(23000), row(23050, true), row(23100)] };
+  const draft = leg({ id: "draft", contract: { ...leg().contract, strike: 23100 } });
+  const html = render(StrategyLegEditor, { ...callbacks, baseline: [leg()], drafts: [draft], expiries: ["2026-09-24"], chain, underlying: "NIFTY", netCashflow: -1250 });
+  assert.match(html, /Contract · NIFTY/);
+  // The conflicted 23,050 is skipped: one step down is 23,000, and 23,100 is the last strike.
+  assert.match(html, /aria-label="Previous strike for[^"]*" title="23,000"/);
+  assert.match(html, /aria-label="Next strike for[^"]*" title="Last strike in the chain" disabled=""/);
+  assert.match(html, /Net <b class="text-loss">-₹1,250</);
 });
 
 test("shares and futures remain editable as linear closes without option contract controls", () => {
@@ -95,7 +108,7 @@ test("mixed expiry metrics preserve global limits and a signed debit", () => {
   const html = render(BuilderMetrics, { comparison: { combined: payoff, expiries: ["2026-09-24", "2026-10-29"], adjustmentCashflow: -400 } });
   assert.match(html, /Scenario max loss/);
   assert.match(html, /Scenario max profit/);
-  assert.match(html, /New premium \(debit\)/);
+  assert.match(html, /New premium<\/p>.*debit/s);
   assert.match(html, /-₹400/);
   assert.match(html, /₹80 \/ ₹120/);
 });
@@ -112,7 +125,8 @@ test("the summary carries margin and hedge benefit, and what the margin was befo
     margin: { status: "AVAILABLE", baseline: { withBenefitMargin: 12000, hedgeBenefit: 0 }, combined: { withBenefitMargin: 18198, hedgeBenefit: 59822 } } } });
   assert.equal((html.match(/<p>/g) ?? []).length, 6);
   assert.match(html, /Margin.*₹18,198/s);
-  assert.match(html, /was ₹12,000/);
+  assert.match(html, /Was ₹12,000 before the drafts/);
+  assert.match(html, /▲6,198/);
   assert.match(html, /Hedge benefit.*₹59,822/s);
 });
 

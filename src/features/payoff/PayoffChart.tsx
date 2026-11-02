@@ -71,6 +71,9 @@ export function PayoffChart({
   todayAt?: Date;
 }) {
   const styled = variant !== "default";
+  // The builder draws its legend over the plot and its range buttons beside the date slider, so the
+  // chart keeps two rows of height.
+  const builder = variant === "builder";
   const [chartWidth, setChartWidth] = useState(0);
   const [mode, setMode] = useState<"auto" | "custom" | number>("auto");
   const [custom, setCustom] = useState<PriceRange | null>(null);
@@ -129,10 +132,7 @@ export function PayoffChart({
   const gradientOffset =
     expiryMax <= 0 ? 0 : expiryMin >= 0 ? 1 : expiryMax / (expiryMax - expiryMin);
 
-  return (
-    <div className={styled ? `payoff-chart-live${variant === "builder" ? " builder-chart" : ""}` : "space-y-3"}>
-      {styled ? <>
-        <div className="payoff-toolbar">
+  const rangeGroup = <>
           <div role="group" aria-label="Price range" className="payoff-toolbar-range">
             {[0.05, 0.10, 0.15].map((percent) => (
               <button key={percent} type="button" aria-pressed={mode === percent} disabled={anchor <= 0}
@@ -146,6 +146,8 @@ export function PayoffChart({
               {formatINRWhole(xMin)} – {formatINRWhole(xMax)}. {mode === "auto" ? `Auto: ${isIndex ? "index ±10%" : "stock ±15%"} around spot, widened to include strikes and breakevens.` : "Selected view."}{spot > 0 ? "" : " Spot unavailable; range centred on strategy prices."} Zoom changes the view only; profit/loss limits remain unchanged.
             </InfoTip>
           </div>
+  </>;
+  const legend = <>
           <div className="payoff-curve-legend">
             {baseline && <span className="text-muted-foreground"><i className="payoff-curve-legend-baseline" />{labels.baseline}</span>}
             {todayAt && (projection ? <>
@@ -158,8 +160,8 @@ export function PayoffChart({
               <InfoTip label="Why the projected curve is unavailable" align="end">It needs a spot price and at least one option price to infer volatility from.</InfoTip></span>)}
             <span><i className="payoff-curve-legend-expiry" />{baseline ? labels.current : "Expiry"}</span>
           </div>
-        </div>
-  {editing && <form className="flex flex-wrap items-end gap-2 text-xs" onSubmit={(e) => {
+  </>;
+  const customForm = editing && <form className="flex flex-wrap items-end gap-2 text-xs" onSubmit={(e) => {
         e.preventDefault();
         if (draftValid) { setCustom([Number(draftLow), Number(draftHigh)]); setMode("custom"); setEditing(false); }
       }}>
@@ -167,7 +169,14 @@ export function PayoffChart({
         <label>Maximum price<input aria-label="Maximum price" type="number" min="0" step="any" value={draftHigh} onChange={(e) => setDraftHigh(e.target.value)} className="ml-2 w-28 rounded border border-border bg-background p-1.5" /></label>
         <button type="submit" disabled={!draftValid} className="rounded border border-border p-1.5 disabled:opacity-40">Apply</button>
         {!draftValid && <span role="status">Enter a nonnegative minimum and a larger maximum.</span>}
-      </form>}
+      </form>;
+
+  return (
+    <div className={styled ? `payoff-chart-live${variant === "builder" ? " builder-chart" : ""}` : "space-y-3"}>
+      {styled ? <>
+        {!builder && <div className="payoff-toolbar">
+{rangeGroup}{legend}        </div>}
+        {!builder && customForm}
       </> : <>
       <details open className="contents">
       <summary className="hidden">Price range · {formatINRWhole(xMin)} – {formatINRWhole(xMax)}</summary>
@@ -203,11 +212,13 @@ export function PayoffChart({
       )}
       </>}
     {styled && axisTitles && <p className="px-5 pt-2 text-sm text-muted-foreground">P&amp;L (₹)</p>}
-    <div className={styled ? "payoff-chart-canvas" : "h-[23.75rem] w-full"}>
+    <div className={styled ? `payoff-chart-canvas${builder ? " builder-chart-canvas" : ""}` : "h-[23.75rem] w-full"}>
+      {builder && <div className="builder-chart-legend">{legend}</div>}
       <ResponsiveContainer width="100%" height="100%" onResize={(width) => setChartWidth(width)}>
         <ComposedChart
           data={points}
-          margin={{ top: 16, right: 16, bottom: 8, left: 8 }}
+          // The builder's legend sits in the extra top margin, above the plot.
+          margin={{ top: builder ? 30 : 16, right: 16, bottom: 8, left: 8 }}
         >
           <defs>
             <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
@@ -316,7 +327,31 @@ export function PayoffChart({
       </ResponsiveContainer>
     </div>
     {styled && axisTitles && <p className="pb-2 text-center text-sm text-muted-foreground">Underlying price (₹)</p>}
-    {styled && projection && (
+    {builder && customForm}
+    {builder && (
+      <div className="payoff-target builder-chart-foot">
+        {rangeGroup}
+        {projection && maxDays > 0 && <>
+          <span className="payoff-target-divider" aria-hidden />
+          <button type="button" className="payoff-target-today" onClick={() => setTargetDays(0)}>Today</button>
+          <div className="payoff-target-track">
+            <output htmlFor={`target-${id}`} className="payoff-target-bubble"
+              style={{ left: `calc(${pct}% + ${10 - pct * 0.2}px)`, transform: `translateX(-${pct}%)` }}>
+              <i style={{ background: TODAY }} aria-hidden />{targetCaption(days, maxDays, target)}
+            </output>
+            <input id={`target-${id}`} type="range" aria-label="Target date" min={0} max={maxDays} step={1} value={days}
+              aria-valuetext={targetCaption(days, maxDays, target)} onChange={(e) => setTargetDays(Number(e.target.value))}
+              style={{ background: `linear-gradient(90deg, var(--gb-gold) ${pct}%, hsl(var(--border)) ${pct}%) center / 100% 4px no-repeat` }} />
+          </div>
+          <span className="payoff-target-end">{todayAt && dayMonth(targetMoment(todayAt, maxDays))} · expiry</span>
+        </>}
+        {/* The projected curve's breakevens at the slider's date; the header's figure is at expiry. */}
+        {projection && <span className="payoff-target-breakevens" title={`Breakevens of the ${curveName} (est.) curve; the strategy figures above are at expiry`}>
+          <i style={{ background: TODAY }} aria-hidden />BE
+          <b>{targetBreakevens.length ? targetBreakevens.map(formatPrice).join(" · ") : "—"}</b></span>}
+      </div>
+    )}
+    {styled && !builder && projection && (
       <div className="payoff-target">
         {maxDays > 0 && <>
           <button type="button" className="payoff-target-today" onClick={() => setTargetDays(0)}>Today</button>

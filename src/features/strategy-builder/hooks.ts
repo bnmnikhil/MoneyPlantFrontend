@@ -71,3 +71,17 @@ export function useFutures(underlying?: string, exchange = "NSE", sourceConnecti
     refetchIntervalInBackground: false,
   });
 }
+
+/**
+ * The underlying's day move for the toolbar. The price beside it stays the chain's spot, so it
+ * agrees with the legs; this adds only the change, which the chain does not carry.
+ */
+export function useDayMove(underlying?: string) {
+  return useQuery({
+    queryKey: ["market-data", "spot", underlying],
+    queryFn: () => api.spot([underlying!]),
+    enabled: !!underlying,
+    refetchInterval: 30_000,
+    select: (quotes) => quotes[0]?.changePercent ?? null,
+  });
+}

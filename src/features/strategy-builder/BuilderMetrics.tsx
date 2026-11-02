@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { PayoffComparisonResponse } from "@/types/api";
 import { formatINRWhole, formatPrice, formatSignedINR, formatSignedINRWhole } from "@/lib/format";
 
@@ -15,27 +16,37 @@ const MARGIN_REASON: Record<PayoffComparisonResponse["margin"]["status"], string
 };
 
 /**
- * The strategy's six figures under the legs (Builder layout B): max profit and loss, breakevens,
+ * The strategy's six figures in the Payoff header (Builder layout C): max profit and loss, breakevens,
  * the draft's premium, and the margin with its hedge benefit. Margin is GoldenBook's estimate, never
- * the broker's bill, and when it cannot be estimated no number is shown at all.
+ * the broker's bill, and when it cannot be estimated no number is shown at all. While a new scenario
+ * is calculating the figures dim rather than vanish; `info` (the pricing assumptions) sits by the
+ * breakevens.
  */
-export function BuilderMetrics({ comparison, linearTrades = false }: { comparison: PayoffComparisonResponse; linearTrades?: boolean }) {
+export function BuilderMetrics({ comparison, linearTrades = false, busy = false, info }: {
+  comparison: PayoffComparisonResponse; linearTrades?: boolean; busy?: boolean; info?: ReactNode;
+}) {
   const mixed = comparison.expiries.length > 1;
   const margin = comparison.margin;
   const marginKnown = margin?.status === "AVAILABLE" && !!margin.combined;
   const baselineMargin = marginKnown && margin.baseline && margin.baseline.withBenefitMargin > 0 ? margin.baseline.withBenefitMargin : null;
-  const metrics: { label: string; value: string; colour: string; title?: string; sub?: string }[] = [
+  const marginChange = baselineMargin !== null ? Math.round(margin.combined!.withBenefitMargin - baselineMargin) : 0;
+  const credit = comparison.adjustmentCashflow >= 0;
+  const metrics: { label: string; value: string; colour: string; title?: string; note?: ReactNode; extra?: ReactNode }[] = [
     { label: mixed ? "Scenario max profit" : "Max profit", value: comparison.combined.unboundedProfit ? "Unlimited" : signedMoney(comparison.combined.maxProfit), colour: "text-profit" },
     { label: mixed ? "Scenario max loss" : "Max loss", value: comparison.combined.unboundedLoss ? "Unlimited" : signedMoney(comparison.combined.maxLoss), colour: "text-loss" },
-    { label: "Breakevens", value: comparison.combined.breakevens.length ? comparison.combined.breakevens.map(formatPrice).join(" / ") : "—", colour: "" },
-    { label: `${linearTrades ? "New cashflow" : "New premium"} (${comparison.adjustmentCashflow >= 0 ? "credit" : "debit"})`, value: signedMoney(comparison.adjustmentCashflow), colour: comparison.adjustmentCashflow >= 0 ? "text-profit" : "text-loss" },
+    { label: comparison.combined.breakevens.length > 1 ? "Breakevens" : "Breakeven", value: comparison.combined.breakevens.length ? comparison.combined.breakevens.map(formatPrice).join(" / ") : "—", colour: "",
+      title: "At expiry", extra: info },
+    { label: linearTrades ? "New cashflow" : "New premium", value: signedMoney(comparison.adjustmentCashflow), colour: credit ? "text-profit" : "text-loss",
+      note: <span className="text-muted-foreground">{credit ? "credit" : "debit"}</span> },
     { label: "Margin", value: marginKnown ? formatINRWhole(margin.combined!.withBenefitMargin) : "—", colour: "",
-      title: marginKnown ? "GoldenBook's estimate (SPAN + exposure, after hedge benefit). Premium is separate; this is not the broker's margin bill." : `Margin ${MARGIN_REASON[margin?.status ?? "UNAVAILABLE_SPOT"]}`,
-      sub: !marginKnown && margin ? MARGIN_REASON[margin.status] : baselineMargin !== null ? `was ${formatINRWhole(baselineMargin)}` : undefined },
+      title: marginKnown
+        ? `GoldenBook's estimate (SPAN + exposure, after hedge benefit). Premium is separate; this is not the broker's margin bill.${baselineMargin !== null ? ` Was ${formatINRWhole(baselineMargin)} before the drafts.` : ""}`
+        : `Margin ${MARGIN_REASON[margin?.status ?? "UNAVAILABLE_SPOT"]}`,
+      note: marginChange !== 0 ? <span className={marginChange < 0 ? "text-profit" : "text-loss"}>{marginChange < 0 ? "▼" : "▲"}{formatINRWhole(Math.abs(marginChange)).replace("₹", "")}</span> : undefined },
     { label: "Hedge benefit", value: marginKnown ? formatINRWhole(margin.combined!.hedgeBenefit) : "—", colour: marginKnown ? "text-profit" : "" },
   ];
-  return <div className="builder-metrics">{metrics.map((metric) => <div key={metric.label} title={metric.title}>
-    <p>{metric.label}</p><strong className={metric.colour}>{metric.value}</strong>{metric.sub && <span className="builder-metric-sub">{metric.sub}</span>}
+  return <div className={cn("builder-metrics", busy && "builder-metrics-busy")} aria-busy={busy}>{metrics.map((metric) => <div key={metric.label} title={metric.title}>
+    <p>{metric.label}{metric.extra}</p><strong className={metric.colour}>{metric.value}{metric.note && <small> {metric.note}</small>}</strong>
   </div>)}</div>;
 }
 

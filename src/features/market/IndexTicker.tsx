@@ -1,20 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
 import { brokerLabel } from "@/components/BrokerBadge";
+import { SPOT_QUERY_KEY, useLiveSpots } from "@/features/market/quoteStream";
 import { TICKER_INDICES, tickerItems, type TickerItem } from "@/features/market/tickerItems";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 /**
- * NIFTY and BANKNIFTY spot, refreshed every 30s like the other live figures.
- * One query shared by the header and the mobile strip, so showing both costs one
- * request. The backend caches per user for 5s, so this always fetches fresh.
+ * NIFTY and BANKNIFTY spot. Pushed once a second from the user's Paytm socket
+ * when there is one (quoteStream.ts, which writes into this same query); otherwise
+ * polled every 30s like the other live figures, and the poll resumes whenever the
+ * stream stops. One query shared by the header and the mobile strip.
  */
 function useIndexSpots() {
+  const live = useLiveSpots();
   return useQuery({
-    queryKey: ["market-data", "spot", ...TICKER_INDICES],
+    queryKey: SPOT_QUERY_KEY,
     queryFn: () => api.spot(TICKER_INDICES),
     staleTime: 15_000,
-    refetchInterval: 30_000,
+    refetchInterval: live ? false : 30_000,
   });
 }
 

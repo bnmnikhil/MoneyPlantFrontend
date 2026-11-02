@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLiveQuotes } from "@/features/market/quoteStream";
+import { applyLiveMarks } from "@/features/positions/liveMarks";
 import { api } from "@/lib/api";
 import type { Margins } from "@/types/api";
 
@@ -8,14 +10,21 @@ export const positionsKeys = {
   margins: ["margins"] as const,
 };
 
-/** Live positions across every connected broker. Auto-refreshes every 30s. */
+/**
+ * Live positions across every connected broker. Polled every 30s, which is what
+ * finds new and closed legs (and tells the server what to stream); between polls
+ * each streamed price moves its row's mark and P&L (liveMarks.ts).
+ */
 export function usePositions() {
-  return useQuery({
+  const query = useQuery({
     queryKey: positionsKeys.all,
     queryFn: api.positions,
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
   });
+  const { quotes } = useLiveQuotes();
+  const data = useMemo(() => query.data && applyLiveMarks(query.data, quotes), [query.data, quotes]);
+  return { ...query, data };
 }
 
 /** Zero-value totals, so callers never have to null-check before formatting. */

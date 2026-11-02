@@ -226,6 +226,14 @@ export interface Position extends BrokerSourced {
    * "did the contract master resolve this row?" is asked once.
    */
   contract: PositionContract | null;
+  /**
+   * The row's live-price identity, e.g. `NIFTY|2026-11-25|23000|CE`: what a price
+   * stream subscribes by and what a tick is matched to a row by. The same
+   * contract at two brokers has the same key. Null for equity and for a row the
+   * contract master did not resolve; those keep their polled price. Opaque here:
+   * compare it, never parse it.
+   */
+  quoteKey: string | null;
   product: string;
   qty: number;
   avgPrice: number;

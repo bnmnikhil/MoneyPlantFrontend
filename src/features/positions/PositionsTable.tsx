@@ -1,10 +1,13 @@
 ﻿import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
+import { brokerLabel } from "@/components/BrokerBadge";
 import { Button } from "@/components/ui/button";
 import { MarginFigure } from "@/components/MarginFigure";
 import { PremiumFigure } from "@/components/PremiumFigure";
 import { OverviewBroker } from "@/features/dashboard/OverviewFigures";
 import { accountLabel } from "@/features/dashboard/aggregate";
+import { useLiveQuotes } from "@/features/market/quoteStream";
+import { liveTitle } from "./liveMarks";
 import type { Position } from "@/types/api";
 import { groupPositions, premiumLeft, type RightGroup, type UnderlyingGroup } from "./grouping";
 import type { GroupMargin } from "./margin";
@@ -30,6 +33,14 @@ function Money({ value }: { value: number }) {
   return <span className={cn("tnum whitespace-nowrap font-medium", pnlColor(value))}>{formatSignedINRWhole(value)}</span>;
 }
 
+/** A small dot beside a price that is streaming; nothing beside a polled one. */
+function LiveDot({ quoteKey }: { quoteKey: string | null }) {
+  const { live, quotes } = useLiveQuotes();
+  const q = live && quoteKey ? quotes.get(quoteKey) : undefined;
+  if (!q) return null;
+  return <span role="img" aria-label={liveTitle(q, brokerLabel)} title={liveTitle(q, brokerLabel)} className="mr-1.5 inline-block size-1.5 rounded-full bg-profit align-middle" />;
+}
+
 function FoldIcon({ open }: { open: boolean }) {
   return open ? <ChevronDown className="size-4 shrink-0" /> : <ChevronRight className="size-4 shrink-0" />;
 }
@@ -42,7 +53,7 @@ function LegRow({ p, nested }: { p: Position; nested: boolean }) {
   return <tr className="positions-leg-row">
     <td><span className={cn("positions-tree-symbol", nested && "positions-tree-deep")}>{p.symbol}</span></td>
     <td>{p.product}</td><td>{formatNumber(p.qty)}</td>
-    <td>{price.format(p.avgPrice)}</td><td>{p.priceKnown ? price.format(p.ltp) : <span title="Quote unavailable">—</span>}</td>
+    <td>{price.format(p.avgPrice)}</td><td><LiveDot quoteKey={p.quoteKey} />{p.priceKnown ? price.format(p.ltp) : <span title="Quote unavailable">—</span>}</td>
     <td><PremiumFigure compact premiumLeft={premiumLeft(p)} /></td>
     <td className="positions-dash" title="Margin is estimated per underlying, not displayed per leg">—</td>
     <td><Money value={p.pnl} /></td><td><Money value={p.dayChange} /></td>
@@ -164,7 +175,7 @@ export function PositionsTable({ positions, groupMargin, connectionMargin, accou
                 <dt>P&amp;L</dt><dd className="text-right"><Money value={p.pnl} /></dd>
                 <dt>Day P&amp;L</dt><dd className="text-right"><Money value={p.dayChange} /></dd>
                 <dt>Avg price</dt><dd className="text-right">{formatINR(p.avgPrice)}</dd>
-                <dt>LTP</dt><dd className="text-right">{p.priceKnown ? formatINR(p.ltp) : "—"}</dd>
+                <dt>LTP</dt><dd className="text-right"><LiveDot quoteKey={p.quoteKey} />{p.priceKnown ? formatINR(p.ltp) : "—"}</dd>
                 <dt>Premium left</dt><dd className="text-right"><PremiumFigure compact premiumLeft={premiumLeft(p)} /></dd>
               </dl>
             </div>)}

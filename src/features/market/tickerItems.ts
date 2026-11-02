@@ -65,3 +65,36 @@ export function spotItem(
     title: `${underlying} spot${moveText} ${sourceText(q.source, nameOf)}`.trim(),
   };
 }
+
+/**
+ * A streamed quote folded into the polled list: replaces that underlying's entry,
+ * or adds it. A new array, so the query cache sees a change.
+ */
+export function mergeSpot(quotes: SpotQuote[] | undefined, tick: SpotQuote): SpotQuote[] {
+  const rest = (quotes ?? []).filter((quote) => quote.underlying !== tick.underlying);
+  return [...rest, tick];
+}
+
+/** One key's price as the quotes stream sends it. */
+export interface LiveQuote {
+  price: number;
+  change: number | null;
+  changePercent: number | null;
+  source: string;
+}
+
+const SPOT_SUFFIX = "|SPOT";
+
+/**
+ * A pushed batch's spot entries (`NIFTY|SPOT`) folded into the ticker's list; the
+ * batch's contracts are for the positions table and are ignored here.
+ */
+export function applySpotQuotes(quotes: SpotQuote[] | undefined, batch: Record<string, LiveQuote>): SpotQuote[] {
+  let next = quotes ?? [];
+  for (const [key, q] of Object.entries(batch)) {
+    if (!key.endsWith(SPOT_SUFFIX)) continue;
+    const underlying = key.slice(0, -SPOT_SUFFIX.length);
+    next = mergeSpot(next, { underlying, price: q.price, change: q.change, changePercent: q.changePercent, source: q.source });
+  }
+  return next;
+}

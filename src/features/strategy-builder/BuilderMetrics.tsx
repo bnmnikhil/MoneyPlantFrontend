@@ -7,6 +7,9 @@ const signedMoney = (value: number) => Math.abs(value) >= 1000 ? formatSignedINR
 import { cn } from "@/lib/utils";
 import { niceTicks } from "@/features/payoff/chartRange";
 import { legPnlAtSpot } from "./payoffMath";
+import { expiryValuation, projectedPnl } from "@/features/payoff/projection";
+import type { Projection, ProjectionLeg } from "@/features/payoff/projection";
+import { expiryLabel } from "@/features/payoff/expiry";
 
 const MARGIN_REASON: Record<PayoffComparisonResponse["margin"]["status"], string> = {
   AVAILABLE: "",
@@ -25,17 +28,20 @@ const MARGIN_REASON: Record<PayoffComparisonResponse["margin"]["status"], string
 export function BuilderMetrics({ comparison, linearTrades = false, busy = false, info }: {
   comparison: PayoffComparisonResponse; linearTrades?: boolean; busy?: boolean; info?: ReactNode;
 }) {
-  const mixed = comparison.expiries.length > 1;
+  // Several expiries are valued at the first (valuedAt); without a volatility to do that, every leg
+  // is at intrinsic at one price, a scenario rather than a date, and labelled so.
+  const scenario = comparison.expiries.length > 1 && !comparison.valuedAt;
+  const at = comparison.valuedAt ? `At the ${expiryLabel(comparison.valuedAt)} expiry; later contracts keep their time value at today's implied volatility` : "At expiry";
   const margin = comparison.margin;
   const marginKnown = margin?.status === "AVAILABLE" && !!margin.combined;
   const baselineMargin = marginKnown && margin.baseline && margin.baseline.withBenefitMargin > 0 ? margin.baseline.withBenefitMargin : null;
   const marginChange = baselineMargin !== null ? Math.round(margin.combined!.withBenefitMargin - baselineMargin) : 0;
   const credit = comparison.adjustmentCashflow >= 0;
   const metrics: { label: string; value: string; colour: string; title?: string; note?: ReactNode; extra?: ReactNode }[] = [
-    { label: mixed ? "Scenario max profit" : "Max profit", value: comparison.combined.unboundedProfit ? "Unlimited" : signedMoney(comparison.combined.maxProfit), colour: "text-profit" },
-    { label: mixed ? "Scenario max loss" : "Max loss", value: comparison.combined.unboundedLoss ? "Unlimited" : signedMoney(comparison.combined.maxLoss), colour: "text-loss" },
+    { label: scenario ? "Scenario max profit" : "Max profit", value: comparison.combined.unboundedProfit ? "Unlimited" : signedMoney(comparison.combined.maxProfit), colour: "text-profit", title: at },
+    { label: scenario ? "Scenario max loss" : "Max loss", value: comparison.combined.unboundedLoss ? "Unlimited" : signedMoney(comparison.combined.maxLoss), colour: "text-loss", title: at },
     { label: comparison.combined.breakevens.length > 1 ? "Breakevens" : "Breakeven", value: comparison.combined.breakevens.length ? comparison.combined.breakevens.map(formatPrice).join(" / ") : "—", colour: "",
-      title: "At expiry", extra: info },
+      title: at, extra: info },
     { label: linearTrades ? "New cashflow" : "New premium", value: signedMoney(comparison.adjustmentCashflow), colour: credit ? "text-profit" : "text-loss",
       note: <span className="text-muted-foreground">{credit ? "credit" : "debit"}</span> },
     { label: "Margin", value: marginKnown ? formatINRWhole(margin.combined!.withBenefitMargin) : "—", colour: "",
@@ -50,11 +56,10 @@ export function BuilderMetrics({ comparison, linearTrades = false, busy = false,
   </div>)}</div>;
 }
 
-export interface LadderLeg { type: string; strike: number; price: number; qty: number }
-
-/** Expiry P&L of a set of legs at one underlying price, to the paisa. */
-function pnlAt(legs: LadderLeg[], price: number) {
-  return Math.round(100 * legs.reduce((sum, leg) => sum + legPnlAtSpot(leg, price), 0)) / 100;
+/** Expiry P&L of a set of legs at one underlying price, to the paisa: at the first of several expiries when valued there. */
+function pnlAt(legs: ProjectionLeg[], projection: Projection | undefined, price: number) {
+  if (projection) return projectedPnl(projection, price);
+  return Math.round(100 * legs.reduce((sum, leg) => sum + legPnlAtSpot({ ...leg, price: leg.avgPrice }, price), 0)) / 100;
 }
 
 /**
@@ -62,18 +67,23 @@ function pnlAt(legs: LadderLeg[], price: number) {
  * prices around spot, the existing positions beside the strategy after adjustments, and the row
  * nearest spot marked. Computed in the browser from the same legs the chart draws.
  */
-export function PnlLadder({ spot, isIndex, baseline, combined }: { spot: number | null; isIndex: boolean; baseline: LadderLeg[]; combined: LadderLeg[] }) {
+export function PnlLadder({ spot, isIndex, baseline, combined, now }: {
+  spot: number | null; isIndex: boolean; baseline: ProjectionLeg[]; combined: ProjectionLeg[]; now?: Date;
+}) {
   if (spot === null || spot <= 0) return <p className="builder-empty">A P&amp;L table needs the current spot.</p>;
+  // The same date as the chart's expiry curves: the first of several expiries.
+  const valuation = now ? expiryValuation([combined, baseline], spot, now) : null;
+  const [atExpiry, baselineAtExpiry] = valuation?.projections ?? [];
   const swing = isIndex ? 0.1 : 0.15;
   const prices = niceTicks(spot * (1 - swing), spot * (1 + swing), 14);
   const nearest = prices.reduce((best, price) => Math.abs(price - spot) < Math.abs(best - spot) ? price : best, prices[0]);
   const hasBaseline = baseline.length > 0;
-  return <div className="builder-ladder" role="region" aria-label="P&L at expiry by underlying price" tabIndex={0}>
+  return <div className="builder-ladder" role="region" aria-label={valuation ? `P&L at the ${expiryLabel(valuation.expiry)} expiry by underlying price` : "P&L at expiry by underlying price"} tabIndex={0}>
     <table>
       <thead><tr><th>Underlying</th><th>Change</th>{hasBaseline && <th>Existing</th>}<th>{hasBaseline ? "After adjustments" : "Strategy"}</th></tr></thead>
       <tbody>{prices.map((price) => {
-        const after = pnlAt(combined, price);
-        const before = pnlAt(baseline, price);
+        const after = pnlAt(combined, atExpiry, price);
+        const before = pnlAt(baseline, baselineAtExpiry, price);
         return <tr key={price} className={cn(price === nearest && "builder-ladder-now")}>
           <td>{formatPrice(price)}</td>
           <td className="text-muted-foreground">{((price / spot - 1) * 100).toFixed(1)}%</td>

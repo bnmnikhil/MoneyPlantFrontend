@@ -238,18 +238,54 @@ export function istDate(moment: Date): string {
 }
 
 /**
- * Whole calendar days from today (in India) to the latest open expiry: the slider's last stop.
- * 0 when nothing open expires after today.
+ * Whole calendar days from today (in India) to the first open expiry: the slider's last stop. A
+ * book of several expiries is drawn at its first (see `expiryValuation`), and past it a settled
+ * leg's price is unknown, so the slider goes no further. 0 when nothing open expires after today.
  */
-export function daysToLastExpiry(legs: ProjectionLeg[], now: Date): number {
+export function daysToFirstExpiry(legs: ProjectionLeg[], now: Date): number {
   const today = Date.parse(`${istDate(now)}T00:00:00Z`);
-  let days = 0;
+  let days: number | null = null;
   for (const leg of legs) {
     if (leg.qty === 0 || !leg.expiry) continue;
     const expiry = Date.parse(`${leg.expiry}T00:00:00Z`);
-    if (Number.isFinite(expiry)) days = Math.max(days, Math.round((expiry - today) / DAY_MS));
+    if (!Number.isFinite(expiry)) continue;
+    const left = Math.round((expiry - today) / DAY_MS);
+    if (left >= 0 && (days === null || left < days)) days = left;
   }
-  return days;
+  return days ?? 0;
+}
+
+/**
+ * The first open expiry on or after today (in India) when the legs hold more than one; null for a
+ * book of a single expiry. A mirror of the backend's `ExpiryHorizon.firstOf`.
+ */
+export function firstOfSeveralExpiries(legs: ProjectionLeg[], now: Date): string | null {
+  const today = istDate(now);
+  const open = [...new Set(legs.filter((leg) => leg.qty !== 0 && leg.expiry && leg.expiry >= today)
+    .map((leg) => leg.expiry as string))].sort();
+  return open.length > 1 ? open[0] : null;
+}
+
+/**
+ * The expiry curves of a book of several expiries, valued at the first of them: the legs expiring
+ * then at intrinsic, later options at Black-Scholes with their own implied volatility, later
+ * futures with their remaining basis. `curves` are drawn together (the existing positions and the
+ * strategy after adjustments) and share one date; null when the legs hold a single expiry, or when
+ * any curve cannot be valued, and every curve then falls back to intrinsic at one price, as the
+ * backend's figures do.
+ */
+export function expiryValuation(curves: ProjectionLeg[][], spot: number, now: Date):
+  { expiry: string; projections: Projection[] } | null {
+  const expiry = firstOfSeveralExpiries(curves.flat(), now);
+  if (!expiry) return null;
+  const at = new Date(`${expiry}T10:00:00Z`);
+  const projections: Projection[] = [];
+  for (const legs of curves) {
+    const projection = prepareProjection(legs, spot, now, at);
+    if (!projection) return null;
+    projections.push(projection);
+  }
+  return { expiry, projections };
 }
 
 /**

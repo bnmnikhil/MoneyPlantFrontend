@@ -129,7 +129,9 @@ export function PayoffPage() {
             data.warnings.length > 0 && `${data.warnings.length} warning${data.warnings.length > 1 ? "s" : ""}`].filter(Boolean).join(" · ")}
           <span className="payoff-link"> Details</span>
         </summary>
-        {mixedExpiries && <p>{data.expiries.map(expiryLabel).join(" / ")}. This curve assumes the same underlying price at each expiry. It does not value later contracts at the first expiry, so the scenario loss is not a guaranteed cap across these dates.</p>}
+        {mixedExpiries && <p>{data.expiries.map(expiryLabel).join(" / ")}. {data.valuedAt
+          ? `The expiry curve and its figures are at the first, ${expiryLabel(data.valuedAt)}, where the date slider stops. Later contracts keep their time value, priced at the volatility implied by their current prices; a change in volatility is not modelled.`
+          : "This curve assumes the same underlying price at each expiry. It does not value later contracts at the first expiry, so the scenario loss is not a guaranteed cap across these dates."}</p>}
         {data.warnings.map((warning, index) => <p key={index}>{warning}</p>)}
       </details>}
       <div className="payoff-live-grid">

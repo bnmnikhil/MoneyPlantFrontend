@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { RATE, bsPrice, cdf, daysToLastExpiry, impliedVol, intrinsic, istDate, prepareProjection, projectedBreakevens, projectedPnl, targetMoment, yearsToExpiry } from '../src/features/payoff/projection.ts';
+import { RATE, bsPrice, cdf, daysToFirstExpiry, expiryValuation, firstOfSeveralExpiries, impliedVol, intrinsic, istDate, prepareProjection, projectedBreakevens, projectedPnl, targetMoment, yearsToExpiry } from '../src/features/payoff/projection.ts';
 import { chartPoints } from '../src/features/payoff/chartRange.ts';
 
 const close = (actual, expected, tolerance, message) =>
@@ -102,11 +102,38 @@ test('the date in India rolls over at midnight IST, not UTC', () => {
   assert.equal(istDate(new Date('2026-10-10T18:30:00Z')), '2026-10-11');
 });
 
-test('the slider runs in calendar days from today to the last open expiry', () => {
-  assert.equal(daysToLastExpiry(condor, NOW), 17);
-  const mixed = [...condor, { ...condor[0], expiry: '2026-11-24' }, { ...condor[1], qty: 0, expiry: '2026-12-29' }];
-  assert.equal(daysToLastExpiry(mixed, NOW), 45);
-  assert.equal(daysToLastExpiry(condor, new Date('2026-10-27T12:00:00Z')), 0);
+test('the slider runs in calendar days from today to the first open expiry', () => {
+  assert.equal(daysToFirstExpiry(condor, NOW), 17);
+  const mixed = [...condor, { ...condor[0], expiry: '2026-11-24' }, { ...condor[1], qty: 0, expiry: '2026-10-20' }];
+  assert.equal(daysToFirstExpiry(mixed, NOW), 17);
+  // An expiry already past is not a stop.
+  assert.equal(daysToFirstExpiry([{ ...condor[0], expiry: '2026-10-01' }, condor[1]], NOW), 17);
+  assert.equal(daysToFirstExpiry(condor, new Date('2026-10-27T12:00:00Z')), 0);
+});
+
+test('several expiries are valued at the first, where the today curve ends', () => {
+  assert.equal(firstOfSeveralExpiries(condor, NOW), null);
+  assert.equal(expiryValuation([condor], SPOT, NOW), null);
+  const later = { ...condor[1], qty: -condor[1].qty, expiry: '2026-11-24', currentMark: condor[1].currentMark + 400 };
+  const mixed = [...condor, later];
+  assert.equal(firstOfSeveralExpiries(mixed, NOW), EXPIRY);
+
+  const valuation = expiryValuation([mixed, condor], SPOT, NOW);
+  assert.equal(valuation.expiry, EXPIRY);
+  assert.equal(valuation.projections.length, 2);
+  // The slider's last stop is the same moment, so the two curves coincide there.
+  const lastStop = prepareProjection(mixed, SPOT, NOW, targetMoment(NOW, daysToFirstExpiry(mixed, NOW)));
+  for (const spot of [52000, 58000, SPOT, 64000]) {
+    assert.equal(projectedPnl(valuation.projections[0], spot), projectedPnl(lastStop, spot));
+  }
+  // The condor's own legs are at intrinsic on its expiry; the later leg is not.
+  const intrinsicOnly = chartPoints(condor, [52000, 64000]);
+  for (const point of intrinsicOnly) close(projectedPnl(valuation.projections[1], point.spot), point.pnl, 0.01);
+  assert.ok(valuation.projections[0].legs.some((leg) => leg.kind === 'option' && leg.years > 0));
+
+  // A later option with no volatility anywhere: no valuation, so every curve falls back to intrinsic.
+  const unpriced = mixed.map((leg) => ({ ...leg, currentMarkKnown: false, currentMark: null }));
+  assert.equal(expiryValuation([unpriced], SPOT, NOW), null);
 });
 
 test('a target day is valued at that day\'s 15:30 IST close; day 0 is now', () => {
@@ -117,7 +144,7 @@ test('a target day is valued at that day\'s 15:30 IST close; day 0 is now', () =
 });
 
 test('at the last expiry the target curve is the expiry curve', () => {
-  const projection = prepareProjection(condor, SPOT, NOW, targetMoment(NOW, daysToLastExpiry(condor, NOW)));
+  const projection = prepareProjection(condor, SPOT, NOW, targetMoment(NOW, daysToFirstExpiry(condor, NOW)));
   for (const point of chartPoints(condor, [52000, 64000])) {
     close(projectedPnl(projection, point.spot), point.pnl, 0.01, `at ${point.spot}`);
   }

@@ -25,7 +25,6 @@ import {
   applyRecipe,
   baselineFromPayoff,
   changeDraftContract,
-  chartLeg,
   projectionLeg,
   closeDraft,
   draftFromChain,
@@ -346,7 +345,6 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
 
   const account = context?.baselineResponse ? `${brokerLabel(context.baselineResponse.brokerId)} · ${positionCurve?.accountLabel ?? "Imported account"}` : undefined;
   const netCashflow = draftCashflow(drafts);
-  const ladderLeg = (leg: ScenarioLeg) => ({ type: leg.contract.type, strike: leg.contract.strike, price: leg.entryPrice ?? 0, qty: leg.qty });
   const quotesNote = `Quotes may come from another broker; positions and margin ${account ? `remain tied to ${account}` : "stay in their original account"}.`;
   return <div className="builder-workspace builder-b">
     <section className="builder-panel builder-context" aria-label="Strategy context">
@@ -462,12 +460,14 @@ export function StrategyBuilderView({ initialBaseline, active = true }: Strategy
           {comparison ? <>
             {chartTab === "chart"
               ? <PayoffChart variant="builder" axisTitles={false} key={activeKey} payoff={comparison.combined} spot={comparison.spot ?? 0} legs={projectionLegs} isIndex={selection.isIndex} todayAt={markedAt}
-                  baseline={baseline.length ? { payoff: comparison.baseline, legs: baseline.map(chartLeg) } : undefined} />
-              : <PnlLadder spot={comparison.spot} isIndex={selection.isIndex} baseline={baseline.map(ladderLeg)} combined={enabledCombined.map(ladderLeg)} />}
+                  baseline={baseline.length ? { payoff: comparison.baseline, legs: baseline.map(projectionLeg) } : undefined} />
+              : <PnlLadder spot={comparison.spot} isIndex={selection.isIndex} baseline={baseline.map(projectionLeg)} combined={projectionLegs} now={markedAt} />}
           </> : <div className="builder-empty builder-preview-empty">{isComparing ? "Calculating this scenario…" : "Add legs from the chain or a recipe to see the expiry payoff."}</div>}
         </section>
       </div>
-      {comparison && comparison.expiries.length > 1 && <p role="note" className="payoff-warning">Expiry scenario: {comparison.expiries.map(expiryLabel).join(" / ")}. A single terminal price is applied to every expiry; later-contract time value is not modelled at the first expiry.</p>}
+      {comparison && comparison.expiries.length > 1 && <p role="note" className="payoff-warning">{comparison.valuedAt
+        ? <>Several expiries ({comparison.expiries.map(expiryLabel).join(" / ")}): the expiry curves, figures and P&amp;L table are at the first, {expiryLabel(comparison.valuedAt)}, where the date slider stops. Later contracts keep their time value, priced at the volatility implied by their current prices; a change in volatility is not modelled.</>
+        : <>Expiry scenario: {comparison.expiries.map(expiryLabel).join(" / ")}. A single terminal price is applied to every expiry; later-contract time value is not modelled at the first expiry.</>}</p>}
       {comparison?.warnings.map((warning) => <p key={warning} role="status" className="text-xs text-orange-300">{warning}</p>)}
     </>}
   </div>;

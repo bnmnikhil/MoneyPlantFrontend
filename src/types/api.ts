@@ -396,6 +396,8 @@ export interface PayoffResponse {
   legs: PayoffLeg[];
   payoff: Payoff;
   expiries: string[];
+  /** With several expiries, the first: the date the payoff is valued at. Null for one expiry, or when it cannot be valued there. */
+  valuedAt?: string | null;
   retrievedAt: string;
   complete: boolean;
   warnings: string[];
@@ -547,6 +549,8 @@ export interface PayoffComparisonResponse {
   revision: number;
   spot: number | null;
   expiries: string[];
+  /** With several expiries, the first: the date both curves are valued at. Null otherwise. */
+  valuedAt?: string | null;
   assumptions: string[];
   baseline: Payoff;
   combined: Payoff;

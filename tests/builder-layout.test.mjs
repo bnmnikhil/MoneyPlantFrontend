@@ -138,7 +138,7 @@ test("breakevens keep their paise below ₹1,000 and drop them above", () => {
 });
 
 test("the P&L table lists round prices around spot, marks the nearest, and compares to existing", () => {
-  const spread = [{ type: "CE", strike: 265, price: 5.35, qty: 1725 }, { type: "CE", strike: 267.5, price: 4.10, qty: -1725 }];
+  const spread = [{ type: "CE", strike: 265, avgPrice: 5.35, qty: 1725 }, { type: "CE", strike: 267.5, avgPrice: 4.10, qty: -1725 }];
   const html = render(PnlLadder, { spot: 265.7, isIndex: false, baseline: [], combined: spread });
   assert.match(html, /Strategy/);
   assert.doesNotMatch(html, /Existing/);
@@ -149,6 +149,26 @@ test("the P&L table lists round prices around spot, marks the nearest, and compa
   assert.match(withBase, /Existing/);
   assert.match(withBase, /After adjustments/);
   assert.match(render(PnlLadder, { spot: null, isIndex: false, baseline: [], combined: spread }), /needs the current spot/);
+});
+
+test("several expiries: the P&L table is at the first, and the figures say so", () => {
+  const now = new Date("2026-11-03T06:00:00Z");
+  const calendar = [
+    { type: "CE", strike: 24000, avgPrice: 52.8, qty: -75, expiry: "2026-11-09", currentMark: 52.8, currentMarkKnown: true },
+    { type: "CE", strike: 24000, avgPrice: 330, qty: 75, expiry: "2026-12-29", currentMark: 330, currentMarkKnown: true },
+  ];
+  const label = (html) => html.match(/aria-label="([^"]*)"/)[1];
+  // At one price the two intrinsics cancel: every row is the debit. At 9 Nov the December call still has time value.
+  const flat = render(PnlLadder, { spot: 23644, isIndex: true, baseline: [], combined: calendar });
+  assert.equal(label(flat), "P&amp;L at expiry by underlying price");
+  const dated = render(PnlLadder, { spot: 23644, isIndex: true, baseline: [], combined: calendar, now });
+  assert.equal(label(dated), "P&amp;L at the 09 Nov 2026 expiry by underlying price");
+  assert.notEqual(dated, flat);
+
+  const comparison = { combined: { ...payoff, breakevens: [23500, 24600] }, expiries: ["2026-11-09", "2026-12-29"], valuedAt: "2026-11-09", adjustmentCashflow: 1 };
+  const html = render(BuilderMetrics, { comparison });
+  assert.doesNotMatch(html, /Scenario max/);
+  assert.match(html, /At the 09 Nov 2026 expiry; later contracts keep their time value/);
 });
 
 test("big figures drop their paise; small ones keep them", () => {

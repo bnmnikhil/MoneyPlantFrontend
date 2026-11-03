@@ -16,7 +16,7 @@ import type { ChartLeg, PriceRange } from "./chartRange";
 import { layoutReferenceLabels } from "./referenceLabels";
 import type { ReferenceLabel } from "./referenceLabels";
 import { PayoffTooltip } from "./PayoffTooltip";
-import { daysToLastExpiry, prepareProjection, projectedBreakevens, projectedPnl, targetMoment } from "./projection";
+import { daysToFirstExpiry, expiryValuation, prepareProjection, projectedBreakevens, projectedPnl, targetMoment } from "./projection";
 import type { ProjectionLeg } from "./projection";
 import { RotateCcw } from "lucide-react";
 import { InfoTip } from "./InfoTip";
@@ -58,7 +58,7 @@ export function PayoffChart({
   spot: number;
   legs: ChartLeg[] | ProjectionLeg[];
   isIndex: boolean;
-  baseline?: { payoff: Payoff; legs: ChartLeg[] };
+  baseline?: { payoff: Payoff; legs: ChartLeg[] | ProjectionLeg[] };
   variant?: "default" | "live" | "builder";
   /** Legend wording when a baseline is drawn: the builder compares adjustments, Payoff a what-if. */
   labels?: { baseline: string; current: string };
@@ -66,7 +66,8 @@ export function PayoffChart({
   axisTitles?: boolean;
   /**
    * When the legs were marked. Given, the chart also draws the "today" curve: the legs valued now
-   * at each spot (see projection.ts). Omitted, it draws the expiry payoff only.
+   * at each spot (see projection.ts), and a book of several expiries is drawn at the first of them.
+   * Omitted, it draws the expiry payoff only, every leg at intrinsic.
    */
   todayAt?: Date;
 }) {
@@ -81,7 +82,7 @@ export function PayoffChart({
   const [draftHigh, setDraftHigh] = useState("");
   const [editing, setEditing] = useState(false);
   const [targetDays, setTargetDays] = useState(0);
-  const maxDays = useMemo(() => todayAt ? daysToLastExpiry(legs, todayAt) : 0, [legs, todayAt]);
+  const maxDays = useMemo(() => todayAt ? daysToFirstExpiry(legs, todayAt) : 0, [legs, todayAt]);
   const days = Math.min(targetDays, maxDays);
   const pct = maxDays > 0 ? days / maxDays * 100 : 0;
   const target = useMemo(() => todayAt ? targetMoment(todayAt, days) : undefined, [todayAt, days]);
@@ -90,6 +91,12 @@ export function PayoffChart({
   // The projected curve's name: "Today", or its target date.
   const curveName = days === 0 || !target ? "Today" : shortDate(target);
   const rangeLegs = baseline ? [...baseline.legs, ...legs] : legs;
+  // Several expiries: the expiry curves are valued at the first, where the slider also stops, so the
+  // today curve lands on them at its last stop. Mirrors the backend's figures (ExpiryHorizon).
+  const valuation = useMemo(() => todayAt ? expiryValuation(baseline ? [legs, baseline.legs] : [legs], spot, todayAt) : null,
+    [legs, baseline, spot, todayAt]);
+  const [atExpiry, baselineAtExpiry] = valuation?.projections ?? [];
+  const expiryName = valuation ? dayMonth(new Date(`${valuation.expiry}T10:00:00Z`)) : null;
   const anchor = rangeAnchor(spot, rangeLegs);
   const auto = defaultRange(spot, isIndex, rangeLegs,
     baseline ? [...payoff.breakevens, ...baseline.payoff.breakevens] : payoff.breakevens);
@@ -110,7 +117,8 @@ export function PayoffChart({
     spot,
   ]).map((point) => ({
     ...point,
-    ...(baseline ? { baselinePnl: pnlAtSpot(baseline.legs, point.spot) } : {}),
+    ...(atExpiry ? { pnl: projectedPnl(atExpiry, point.spot) } : {}),
+    ...(baseline ? { baselinePnl: baselineAtExpiry ? projectedPnl(baselineAtExpiry, point.spot) : pnlAtSpot(baseline.legs, point.spot) } : {}),
     ...(projection ? { todayPnl: projectedPnl(projection, point.spot) } : {}),
   }));
   const id = useId().replace(/:/g, "");
@@ -149,7 +157,7 @@ export function PayoffChart({
   </>;
   const legend = <>
           <div className="payoff-curve-legend">
-            {baseline && <span className="text-muted-foreground"><i className="payoff-curve-legend-baseline" />{labels.baseline}</span>}
+            {baseline && <span className="text-muted-foreground"><i className="payoff-curve-legend-baseline" />{labels.baseline}{expiryName && ` · ${expiryName}`}</span>}
             {todayAt && (projection ? <>
               <span><i style={{ background: TODAY }} />{curveName} (est.)</span>
               <InfoTip label="How the projected curve is estimated" align="end">
@@ -158,7 +166,10 @@ export function PayoffChart({
               </InfoTip>
             </> : <span className="text-muted-foreground">Projected curve unavailable
               <InfoTip label="Why the projected curve is unavailable" align="end">It needs a spot price and at least one option price to infer volatility from.</InfoTip></span>)}
-            <span><i className="payoff-curve-legend-expiry" />{baseline ? labels.current : "Expiry"}</span>
+            <span><i className="payoff-curve-legend-expiry" />{baseline ? labels.current : "Expiry"}{expiryName && ` · ${expiryName}`}</span>
+            {expiryName && <InfoTip label="How the expiry curves are valued" align="end">
+              These legs have several expiries, so the {baseline ? "solid and dashed curves are" : "expiry curve is"} drawn at the first, {expiryName}: legs expiring then count at intrinsic value, and later options keep their time value, priced with Black-Scholes at the volatility implied by their current price. A change in volatility is not modelled.
+            </InfoTip>}
           </div>
   </>;
   const customForm = editing && <form className="flex flex-wrap items-end gap-2 text-xs" onSubmit={(e) => {

@@ -103,7 +103,7 @@ const steps: { title: string; body: string }[] = [
 
 const limits = [
   "Figures are estimates. The margin estimate usually runs below your broker's bill; your broker is the source of truth.",
-  "Payoff charts mixing several expiries are a single simplified scenario, and are labelled as such.",
+  "Payoff charts mixing several expiries are drawn at the first expiry, later contracts valued at their implied volatility, and are labelled as such.",
   "No Greeks, implied-volatility history or alerts yet.",
 ];
 

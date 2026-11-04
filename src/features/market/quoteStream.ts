@@ -82,6 +82,15 @@ function sync() {
   else if (!wanted && source) close();
 }
 
+/** Coming back to the tab is a reason to try now: a pending retry is dropped rather than waited out. */
+function onVisibility() {
+  if (document.visibilityState === "visible" && retryTimer !== undefined) {
+    clearTimeout(retryTimer);
+    retryTimer = undefined;
+  }
+  sync();
+}
+
 function subscribe(listener: () => void) {
   listeners.add(listener);
   return () => { listeners.delete(listener); };
@@ -91,11 +100,11 @@ function subscribe(listener: () => void) {
 function useStream() {
   useEffect(() => {
     users += 1;
-    if (users === 1) document.addEventListener("visibilitychange", sync);
+    if (users === 1) document.addEventListener("visibilitychange", onVisibility);
     sync();
     return () => {
       users -= 1;
-      if (users === 0) document.removeEventListener("visibilitychange", sync);
+      if (users === 0) document.removeEventListener("visibilitychange", onVisibility);
       sync();
     };
   }, []);

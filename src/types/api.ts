@@ -86,6 +86,59 @@ export interface SessionStatus {
   connections: BrokerConnection[];
 }
 
+/** Whether a result covers the company alone or with its subsidiaries. */
+export type Basis = "consolidated" | "standalone";
+
+/**
+ * One quarter and basis of a company's results (GET /api/research/stocks/{symbol}).
+ * Amounts are whole rupees, per-share figures rupees per share. **A null is "the filing did not
+ * state it", never zero.**
+ */
+export interface QuarterResult {
+  basis: Basis;
+  periodStart: string;
+  periodEnd: string;
+  audited: boolean;
+  approvedOn: string | null;
+  /** The filing's own unit: "lakhs", "crores", "actual". */
+  reportedIn?: string | null;
+  revenue: number;
+  otherIncome: number | null;
+  totalIncome: number | null;
+  financeCosts: number | null;
+  depreciation: number | null;
+  totalExpenses: number | null;
+  /** One-offs before tax, as filed. */
+  exceptionalItems?: number | null;
+  profitBeforeTax: number | null;
+  tax: number | null;
+  /** Net profit from discontinued operations, already inside `netProfit`. */
+  profitDiscontinued?: number | null;
+  netProfit: number;
+  /** Consolidated only: the parent's share, which EPS is based on. */
+  netProfitOwners?: number | null;
+  paidUpEquity: number | null;
+  faceValue: number | null;
+  epsBasic: number | null;
+  epsDiluted: number | null;
+  /** The NSE address of the filing these figures were read from. */
+  filing: string | null;
+}
+
+/**
+ * A stock's stored results. 404 `{error: "STOCK_NOT_LOADED"}` when nothing is loaded for it; a
+ * bare 404 when the caller is outside the page's audience (GB_RESEARCH_AUDIENCE).
+ */
+export interface StockFundamentals {
+  symbol: string;
+  name: string | null;
+  isin: string | null;
+  source: string;
+  /** When the newest of these figures was imported. */
+  generatedAt: string | null;
+  quarters: QuarterResult[];
+}
+
 /**
  * One underlying's spot for the header ticker (GET /api/market-data/spot).
  *

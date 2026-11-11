@@ -1,107 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { FilingFormatError, parseAmount, parseAny, parseFiling, parseXbrl } from "../scripts/fundamentals/parse-filing.mjs";
 import {
-  basesOf, chartBars, exposureIn, inCrore, keyFigures, operatingProfit, quarterLabel, quartersFor, resultRows, resultsAreStale,
-  trailingEps,
+  basesOf, chartBars, exposureIn, inCrore, keyFigures, missingKind, operatingProfit, quarterLabel, quartersFor, resultRows,
+  resultsAreStale, trailingEps,
 } from "../src/features/research/fundamentals.ts";
 
-/** A filing page cut down to the rows the parser reads, quirks included. */
-function filing({ heading = "Integrated Filing &mdash; IndAS", symbol = "ACME", rounding = "Lakhs", basis = "Consolidated" } = {}) {
-  return `<html><body><h1>${heading}</h1>
-<h3 style="font-weight: bold">General information about company</h3>
-<table>
-<tr><th>NSE Symbol</th><td>${symbol}</td></tr>
-<tr><th>ISIN</th><td>INE000A01010</td></tr>
-<tr><th>Name of company</th><td>Acme &amp; Sons Limited</td></tr>
-<tr><th>Date of board meeting when results were approved</th><td>11-11-2025</td></tr>
-<tr><th>Level of rounding used in financial results</th><td>${rounding}</td></tr>
-</table>
-<h3 style="font-weight: bold">Financial Results Ind-AS</h3>
-<h3 style="color:red">Amount in (${rounding})</h3>
-<table>
-<tr><th></th><th>Particulars</th><th>3 months ended</th><th>Year to date</th></tr>
-<tr><th>A</th><th>Date of start of reporting period</th><td>01-07-2025</td><td>01-04-2025</td></tr>
-<tr><th>B</th><th>Date of end of reporting period</th><td>30-09-2025</td><td>30-09-2025</td></tr>
-<tr><th>C</th><th>Whether results are audited or unaudited</th><td>Unaudited</td><td>Unaudited</td></tr>
-<tr><th>D</th><th>Nature of report standalone or consolidated</th><td>${basis}</td><td>${basis}</td></tr>
-<tr><th>1</th><th>Income</th><td></td><td></td></tr>
-<tr><th></th><th>Revenue from operations</th><td>1,06,839.00</td><td>2,02,634.00</td></tr>
-<tr><th></th><th>Other income</th><td>7,114.00</td><td>15,764.00</td></tr>
-<tr><th></th><th>Total income</th><td>1,13,953.00</td><td>2,18,398.00</td></tr>
-<tr><th>(e)</th><th>Finance costs</th><td>0.00</td><td>0.00</td></tr>
-<tr><th>(f)</th><th>Depreciation, depletion and amortisation expense
-<td>3,246.00</td><td>5,934.00</td></tr>
-<tr><th></th><th>Total expenses</th><td>42,059.00</td><td>77,993.00</td></tr>
-<tr><th>5</th><th>Total profit before tax</th><td>71,894.00</td><td>1,40,405.00</td></tr>
-<tr><th>9</th><th>Total tax expenses</th><td>18,194.00</td><td>35,712.00</td></tr>
-<tr><th>16</th><th>Total profit (loss) for period</th><td>55,702.00</td><td>1,09,519.00</td></tr>
-<tr><th>17</th><th>Other comprehensive income net of taxes</th><td>1,160.00</td><td>1,012.00</td></tr>
-<tr><th></th><th>Total profit or loss, attributable to non-controlling interests</th><td>(141.00)</td><td>(265.00)</td></tr>
-<tr><th></th><th>Paid-up equity share capital</th><td>8,146.00</td><td>8,146.00</td></tr>
-<tr><th></th><th>Face value of equity share capital</th><td>2</td><td>2</td></tr>
-<tr><th></th><th>Basic earnings (loss) per share from continuing operations</th><td>13.50</td><td>26.36</td></tr>
-<tr><th></th><th>Basic earnings (loss) per share from continuing and discontinued operations</th><td>13.56</td><td>26.65</td></tr>
-<tr><th></th><th>Diluted earnings (loss) per share from continuing and discontinued operations</th><td>13.55</td><td>26.60</td></tr>
-</table>
-<h3 style="font-weight: bold">Remarks</h3><table><tr><th>Revenue from operations</th><td>999</td></tr></table>
-</body></html>`;
-}
-
-test("a filing is read into rupees, from the quarter column, with per-share figures unscaled", () => {
-  const { company, quarter } = parseFiling(filing());
-  assert.deepEqual(company, { symbol: "ACME", isin: "INE000A01010", name: "Acme & Sons Limited" });
-  assert.equal(quarter.basis, "consolidated");
-  assert.deepEqual([quarter.periodStart, quarter.periodEnd, quarter.approvedOn], ["2025-07-01", "2025-09-30", "2025-11-11"]);
-  assert.equal(quarter.audited, false);
-  assert.equal(quarter.revenue, 10_683_900_000);
-  assert.equal(quarter.otherIncome, 711_400_000);
-  assert.equal(quarter.netProfit, 5_570_200_000);
-  assert.equal(quarter.paidUpEquity, 814_600_000);
-  assert.deepEqual([quarter.faceValue, quarter.epsBasic, quarter.epsDiluted], [2, 13.56, 13.55]);
-});
-
-test("an unclosed label cell does not swallow its number", () => {
-  assert.equal(parseFiling(filing()).quarter.depreciation, 324_600_000);
-});
-
-test("commented-out markup inside a cell is ignored", () => {
-  const page = filing({ rounding: "Crores" }).replace("<td>Crores</td>", "<td>Crores <!-- <span>old</span> --></td>");
-  assert.equal(parseFiling(page).quarter.revenue, 1_068_390_000_000);
-});
-
-test("without a rounding row the unit comes from the table's heading, then the currency row", () => {
-  const noRow = filing().replace(/<tr><th>Level of rounding[\s\S]*?<\/tr>/, "");
-  assert.equal(parseFiling(noRow).quarter.revenue, 10_683_900_000);
-  const actuals = noRow.replace(/<h3 style="color:red">[\s\S]*?<\/h3>/, "")
-    .replace("</table>", "<tr><th>Description of presentation currency</th><td>INR (in Actuals)</td></tr></table>");
-  assert.equal(parseFiling(actuals).quarter.revenue, 106_839);
-  assert.throws(() => parseFiling(noRow.replace(/<h3 style="color:red">[\s\S]*?<\/h3>/, "")), FilingFormatError);
-});
-
-test("dates with month names are read too", () => {
-  const page = filing().replace("<td>01-07-2025</td>", "<td>01-Jul-2025</td>").replace("<td>30-09-2025</td>", "<td>30-Sep-2025</td>");
-  const { quarter } = parseFiling(page);
-  assert.deepEqual([quarter.periodStart, quarter.periodEnd], ["2025-07-01", "2025-09-30"]);
-});
-
-test("the rounding level scales amounts; an unknown one is refused", () => {
-  assert.equal(parseFiling(filing({ rounding: "Crores" })).quarter.revenue, 1_068_390_000_000);
-  assert.throws(() => parseFiling(filing({ rounding: "Bushels" })), FilingFormatError);
-});
-
-test("a page that is not an IndAS integrated filing is refused, not half-read", () => {
-  assert.throws(() => parseFiling(filing({ heading: "Integrated Filing &mdash; Banking" })), FilingFormatError);
-  assert.throws(() => parseFiling("<html><body>Access denied</body></html>"), FilingFormatError);
-});
-
-test("amounts: Indian grouping, brackets for negatives, and text is not a number", () => {
-  assert.equal(parseAmount("1,06,839.00"), 106839);
-  assert.equal(parseAmount("(141.00)"), -141);
-  assert.equal(parseAmount("-6300000"), -6300000);
-  assert.equal(parseAmount("Unaudited"), null);
-  assert.equal(parseAmount(""), null);
-});
+// The filing parsers moved to the backend in AN-12 (fundamentals/parse, FilingParsersTest); what
+// stays here is the page's own arithmetic.
 
 const quarter = (periodEnd, over = {}) => ({
   basis: "consolidated", periodStart: "", periodEnd, audited: false, approvedOn: null,
@@ -125,34 +30,6 @@ test("trailing EPS needs four consecutive quarters", () => {
   assert.equal(trailingEps(year), 12);
   assert.equal(trailingEps(year.slice(1)), null);
   assert.equal(trailingEps([quarter("2025-06-30"), ...year.slice(1)]), null);
-});
-
-test("an XBRL instance is read from the quarter's context, in rupees as filed", () => {
-  const fact = (name, context, value) => `<in-bse-fin:${name} contextRef="${context}" unitRef="INR" decimals="-7">${value}</in-bse-fin:${name}>`;
-  const text = (name, value) => `<in-bse-fin:${name} contextRef="OneD">${value}</in-bse-fin:${name}>`;
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><xbrli:xbrl xmlns:xbrli="http://www.xbrl.org/2003/instance">
-${text("Symbol", "ITC")}${text("NameOfTheCompany", "ITC Limited")}
-${text("DateOfBoardMeetingWhenFinancialResultsWereApproved", "2025-02-06")}
-${text("LevelOfRoundingUsedInFinancialStatements", "Crores")}
-${text("DateOfStartOfReportingPeriod", "2024-10-01")}${text("DateOfEndOfReportingPeriod", "2024-12-31")}
-${text("WhetherResultsAreAuditedOrUnaudited", "Unaudited")}${text("NatureOfReportStandaloneConsolidated", "Consolidated")}
-${fact("RevenueFromOperations", "OneD", "203499600000.00")}${fact("RevenueFromOperations", "FourD", "612364200000.00")}
-${fact("RevenueFromOperations", "OneReportableSegmentRevenue01D", "1.00")}
-${fact("ProfitLossForPeriod", "OneD", "50131800000.00")}${fact("Expenses", "OneD", "144138600000.00")}
-${fact("PaidUpValueOfEquityShareCapital", "OneD", "12511700000.00")}
-<in-bse-fin:FaceValueOfEquityShareCapital contextRef="OneD" unitRef="INRPerShare" decimals="INF">1</in-bse-fin:FaceValueOfEquityShareCapital>
-<in-bse-fin:BasicEarningsLossPerShareFromContinuingOperations contextRef="OneD" unitRef="INRPerShare" decimals="INF">3.79</in-bse-fin:BasicEarningsLossPerShareFromContinuingOperations>
-<in-bse-fin:BasicEarningsLossPerShareFromContinuingAndDiscontinuedOperations contextRef="OneD" unitRef="INRPerShare" decimals="INF">3.95</in-bse-fin:BasicEarningsLossPerShareFromContinuingAndDiscontinuedOperations>
-</xbrli:xbrl>`;
-  const { company, quarter } = parseAny(xml);
-  assert.deepEqual(company, { symbol: "ITC", isin: null, name: "ITC Limited" });
-  assert.deepEqual([quarter.basis, quarter.periodStart, quarter.periodEnd, quarter.approvedOn, quarter.audited],
-    ["consolidated", "2024-10-01", "2024-12-31", "2025-02-06", false]);
-  assert.equal(quarter.revenue, 203_499_600_000);
-  assert.equal(quarter.netProfit, 50_131_800_000);
-  assert.deepEqual([quarter.faceValue, quarter.epsBasic, quarter.tax], [1, 3.95, null]);
-  assert.throws(() => parseXbrl(xml.replaceAll("RevenueFromOperations", "InterestEarned")), FilingFormatError);
-  assert.equal(parseAny(filing()).company.symbol, "ACME");
 });
 
 test("old results still show, but not a P/E against today's price", () => {
@@ -210,4 +87,30 @@ test("exposure groups the user's positions and holdings in the stock by account"
     ["kite", 1840, ["Short 1600 · ITC26NOV260CE"]],
   ]);
   assert.deepEqual(exposureIn("TCS", [], []), []);
+});
+
+test("a 404 means not loaded only when the API says so; a bare one means the page is hidden", () => {
+  assert.equal(missingKind({ error: "STOCK_NOT_LOADED", message: "No results are loaded for TCS." }), "not-loaded");
+  assert.equal(missingKind(undefined), "hidden");
+  assert.equal(missingKind("Not Found"), "hidden");
+  assert.equal(missingKind({ error: "SOMETHING_ELSE" }), "hidden");
+});
+
+test("one-off rows appear only when a shown quarter has one", () => {
+  const plain = resultRows(year).map((row) => row.label);
+  assert.equal(plain.includes("Exceptional items"), false);
+  assert.equal(plain.includes("Profit from discontinued operations"), false);
+
+  // ITC, Mar 2025: the hotels demerger is profit from discontinued operations, not an exceptional item.
+  const demerger = [...year.slice(0, 3), quarter("2026-09-30", { exceptionalItems: 0, profitDiscontinued: 14653e7 })];
+  const rows = Object.fromEntries(resultRows(demerger).map((row) => [row.label, row.cells]));
+  assert.equal(rows["Exceptional items"], undefined);
+  assert.deepEqual(rows["Profit from discontinued operations"], ["—", "—", "—", "14,653"]);
+  const order = resultRows(demerger).map((row) => row.label);
+  assert.ok(order.indexOf("Tax") < order.indexOf("Profit from discontinued operations"));
+  assert.ok(order.indexOf("Profit from discontinued operations") < order.indexOf("Net profit"));
+
+  const withExceptional = resultRows([quarter("2026-09-30", { exceptionalItems: 528e7 })]).map((row) => row.label);
+  assert.ok(withExceptional.indexOf("Depreciation") < withExceptional.indexOf("Exceptional items"));
+  assert.ok(withExceptional.indexOf("Exceptional items") < withExceptional.indexOf("Profit before tax"));
 });

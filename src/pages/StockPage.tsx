@@ -38,6 +38,20 @@ export function StockPage() {
   const quote = spot.data?.[0];
   const spotLine = spot.data ? spotItem(symbol, quote, brokerLabel, "No live price for this stock") : undefined;
   const price = quote?.price ?? null;
+  const state = fundamentals.data;
+  const loaded = state?.status === "loaded" ? state.data : undefined;
+
+  // Outside the page's audience: say nothing about the stock, show none of the user's book.
+  if (state?.status === "hidden") {
+    return (
+      <div className="page-stack">
+        <div className={panel}>
+          <EmptyState icon={<FileSearch />} title="Research is not available yet"
+            description="Stock pages are being prepared and are not open to every account." />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-stack">
@@ -48,7 +62,7 @@ export function StockPage() {
 
       <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{fundamentals.data?.name ?? symbol}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{loaded?.name ?? symbol}</h1>
           <p className="text-sm text-muted-foreground">NSE: {symbol}</p>
           {spotLine && (
             <p className="flex items-baseline gap-3 pt-1 tabular-nums" title={spotLine.title}>
@@ -68,13 +82,13 @@ export function StockPage() {
       {fundamentals.isError && (
         <div className={panel}><ErrorState title="Couldn't load this stock's results" onRetry={() => { void fundamentals.refetch(); }} /></div>
       )}
-      {fundamentals.data === null && (
+      {state?.status === "not-loaded" && (
         <div className={panel}>
           <EmptyState icon={<FileSearch />} title={`No results loaded for ${symbol}`}
-            description="Quarterly results appear here once this stock's filings have been extracted." />
+            description="Quarterly results appear here once this stock's filings have been imported." />
         </div>
       )}
-      {fundamentals.data && <Results data={fundamentals.data} price={price} />}
+      {loaded && <Results data={loaded} price={price} />}
 
       <Exposure symbol={symbol} />
 

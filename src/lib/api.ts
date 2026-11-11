@@ -23,6 +23,7 @@ import type {
   Position,
   RiskSummaryReport,
   SessionStatus,
+  StockFundamentals,
   SpotQuote,
   StrategyMetadata,
   StrategySimulationRequest,
@@ -236,6 +237,9 @@ function credentialPath(brokerId: string, label: string) {
 export const api = {
   me: () => request<Me>("/api/me"),
   adminStatus: () => request<AdminStatus>("/api/admin/status"),
+  /** A stock's quarterly results. 404: see `missingKind` in features/research/fundamentals.ts. */
+  stockFundamentals: (symbol: string) =>
+    request<StockFundamentals>(`/api/research/stocks/${encodeURIComponent(symbol)}`),
   brokerDefinitions: () => request<BrokerDefinition[]>("/api/brokers"),
   sessionStatus: () => request<SessionStatus>("/api/session/status"),
   /** Disconnect one broker account (C5). 404 when it is not this user's, or already gone. */

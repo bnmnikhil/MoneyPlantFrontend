@@ -1,2 +1,0 @@
-﻿# BSE Ltd quarterly result filings (NSE symbol BSE). One address per line.
-https://nsearchives.nseindia.com/corporate/ixbrl/INTEGRATED_FILING_INDAS_126130_11112025183926_iXBRL_WEB.html

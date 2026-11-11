@@ -2,42 +2,30 @@
  * A stock's quarterly results as the stock page shows them. Pure, so the arithmetic and the
  * "dash, not a guess" rules are tested without rendering.
  *
- * The data is public/fundamentals/<SYMBOL>.json, written by scripts/fundamentals/extract-filings.mjs
- * from the company's own filings. Amounts are rupees; per-share figures are rupees per share.
+ * The data is `GET /api/research/stocks/{symbol}`, read by the backend from the company's own
+ * filings with NSE. Amounts are rupees; per-share figures are rupees per share.
  */
+import type { Basis, QuarterResult, StockFundamentals } from "@/types/api";
 
-export type Basis = "consolidated" | "standalone";
+export type { Basis, QuarterResult, StockFundamentals };
 
-export interface QuarterResult {
-  basis: Basis;
-  periodStart: string;
-  periodEnd: string;
-  audited: boolean;
-  approvedOn: string | null;
-  revenue: number;
-  otherIncome: number | null;
-  totalIncome: number | null;
-  financeCosts: number | null;
-  depreciation: number | null;
-  totalExpenses: number | null;
-  profitBeforeTax: number | null;
-  tax: number | null;
-  netProfit: number;
-  paidUpEquity: number | null;
-  faceValue: number | null;
-  epsBasic: number | null;
-  epsDiluted: number | null;
-  /** The filing this row was read from; null when it came from a saved copy. */
-  filing: string | null;
+/**
+ * What a 404 from the results endpoint means. Outside the page's audience the answer is a bare
+ * 404 (the endpoint does not announce itself); inside it, `STOCK_NOT_LOADED` means the stock
+ * simply has no results yet.
+ */
+export function missingKind(body: unknown): "not-loaded" | "hidden" {
+  return typeof body === "object" && body !== null && (body as { error?: unknown }).error === "STOCK_NOT_LOADED"
+    ? "not-loaded"
+    : "hidden";
 }
 
-export interface StockFundamentals {
-  symbol: string;
-  name: string | null;
-  isin: string | null;
-  source: string;
-  generatedAt: string;
-  quarters: QuarterResult[];
+/** True when any shown quarter carries a non-zero figure: an empty row would only be noise. */
+function anyNonZero(quarters: QuarterResult[], pick: (q: QuarterResult) => number | null | undefined): boolean {
+  return quarters.some((q) => {
+    const value = pick(q);
+    return value !== null && value !== undefined && value !== 0;
+  });
 }
 
 const CRORE = 1e7;
@@ -111,8 +99,14 @@ export function resultRows(quarters: QuarterResult[]): ResultRow[] {
     row("Other income", false, (q) => inCrore(q.otherIncome)),
     row("Interest", false, (q) => inCrore(q.financeCosts)),
     row("Depreciation", false, (q) => inCrore(q.depreciation)),
+    // One-offs get a row only when a shown quarter has one, so a quarter like ITC's Mar 2025
+    // (the hotels demerger) explains itself without an empty line everywhere else.
+    ...(anyNonZero(quarters, (q) => q.exceptionalItems)
+      ? [row("Exceptional items", false, (q) => inCrore(q.exceptionalItems ?? null))] : []),
     row("Profit before tax", false, (q) => inCrore(q.profitBeforeTax)),
     row("Tax", false, (q) => inCrore(q.tax)),
+    ...(anyNonZero(quarters, (q) => q.profitDiscontinued)
+      ? [row("Profit from discontinued operations", false, (q) => inCrore(q.profitDiscontinued ?? null))] : []),
     row("Net profit", true, (q) => inCrore(q.netProfit)),
     row("EPS (₹)", false, (q) => (q.epsBasic === null ? DASH : twoDp.format(q.epsBasic))),
   ];

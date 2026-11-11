@@ -5,9 +5,21 @@
  * The data is `GET /api/research/stocks/{symbol}`, read by the backend from the company's own
  * filings with NSE. Amounts are rupees; per-share figures are rupees per share.
  */
-import type { Basis, QuarterResult, StockFundamentals } from "@/types/api";
+import type { Basis, PriceSummary, QuarterResult, StockFundamentals } from "@/types/api";
 
-export type { Basis, QuarterResult, StockFundamentals };
+export type { Basis, PriceSummary, QuarterResult, StockFundamentals };
+
+/** A window this full counts as a year of trading; fewer days and the tile says how many. */
+const FULL_YEAR_DAYS = 240;
+
+/** The 52-week tile from stored daily prices; a dash with the reason when there are none. */
+export function rangeFigure(range: PriceSummary | null | undefined): { value: string; note: string } {
+  if (!range) return { value: DASH, note: "Needs price history" };
+  const value = `₹${twoDp.format(range.low52w)} – ₹${twoDp.format(range.high52w)}`;
+  return range.days >= FULL_YEAR_DAYS
+    ? { value, note: `To the close of ${dateLabel(range.lastDate)}` }
+    : { value, note: `From ${range.days} trading day${range.days === 1 ? "" : "s"} since ${dateLabel(range.since)}` };
+}
 
 /**
  * What a 404 from the results endpoint means. Outside the page's audience the answer is a bare
@@ -146,7 +158,8 @@ export interface KeyFigure {
  * The tiles above the table. `price` is the live spot, or null when nothing could quote it.
  * A figure whose inputs are incomplete is a dash with the reason, never an estimate.
  */
-export function keyFigures(quarters: QuarterResult[], price: number | null, today = new Date()): KeyFigure[] {
+export function keyFigures(quarters: QuarterResult[], price: number | null, today = new Date(),
+  range: PriceSummary | null = null): KeyFigure[] {
   const latest = quarters.at(-1);
   const stale = !!latest && resultsAreStale(latest.periodEnd, today);
   const upTo = latest ? quarterLabel(latest.periodEnd) : "";
@@ -182,7 +195,7 @@ export function keyFigures(quarters: QuarterResult[], price: number | null, toda
       note: latest ? `Quarter ended ${quarterLabel(latest.periodEnd)}` : "No results loaded",
     },
     { label: "Dividend yield", value: DASH, note: "Needs dividend data" },
-    { label: "52-week range", value: DASH, note: "Needs price history" },
+    { label: "52-week range", ...rangeFigure(range) },
   ];
 }
 

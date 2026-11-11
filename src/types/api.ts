@@ -126,6 +126,21 @@ export interface QuarterResult {
 }
 
 /**
+ * The latest stored daily close and the range over the 365 days up to it, from NSE's daily price
+ * files (AN-22). Raw prices: not adjusted for splits or bonuses.
+ */
+export interface PriceSummary {
+  lastDate: string;
+  lastClose: number;
+  high52w: number;
+  low52w: number;
+  /** The earliest loaded trading day inside the window. */
+  since: string;
+  /** Trading days loaded inside the window; about 250 when it is complete. */
+  days: number;
+}
+
+/**
  * A stock's stored results. 404 `{error: "STOCK_NOT_LOADED"}` when nothing is loaded for it; a
  * bare 404 when the caller is outside the page's audience (GB_RESEARCH_AUDIENCE).
  */
@@ -137,6 +152,8 @@ export interface StockFundamentals {
   /** When the newest of these figures was imported. */
   generatedAt: string | null;
   quarters: QuarterResult[];
+  /** Null when no daily prices are loaded for the stock. */
+  price?: PriceSummary | null;
 }
 
 /**

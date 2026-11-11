@@ -118,7 +118,7 @@ function Results({ data, price }: { data: StockFundamentals; price: number | nul
         </p>
       )}
       <section aria-label="Key figures" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        {keyFigures(quarters, price).map((figure) => (
+        {keyFigures(quarters, price, new Date(), data.price ?? null).map((figure) => (
           <div key={figure.label} className="rounded-lg border border-border bg-card px-4 py-3">
             <p className="text-xs text-muted-foreground">{figure.label}</p>
             <p className="text-xl font-semibold tabular-nums">{figure.value}</p>

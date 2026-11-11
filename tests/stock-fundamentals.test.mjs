@@ -114,3 +114,17 @@ test("one-off rows appear only when a shown quarter has one", () => {
   assert.ok(withExceptional.indexOf("Depreciation") < withExceptional.indexOf("Exceptional items"));
   assert.ok(withExceptional.indexOf("Exceptional items") < withExceptional.indexOf("Profit before tax"));
 });
+
+test("the 52-week tile reads stored prices and says when the year is not complete", () => {
+  const full = { lastDate: "2026-11-09", lastClose: 278.8, high52w: 444.2, low52w: 270.05, since: "2025-11-10", days: 248 };
+  const range = Object.fromEntries(keyFigures(year, 240, new Date("2026-11-11"), full).map((f) => [f.label, f]))["52-week range"];
+  assert.equal(range.value, "₹270.05 – ₹444.20");
+  assert.equal(range.note, "To the close of 9 Nov 2026");
+
+  const partial = Object.fromEntries(keyFigures(year, 240, new Date("2026-11-11"), { ...full, days: 23, since: "2026-10-09" })
+    .map((f) => [f.label, f]))["52-week range"];
+  assert.equal(partial.note, "From 23 trading days since 9 Oct 2026");
+
+  const none = Object.fromEntries(keyFigures(year, 240, new Date("2026-11-11")).map((f) => [f.label, f]))["52-week range"];
+  assert.deepEqual([none.value, none.note], ["—", "Needs price history"]);
+});

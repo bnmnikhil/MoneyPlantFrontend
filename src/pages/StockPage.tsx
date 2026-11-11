@@ -136,7 +136,8 @@ function Results({ data, price }: { data: StockFundamentals; price: number | nul
             <span>₹ crore</span>
           </div>
         </div>
-        <div className="overflow-x-auto">
+        {/* relative: the positioning context for anything absolute inside (the sr-only labels), so it scrolls with the box instead of widening the page. */}
+        <div className="relative overflow-x-auto [scrollbar-color:var(--gb-thumb)_transparent] [scrollbar-width:thin]">
           <ol className="flex min-w-[28rem] items-end gap-3" aria-label="Revenue and net profit for each quarter">
             {bars.map((bar) => (
               <li key={bar.label} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
@@ -170,18 +171,18 @@ function Results({ data, price }: { data: StockFundamentals; price: number | nul
             </div>
           )}
         </div>
-        <div className="overflow-x-auto">
+        <div className="relative overflow-x-auto [scrollbar-color:var(--gb-thumb)_transparent] [scrollbar-width:thin]">
           <table className="w-full min-w-[36rem] border-collapse text-sm tabular-nums">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
-                <th scope="col" className="sticky left-0 bg-card px-3 py-2.5 text-left font-medium"><span className="sr-only">Line item</span></th>
+                <th scope="col" className="sticky left-0 w-36 min-w-36 bg-card px-3 sm:w-auto py-2.5 text-left font-medium"><span className="sr-only">Line item</span></th>
                 {quarters.map((q) => <th key={q.periodEnd} scope="col" className="whitespace-nowrap px-3 py-2.5 text-right font-medium">{quarterLabel(q.periodEnd)}</th>)}
               </tr>
             </thead>
             <tbody>
               {resultRows(quarters).map((row) => (
                 <tr key={row.label} className={cn("border-b border-border", row.strong ? "font-semibold" : "text-foreground/80")}>
-                  <th scope="row" className="sticky left-0 whitespace-nowrap bg-card px-3 py-2.5 text-left font-[inherit]">{row.label}</th>
+                  <th scope="row" className="sticky left-0 w-36 min-w-36 bg-card px-3 sm:w-auto sm:whitespace-nowrap py-2.5 text-left font-[inherit]">{row.label}</th>
                   {row.cells.map((cell, index) => <td key={quarters[index].periodEnd} className="px-3 py-2.5 text-right">{cell}</td>)}
                 </tr>
               ))}

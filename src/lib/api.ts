@@ -23,6 +23,10 @@ import type {
   Position,
   RiskSummaryReport,
   SessionStatus,
+  StockFundamentals,
+  FilingImportReport,
+  FilingImportResult,
+  PriceLoadReport,
   SpotQuote,
   StrategyMetadata,
   StrategySimulationRequest,
@@ -133,6 +137,8 @@ async function parseBody(res: Response): Promise<unknown> {
 
 interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
+  /** Sent as it is, as application/octet-stream, instead of `body` as JSON: a file upload. */
+  rawBody?: Blob;
 }
 
 /**
@@ -158,17 +164,18 @@ function csrfHeader(method: string | undefined): Record<string, string> {
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { body, headers, ...rest } = options;
+  const { body, rawBody, headers, ...rest } = options;
 
   const res = await fetch(path, {
     credentials: "include",
     headers: {
       Accept: "application/json",
-      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(rawBody !== undefined ? { "Content-Type": "application/octet-stream" }
+        : body !== undefined ? { "Content-Type": "application/json" } : {}),
       ...csrfHeader(rest.method),
       ...headers,
     },
-    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    ...(rawBody !== undefined ? { body: rawBody } : body !== undefined ? { body: JSON.stringify(body) } : {}),
     ...rest,
   });
 
@@ -236,6 +243,20 @@ function credentialPath(brokerId: string, label: string) {
 export const api = {
   me: () => request<Me>("/api/me"),
   adminStatus: () => request<AdminStatus>("/api/admin/status"),
+  /** A stock's quarterly results. 404: see `missingKind` in features/research/fundamentals.ts. */
+  stockFundamentals: (symbol: string) =>
+    request<StockFundamentals>(`/api/research/stocks/${encodeURIComponent(symbol)}`),
+  /** Owner only (others 404). Synchronous: about 2 s per filing not stored before. */
+  importFilings: (symbol: string, text: string) =>
+    request<FilingImportReport>("/api/admin/fundamentals/import", { method: "POST", body: { symbol, text } }),
+  /** Owner only. One filing's file, under the NSE address it came from. */
+  uploadFiling: (symbol: string, source: string, file: Blob) =>
+    request<FilingImportResult>(
+      `/api/admin/fundamentals/upload?symbol=${encodeURIComponent(symbol)}&source=${encodeURIComponent(source)}`,
+      { method: "POST", rawBody: file }),
+  /** Owner only. At most 62 days per call; about 2 s per date not loaded before. */
+  loadPrices: (from: string, to: string) =>
+    request<PriceLoadReport>("/api/admin/prices/load", { method: "POST", body: { from, to } }),
   brokerDefinitions: () => request<BrokerDefinition[]>("/api/brokers"),
   sessionStatus: () => request<SessionStatus>("/api/session/status"),
   /** Disconnect one broker account (C5). 404 when it is not this user's, or already gone. */

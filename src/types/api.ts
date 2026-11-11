@@ -86,6 +86,109 @@ export interface SessionStatus {
   connections: BrokerConnection[];
 }
 
+/** Whether a result covers the company alone or with its subsidiaries. */
+export type Basis = "consolidated" | "standalone";
+
+/**
+ * One quarter and basis of a company's results (GET /api/research/stocks/{symbol}).
+ * Amounts are whole rupees, per-share figures rupees per share. **A null is "the filing did not
+ * state it", never zero.**
+ */
+export interface QuarterResult {
+  basis: Basis;
+  periodStart: string;
+  periodEnd: string;
+  audited: boolean;
+  approvedOn: string | null;
+  /** The filing's own unit: "lakhs", "crores", "actual". */
+  reportedIn?: string | null;
+  revenue: number;
+  otherIncome: number | null;
+  totalIncome: number | null;
+  financeCosts: number | null;
+  depreciation: number | null;
+  totalExpenses: number | null;
+  /** One-offs before tax, as filed. */
+  exceptionalItems?: number | null;
+  profitBeforeTax: number | null;
+  tax: number | null;
+  /** Net profit from discontinued operations, already inside `netProfit`. */
+  profitDiscontinued?: number | null;
+  netProfit: number;
+  /** Consolidated only: the parent's share, which EPS is based on. */
+  netProfitOwners?: number | null;
+  paidUpEquity: number | null;
+  faceValue: number | null;
+  epsBasic: number | null;
+  epsDiluted: number | null;
+  /** The NSE address of the filing these figures were read from. */
+  filing: string | null;
+}
+
+/** One filing's fate in an import (owner only, POST /api/admin/fundamentals/import or /upload). */
+export interface FilingImportResult {
+  source: string;
+  outcome: "PARSED" | "OLDER_THAN_STORED" | "ALREADY_STORED" | "FAILED";
+  periodEnd: string | null;
+  basis: "CONSOLIDATED" | "STANDALONE" | null;
+  /** Why it failed; null otherwise. */
+  detail: string | null;
+}
+
+export interface FilingImportReport {
+  symbol: string;
+  filings: FilingImportResult[];
+  withoutFile: number;
+  ignored: number;
+}
+
+/** One daily price file's fate in a price load (owner only, POST /api/admin/prices/load). */
+export interface PriceDayResult {
+  fileDate: string;
+  outcome: "LOADED" | "ALREADY_LOADED" | "NOT_PUBLISHED" | "FAILED";
+  /** The trading date printed inside the file; a holiday's file carries the previous day. */
+  tradeDate: string | null;
+  rows: number | null;
+  detail: string | null;
+}
+
+export interface PriceLoadReport {
+  from: string;
+  to: string;
+  days: PriceDayResult[];
+}
+
+/**
+ * The latest stored daily close and the range over the 365 days up to it, from NSE's daily price
+ * files (AN-22). Raw prices: not adjusted for splits or bonuses.
+ */
+export interface PriceSummary {
+  lastDate: string;
+  lastClose: number;
+  high52w: number;
+  low52w: number;
+  /** The earliest loaded trading day inside the window. */
+  since: string;
+  /** Trading days loaded inside the window; about 250 when it is complete. */
+  days: number;
+}
+
+/**
+ * A stock's stored results. 404 `{error: "STOCK_NOT_LOADED"}` when nothing is loaded for it; a
+ * bare 404 when the caller is outside the page's audience (GB_RESEARCH_AUDIENCE).
+ */
+export interface StockFundamentals {
+  symbol: string;
+  name: string | null;
+  isin: string | null;
+  source: string;
+  /** When the newest of these figures was imported. */
+  generatedAt: string | null;
+  quarters: QuarterResult[];
+  /** Null when no daily prices are loaded for the stock. */
+  price?: PriceSummary | null;
+}
+
 /**
  * One underlying's spot for the header ticker (GET /api/market-data/spot).
  *

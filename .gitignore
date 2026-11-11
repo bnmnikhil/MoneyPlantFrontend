@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Filings downloaded by the sample's script (removed in AN-16). Kept on disk on the
+# owner's laptop because the backend's ItcGoldenFilingsTest reads them; never committed.
+scripts/fundamentals/cache/

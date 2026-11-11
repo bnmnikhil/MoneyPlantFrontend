@@ -11,6 +11,7 @@ import { SettingsPage } from "@/pages/SettingsPage";
 import { AdminStatusPage } from "@/pages/AdminStatusPage";
 import { BuilderRoute } from "@/pages/BuilderPage";
 import { StockPage } from "@/pages/StockPage";
+import { ResearchAdminPage } from "@/pages/ResearchAdminPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { PrivacyPage } from "@/pages/PrivacyPage";
 import { TermsPage } from "@/pages/TermsPage";
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="/app/risk" element={<Navigate to="/app/positions" replace />} />
           <Route path="/app/settings" element={<SettingsPage />} />
           <Route path="/app/admin" element={<AdminStatusPage />} />
+          <Route path="/app/admin/research" element={<ResearchAdminPage />} />
         </Route>
       </Route>
 

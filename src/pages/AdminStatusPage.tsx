@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ErrorState } from "@/components/states";
@@ -32,6 +34,7 @@ export function AdminStatusPage() {
       <PageHeader
         title="Status"
         description={`${s.app.environment} - up ${formatUptime(s.app.uptimeSeconds)} - refreshes every 15 seconds`}
+        actions={<Button asChild variant="outline"><Link to="/app/admin/research">Research data</Link></Button>}
       />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Cpu s={s} />

@@ -125,6 +125,39 @@ export interface QuarterResult {
   filing: string | null;
 }
 
+/** One filing's fate in an import (owner only, POST /api/admin/fundamentals/import or /upload). */
+export interface FilingImportResult {
+  source: string;
+  outcome: "PARSED" | "OLDER_THAN_STORED" | "ALREADY_STORED" | "FAILED";
+  periodEnd: string | null;
+  basis: "CONSOLIDATED" | "STANDALONE" | null;
+  /** Why it failed; null otherwise. */
+  detail: string | null;
+}
+
+export interface FilingImportReport {
+  symbol: string;
+  filings: FilingImportResult[];
+  withoutFile: number;
+  ignored: number;
+}
+
+/** One daily price file's fate in a price load (owner only, POST /api/admin/prices/load). */
+export interface PriceDayResult {
+  fileDate: string;
+  outcome: "LOADED" | "ALREADY_LOADED" | "NOT_PUBLISHED" | "FAILED";
+  /** The trading date printed inside the file; a holiday's file carries the previous day. */
+  tradeDate: string | null;
+  rows: number | null;
+  detail: string | null;
+}
+
+export interface PriceLoadReport {
+  from: string;
+  to: string;
+  days: PriceDayResult[];
+}
+
 /**
  * The latest stored daily close and the range over the 365 days up to it, from NSE's daily price
  * files (AN-22). Raw prices: not adjusted for splits or bonuses.

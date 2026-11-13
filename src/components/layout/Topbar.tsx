@@ -1,4 +1,4 @@
-﻿import { Link, NavLink } from "react-router-dom";
+﻿import { Link, NavLink, useLocation } from "react-router-dom";
 import { ChevronDown, KeyRound, LogOut, Loader2, MoreHorizontal } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -6,7 +6,8 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Logo } from "@/components/Logo";
-import { primaryNavItems } from "@/components/layout/nav";
+import { alsoActive, primaryNavItems, visibleNavItems } from "@/components/layout/nav";
+import { useResearchAvailable } from "@/features/research/hooks";
 import { BrokerMenuList } from "@/features/session/BrokerMenuList";
 import { IndexStrip, IndexTicker } from "@/features/market/IndexTicker";
 import { useBrokerStatus, useLogout, useMe } from "@/features/session/hooks";
@@ -23,6 +24,8 @@ export function Topbar() {
   const { data: me } = useMe();
   const logout = useLogout();
   const status = useBrokerStatus();
+  const { pathname } = useLocation();
+  const tabs = visibleNavItems(primaryNavItems, useResearchAvailable());
   const brokerIds = new Set([
     ...status.brokers,
     ...status.connections.map((connection) => connection.brokerId),
@@ -50,11 +53,11 @@ export function Topbar() {
         </Link>
 
         <nav aria-label="Main navigation" className="hidden items-center gap-1 lg:flex xl:gap-2">
-          {primaryNavItems.map((item) => (
+          {tabs.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end}
               className={({ isActive }) => cn(
                 "rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:px-4 lg:text-base",
-                isActive ? "workspace-nav-active" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                isActive || alsoActive(item, pathname) ? "workspace-nav-active" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
               )}>
               {item.label}
             </NavLink>

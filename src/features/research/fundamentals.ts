@@ -199,27 +199,52 @@ export function keyFigures(quarters: QuarterResult[], price: number | null, toda
   ];
 }
 
+/** The tallest bar, up or down, in pixels. */
+export const CHART_PX = 144;
+/** A loss, however small next to revenue, still draws a bar you can see. */
+const MIN_LOSS_PX = 3;
+
 export interface ChartBar {
   label: string;
   revenue: string;
-  /** Net profit in crores, a loss with a minus: the tooltip shows it even when no bar is drawn. */
+  /** Net profit in crores, a loss with a minus. */
   profit: string;
   profitIsLoss: boolean;
-  /** Bar heights as a share of the tallest revenue bar, 0 to 100. A loss draws no profit bar. */
-  revenuePct: number;
-  profitPct: number;
+  /** The profit, or the loss without its minus: what follows "Net profit" or "Net loss". */
+  amount: string;
+  /** Heights in pixels on one scale: revenue and a profit rise from the zero line, a loss hangs below it. */
+  revenuePx: number;
+  profitPx: number;
+  lossPx: number;
 }
 
-export function chartBars(quarters: QuarterResult[]): ChartBar[] {
-  const top = Math.max(0, ...quarters.map((q) => q.revenue));
-  return quarters.map((q) => ({
+/**
+ * The chart on one scale for everything, so a loss reads against revenue as truly as a profit
+ * does. `upPx` and `downPx` are the heights above and below the zero line; `downPx` is 0, and
+ * nothing is drawn below the line, when no shown quarter is a loss.
+ */
+export interface ChartLayout {
+  bars: ChartBar[];
+  upPx: number;
+  downPx: number;
+}
+
+export function chartBars(quarters: QuarterResult[]): ChartLayout {
+  const up = Math.max(0, ...quarters.map((q) => Math.max(q.revenue, q.netProfit)));
+  const down = Math.max(0, ...quarters.map((q) => -q.netProfit));
+  const scale = Math.max(up, down);
+  const px = (value: number) => (scale > 0 && value > 0 ? Math.round((value / scale) * CHART_PX * 10) / 10 : 0);
+  const bars = quarters.map((q) => ({
     label: quarterLabel(q.periodEnd),
     revenue: inCrore(q.revenue),
     profit: inCrore(q.netProfit),
     profitIsLoss: q.netProfit < 0,
-    revenuePct: top > 0 ? Math.max(0, (q.revenue / top) * 100) : 0,
-    profitPct: top > 0 ? Math.max(0, (q.netProfit / top) * 100) : 0,
+    amount: inCrore(Math.abs(q.netProfit)),
+    revenuePx: px(q.revenue),
+    profitPx: px(q.netProfit),
+    lossPx: q.netProfit < 0 ? Math.max(MIN_LOSS_PX, px(-q.netProfit)) : 0,
   }));
+  return { bars, upPx: px(up), downPx: down > 0 ? Math.max(MIN_LOSS_PX, px(down)) : 0 };
 }
 
 /** The user's own book in this stock, one block per broker account. */

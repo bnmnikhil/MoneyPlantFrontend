@@ -67,12 +67,26 @@ test("quarters are shown per basis, oldest first, latest eight", () => {
   assert.equal(quartersFor(data, "standalone").length, 1);
 });
 
-test("a loss draws no profit bar and prints with a minus", () => {
-  const [bar] = chartBars([quarter("2026-09-30", { netProfit: -20e7 })]);
-  assert.deepEqual([bar.revenuePct, bar.profitPct], [100, 0]);
-  assert.deepEqual([bar.revenue, bar.profit, bar.profitIsLoss], ["1,000", "−20", true], "the tooltip still states the loss");
+test("a loss hangs below the zero line on the same scale as revenue, and prints with a minus", () => {
+  const chart = chartBars([quarter("2026-06-30", { netProfit: 300e7 }), quarter("2026-09-30", { netProfit: -250e7 })]);
+  const [profit, loss] = chart.bars;
+  assert.deepEqual([profit.revenuePx, profit.profitPx, profit.lossPx], [144, 43.2, 0]);
+  assert.deepEqual([loss.revenuePx, loss.profitPx, loss.lossPx], [144, 0, 36], "a quarter of revenue, a quarter of the height");
+  assert.deepEqual([chart.upPx, chart.downPx], [144, 36]);
+  assert.deepEqual([loss.revenue, loss.profit, loss.profitIsLoss, loss.amount], ["1,000", "−250", true, "250"]);
   assert.equal(inCrore(-20e7), "−20");
   assert.equal(inCrore(null), "—");
+});
+
+test("a chart without a loss draws nothing below the line; a tiny loss still shows", () => {
+  assert.equal(chartBars([quarter("2026-09-30")]).downPx, 0);
+  const tiny = chartBars([quarter("2026-09-30", { netProfit: -0.1e7 })]);
+  assert.deepEqual([tiny.bars[0].lossPx, tiny.downPx], [3, 3]);
+});
+
+test("a loss bigger than revenue sets the scale, and revenue shrinks to fit", () => {
+  const chart = chartBars([quarter("2025-09-30", { netProfit: -2000e7 })]);
+  assert.deepEqual([chart.bars[0].revenuePx, chart.bars[0].lossPx, chart.upPx, chart.downPx], [72, 144, 72, 144]);
 });
 
 test("exposure groups the user's positions and holdings in the stock by account", () => {

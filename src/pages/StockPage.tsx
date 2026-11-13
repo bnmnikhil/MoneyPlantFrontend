@@ -108,7 +108,9 @@ function Results({ data, price }: { data: StockFundamentals; price: number | nul
   }
   const quarters = quartersFor(data, basis);
   const latest = quarters[quarters.length - 1];
-  const bars = chartBars(quarters);
+  const chart = chartBars(quarters);
+  const bars = chart.bars;
+  const anyLoss = chart.downPx > 0;
 
   return (
     <>
@@ -133,6 +135,7 @@ function Results({ data, price }: { data: StockFundamentals; price: number | nul
           <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
             <span><span aria-hidden="true" className="mr-1.5 inline-block size-2.5 rounded-sm bg-[var(--gb-bar)]" />Revenue</span>
             <span><span aria-hidden="true" className="mr-1.5 inline-block size-2.5 rounded-sm bg-profit" />Net profit</span>
+            {anyLoss && <span><span aria-hidden="true" className="mr-1.5 inline-block size-2.5 rounded-sm bg-loss" />Net loss</span>}
             <span>₹ crore</span>
           </div>
         </div>
@@ -143,12 +146,25 @@ function Results({ data, price }: { data: StockFundamentals; price: number | nul
               // Focusable so the tooltip also opens from the keyboard and, on a phone, with a tap.
               <li key={bar.label} tabIndex={0}
                 className="group relative flex min-w-0 flex-1 cursor-default flex-col items-center gap-1.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <span className="sr-only">{`${bar.label}: revenue ₹${bar.revenue} crore, net profit ₹${bar.profit} crore`}</span>
+                <span className="sr-only">{`${bar.label}: revenue ₹${bar.revenue} crore, ${bar.profitIsLoss ? "net loss" : "net profit"} ₹${bar.amount} crore`}</span>
                 <span aria-hidden="true" className="text-[11px] tabular-nums text-muted-foreground">{bar.revenue}</span>
-                <div aria-hidden="true" className="flex h-36 w-full items-end justify-center gap-1 rounded-t-sm border-b border-border group-hover:bg-secondary/50 group-focus-visible:bg-secondary/50">
-                  <div className="w-2/5 max-w-8 rounded-t-sm bg-[var(--gb-bar)]" style={{ height: `${bar.revenuePct}%` }} />
-                  <div className="w-2/5 max-w-8 rounded-t-sm bg-profit" style={{ height: `${bar.profitPct}%` }} />
+                {/* Above the zero line: revenue and a profit. Below it, only when some quarter is a loss: the loss,
+                    under the profit bar's slot and on the same scale, with its amount beneath. */}
+                <div aria-hidden="true" className="flex w-full flex-col group-hover:bg-secondary/50 group-focus-visible:bg-secondary/50 rounded-sm">
+                  <div className="flex w-full items-end justify-center gap-1 border-b border-border" style={{ height: chart.upPx }}>
+                    <div className="w-2/5 max-w-8 rounded-t-sm bg-[var(--gb-bar)]" style={{ height: bar.revenuePx }} />
+                    <div className="w-2/5 max-w-8 rounded-t-sm bg-profit" style={{ height: bar.profitPx }} />
+                  </div>
+                  {anyLoss && (
+                    <div className="flex w-full items-start justify-center gap-1" style={{ height: chart.downPx }}>
+                      <div className="w-2/5 max-w-8" />
+                      <div className="w-2/5 max-w-8 rounded-b-sm bg-loss" style={{ height: bar.lossPx }} />
+                    </div>
+                  )}
                 </div>
+                {anyLoss && (
+                  <span aria-hidden="true" className="h-4 text-[11px] tabular-nums text-loss">{bar.profitIsLoss ? bar.profit : ""}</span>
+                )}
                 <span aria-hidden="true" className="text-xs text-muted-foreground">{bar.label}</span>
                 {/* Inside the bar area, not above it: the chart's scroll box would clip anything outside.
                     The end columns pin to their outer edge so the tooltip never widens the box. */}
@@ -163,8 +179,11 @@ function Results({ data, price }: { data: StockFundamentals; price: number | nul
                     <span className="font-semibold text-foreground">₹{bar.revenue} cr</span>
                   </p>
                   <p className="flex items-center justify-between gap-4 tabular-nums">
-                    <span className="text-muted-foreground"><span className="mr-1.5 inline-block size-2 rounded-sm bg-profit" />Net profit</span>
-                    <span className={cn("font-semibold", bar.profitIsLoss ? "text-loss" : "text-foreground")}>₹{bar.profit} cr</span>
+                    <span className="text-muted-foreground">
+                      <span className={cn("mr-1.5 inline-block size-2 rounded-sm", bar.profitIsLoss ? "bg-loss" : "bg-profit")} />
+                      {bar.profitIsLoss ? "Net loss" : "Net profit"}
+                    </span>
+                    <span className={cn("font-semibold", bar.profitIsLoss ? "text-loss" : "text-foreground")}>₹{bar.amount} cr</span>
                   </p>
                 </div>
               </li>
@@ -201,27 +220,20 @@ function Results({ data, price }: { data: StockFundamentals; price: number | nul
             </thead>
             <tbody>
               {resultRows(quarters).map((row) => (
-                <tr key={row.label} className={cn("border-b border-border", row.strong ? "font-semibold" : "text-foreground/80")}>
+                <tr key={row.label} className={cn("border-b border-border last:border-b-0", row.strong ? "font-semibold" : "text-foreground/80")}>
                   <th scope="row" className="sticky left-0 w-36 min-w-36 bg-card px-3 sm:w-auto sm:whitespace-nowrap py-2.5 text-left font-[inherit]">{row.label}</th>
                   {row.cells.map((cell, index) => <td key={quarters[index].periodEnd} className="px-3 py-2.5 text-right">{cell}</td>)}
                 </tr>
               ))}
-              <tr className="text-muted-foreground">
-                <th scope="row" className="sticky left-0 bg-card px-3 py-2.5 text-left font-normal">Filing</th>
-                {quarters.map((q) => (
-                  <td key={q.periodEnd} className="px-3 py-2.5 text-right">
-                    {q.filing
-                      ? <a href={q.filing} target="_blank" rel="noreferrer" className="text-primary underline-offset-2 hover:underline">View<span className="sr-only"> the {quarterLabel(q.periodEnd)} filing</span></a>
-                      : "—"}
-                  </td>
-                ))}
-              </tr>
             </tbody>
           </table>
         </div>
         <p className="text-xs text-muted-foreground">
           From the company's filings with NSE. Latest: quarter ended {dateLabel(latest.periodEnd)}, approved {dateLabel(latest.approvedOn)}
-          {latest.audited ? "" : ", unaudited"}. Ratios are calculated by GoldenBook from these figures and the current price.
+          {latest.audited ? "" : ", unaudited"}
+          {latest.filing && (
+            <> (<a href={latest.filing} target="_blank" rel="noreferrer" className="text-primary underline-offset-2 hover:underline">view the filing</a>)</>
+          )}. Ratios are calculated by GoldenBook from these figures and the current price.
         </p>
       </section>
     </>

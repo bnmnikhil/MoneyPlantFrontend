@@ -190,6 +190,31 @@ export interface StockFundamentals {
 }
 
 /**
+ * One loaded company on the Research search page (GET /api/research/stocks). Figures are the
+ * backend's `stock_metric` on the basis of the latest quarter; null when the inputs were
+ * incomplete (fewer than four or eight consecutive quarters), never zero. Amounts are rupees.
+ */
+export interface StockListing {
+  symbol: string;
+  name: string;
+  basis: Basis;
+  /** Period end of the latest quarter loaded. */
+  latestQuarter: string;
+  quarters: number;
+  ttmRevenue: number | null;
+  ttmNetProfit: number | null;
+  ttmEps: number | null;
+  ttmRevenueGrowthPct: number | null;
+  ttmProfitGrowthPct: number | null;
+  /** Latest quarter. */
+  operatingMarginPct: number | null;
+  /** The latest stored daily close; all three null when no prices are loaded. */
+  priceDate: string | null;
+  close: number | null;
+  prevClose: number | null;
+}
+
+/**
  * One underlying's spot for the header ticker (GET /api/market-data/spot).
  *
  * `price` is null when none of the user's brokers could quote it. `change` and

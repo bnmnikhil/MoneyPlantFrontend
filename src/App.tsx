@@ -11,6 +11,7 @@ import { SettingsPage } from "@/pages/SettingsPage";
 import { AdminStatusPage } from "@/pages/AdminStatusPage";
 import { BuilderRoute } from "@/pages/BuilderPage";
 import { StockPage } from "@/pages/StockPage";
+import { ResearchPage } from "@/pages/ResearchPage";
 import { ResearchAdminPage } from "@/pages/ResearchAdminPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { PrivacyPage } from "@/pages/PrivacyPage";
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/app/holdings" element={<HoldingsPage />} />
           <Route path="/app/payoff" element={<PayoffPage />} />
           <Route path="/app/builder" element={<BuilderRoute />} />
+          <Route path="/app/research" element={<ResearchPage />} />
           <Route path="/app/stocks/:symbol" element={<StockPage />} />
           {/* Risk is hidden until it is defined; old bookmarks land on Positions, which carries the margin column. */}
           <Route path="/app/risk" element={<Navigate to="/app/positions" replace />} />

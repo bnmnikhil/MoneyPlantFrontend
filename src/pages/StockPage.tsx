@@ -23,7 +23,7 @@ const panel = "rounded-lg border border-border bg-card p-4 sm:p-5";
 
 /**
  * One stock: its quarterly results as the company filed them, a few figures worked out from
- * them, and the user's own positions and holdings in it. A sample page, reached by its URL.
+ * them, and the user's own positions and holdings in it. Reached from the Research search page.
  */
 export function StockPage() {
   const symbol = (useParams().symbol ?? "").toUpperCase();
@@ -56,7 +56,7 @@ export function StockPage() {
   return (
     <div className="page-stack">
       <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-        <span>Research</span><span aria-hidden="true">/</span><span>Stocks</span><span aria-hidden="true">/</span>
+        <Link to="/app/research" className="underline-offset-2 hover:text-foreground hover:underline">Research</Link><span aria-hidden="true">/</span>
         <span className="text-foreground">{symbol}</span>
       </nav>
 

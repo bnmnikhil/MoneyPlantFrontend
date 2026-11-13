@@ -24,6 +24,7 @@ import type {
   RiskSummaryReport,
   SessionStatus,
   StockFundamentals,
+  StockListing,
   FilingImportReport,
   FilingImportResult,
   PriceLoadReport,
@@ -243,6 +244,8 @@ function credentialPath(brokerId: string, label: string) {
 export const api = {
   me: () => request<Me>("/api/me"),
   adminStatus: () => request<AdminStatus>("/api/admin/status"),
+  /** Every loaded company, for the Research search page. A bare 404 outside the audience. */
+  researchStocks: () => request<{ stocks: StockListing[] }>("/api/research/stocks"),
   /** A stock's quarterly results. 404: see `missingKind` in features/research/fundamentals.ts. */
   stockFundamentals: (symbol: string) =>
     request<StockFundamentals>(`/api/research/stocks/${encodeURIComponent(symbol)}`),

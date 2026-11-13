@@ -70,6 +70,7 @@ test("quarters are shown per basis, oldest first, latest eight", () => {
 test("a loss draws no profit bar and prints with a minus", () => {
   const [bar] = chartBars([quarter("2026-09-30", { netProfit: -20e7 })]);
   assert.deepEqual([bar.revenuePct, bar.profitPct], [100, 0]);
+  assert.deepEqual([bar.revenue, bar.profit, bar.profitIsLoss], ["1,000", "−20", true], "the tooltip still states the loss");
   assert.equal(inCrore(-20e7), "−20");
   assert.equal(inCrore(null), "—");
 });

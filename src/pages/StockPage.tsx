@@ -139,14 +139,34 @@ function Results({ data, price }: { data: StockFundamentals; price: number | nul
         {/* relative: the positioning context for anything absolute inside (the sr-only labels), so it scrolls with the box instead of widening the page. */}
         <div className="relative overflow-x-auto [scrollbar-color:var(--gb-thumb)_transparent] [scrollbar-width:thin]">
           <ol className="flex min-w-[28rem] items-end gap-3" aria-label="Revenue and net profit for each quarter">
-            {bars.map((bar) => (
-              <li key={bar.label} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-                <span className="text-[11px] tabular-nums text-muted-foreground">{bar.revenue}</span>
-                <div className="flex h-36 w-full items-end justify-center gap-1 border-b border-border">
+            {bars.map((bar, index) => (
+              // Focusable so the tooltip also opens from the keyboard and, on a phone, with a tap.
+              <li key={bar.label} tabIndex={0}
+                className="group relative flex min-w-0 flex-1 cursor-default flex-col items-center gap-1.5 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <span className="sr-only">{`${bar.label}: revenue ₹${bar.revenue} crore, net profit ₹${bar.profit} crore`}</span>
+                <span aria-hidden="true" className="text-[11px] tabular-nums text-muted-foreground">{bar.revenue}</span>
+                <div aria-hidden="true" className="flex h-36 w-full items-end justify-center gap-1 rounded-t-sm border-b border-border group-hover:bg-secondary/50 group-focus-visible:bg-secondary/50">
                   <div className="w-2/5 max-w-8 rounded-t-sm bg-[var(--gb-bar)]" style={{ height: `${bar.revenuePct}%` }} />
                   <div className="w-2/5 max-w-8 rounded-t-sm bg-profit" style={{ height: `${bar.profitPct}%` }} />
                 </div>
-                <span className="text-xs text-muted-foreground">{bar.label}</span>
+                <span aria-hidden="true" className="text-xs text-muted-foreground">{bar.label}</span>
+                {/* Inside the bar area, not above it: the chart's scroll box would clip anything outside.
+                    The end columns pin to their outer edge so the tooltip never widens the box. */}
+                <div aria-hidden="true" className={cn(
+                  "pointer-events-none invisible absolute top-6 z-10 w-max min-w-36 rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-md",
+                  "opacity-0 transition-opacity group-hover:visible group-hover:opacity-100 group-focus:visible group-focus:opacity-100",
+                  index === 0 ? "left-0" : index === bars.length - 1 ? "right-0" : "left-1/2 -translate-x-1/2",
+                )}>
+                  <p className="mb-1 font-semibold text-foreground">{bar.label}</p>
+                  <p className="flex items-center justify-between gap-4 tabular-nums">
+                    <span className="text-muted-foreground"><span className="mr-1.5 inline-block size-2 rounded-sm bg-[var(--gb-bar)]" />Revenue</span>
+                    <span className="font-semibold text-foreground">₹{bar.revenue} cr</span>
+                  </p>
+                  <p className="flex items-center justify-between gap-4 tabular-nums">
+                    <span className="text-muted-foreground"><span className="mr-1.5 inline-block size-2 rounded-sm bg-profit" />Net profit</span>
+                    <span className={cn("font-semibold", bar.profitIsLoss ? "text-loss" : "text-foreground")}>₹{bar.profit} cr</span>
+                  </p>
+                </div>
               </li>
             ))}
           </ol>

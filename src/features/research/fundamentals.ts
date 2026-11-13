@@ -202,6 +202,9 @@ export function keyFigures(quarters: QuarterResult[], price: number | null, toda
 export interface ChartBar {
   label: string;
   revenue: string;
+  /** Net profit in crores, a loss with a minus: the tooltip shows it even when no bar is drawn. */
+  profit: string;
+  profitIsLoss: boolean;
   /** Bar heights as a share of the tallest revenue bar, 0 to 100. A loss draws no profit bar. */
   revenuePct: number;
   profitPct: number;
@@ -212,6 +215,8 @@ export function chartBars(quarters: QuarterResult[]): ChartBar[] {
   return quarters.map((q) => ({
     label: quarterLabel(q.periodEnd),
     revenue: inCrore(q.revenue),
+    profit: inCrore(q.netProfit),
+    profitIsLoss: q.netProfit < 0,
     revenuePct: top > 0 ? Math.max(0, (q.revenue / top) * 100) : 0,
     profitPct: top > 0 ? Math.max(0, (q.netProfit / top) * 100) : 0,
   }));

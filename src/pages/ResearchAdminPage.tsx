@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  MAX_FILINGS, MAX_LIST_BYTES, countOutcomes, daysBetween, defaultPriceRange, normaliseSymbol, previewList, splitRange,
+  MAX_FILINGS, MAX_LIST_BYTES, countOutcomes, dailyStatusLine, daysBetween, defaultPriceRange, normaliseSymbol, previewList, splitRange,
   todayInIndia, type ListPreview,
 } from "@/features/research/importTools";
 import { ApiError, api } from "@/lib/api";
@@ -206,6 +206,8 @@ interface PriceLoadPart {
 }
 
 function LoadPrices() {
+  const status = useQuery({ queryKey: ["admin", "prices", "status"], queryFn: api.priceStatus, retry: false });
+  const line = status.data ? dailyStatusLine(status.data) : null;
   const today = todayInIndia();
   const initial = defaultPriceRange(today);
   const [from, setFrom] = useState(initial.from);
@@ -232,11 +234,13 @@ function LoadPrices() {
       if (plan[i].error) break;
     }
     setRunning(false);
+    void status.refetch();
   };
 
   return (
     <Section title="Load prices"
       description="NSE's daily price file for each date in the range. Days already loaded are skipped; dates with no file (Saturdays, holidays) are reported and left.">
+      {line && <p role="status" className={line.warn ? "text-sm text-loss" : "text-sm text-muted-foreground"}>{line.text}</p>}
       <div className="grid gap-4 sm:grid-cols-[12rem_12rem]">
         <Field label="From" htmlFor="prices-from">
           <Input id="prices-from" type="date" value={from} max={today} onChange={(event) => setFrom(event.target.value)} />

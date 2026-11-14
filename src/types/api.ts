@@ -152,6 +152,26 @@ export interface PriceDayResult {
   detail: string | null;
 }
 
+/** What the daily price job last did (owner only, GET /api/admin/prices/status). */
+export interface PriceDailyRun {
+  at: string;
+  from: string | null;
+  to: string | null;
+  loaded: number;
+  notPublished: number;
+  failed: number;
+  note: string | null;
+  error: string | null;
+}
+
+export interface PriceStatus {
+  /** The newest daily file stored (the date in its name); null before the first load. */
+  lastFileDate: string | null;
+  dailyJob: "on" | "off";
+  /** Null until the job has run since the server last started. */
+  lastRun: PriceDailyRun | null;
+}
+
 export interface PriceLoadReport {
   from: string;
   to: string;

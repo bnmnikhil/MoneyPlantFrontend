@@ -18,6 +18,42 @@ export const MAX_FILINGS = 200;
 /** Longest date range one price load accepts (the backend refuses more). */
 export const MAX_PRICE_DAYS = 62;
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function day(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split("-");
+  return `${Number(d)} ${MONTHS[Number(m) - 1] ?? "?"} ${y}`;
+}
+
+/** "14 Nov, 19:30" in India's time, from an instant. */
+function runTime(instant: string): string {
+  const at = new Date(Date.parse(instant) + 330 * 60_000);
+  const hh = String(at.getUTCHours()).padStart(2, "0");
+  const mm = String(at.getUTCMinutes()).padStart(2, "0");
+  return `${at.getUTCDate()} ${MONTHS[at.getUTCMonth()]}, ${hh}:${mm}`;
+}
+
+/**
+ * The daily price job's state as one line for the admin page (AN-26c), and whether it needs
+ * attention: off, never run, a failed run, or failed days.
+ */
+export function dailyStatusLine(status: {
+  lastFileDate: string | null; dailyJob: "on" | "off";
+  lastRun: { at: string; loaded: number; notPublished: number; failed: number; note: string | null; error: string | null } | null;
+}): { text: string; warn: boolean } {
+  const latest = status.lastFileDate ? `Latest file: ${day(status.lastFileDate)}.` : "No price files stored yet.";
+  if (status.dailyJob === "off") return { text: `Daily load is off (GB_PRICES_DAILY=false). ${latest}`, warn: true };
+  const run = status.lastRun;
+  if (!run) return { text: `Daily load is on: 19:30, 21:30 and 08:00 IST. ${latest} It has not run since the server last started.`, warn: false };
+  if (run.error) return { text: `Daily load is on. ${latest} The run at ${runTime(run.at)} failed: ${run.error}`, warn: true };
+  const did = run.note === "Up to date" ? "nothing new"
+    : `${run.loaded} loaded, ${run.notPublished} not published${run.failed ? `, ${run.failed} failed` : ""}`;
+  return {
+    text: `Daily load is on. ${latest} Last run ${runTime(run.at)}: ${did}.${run.note && run.note !== "Up to date" ? ` ${run.note}.` : ""}`,
+    warn: run.failed > 0 || (run.note !== null && run.note !== "Up to date"),
+  };
+}
+
 export interface ListPreview {
   /** The filing addresses that will be imported: the first file address of each row, no repeats. */
   addresses: string[];

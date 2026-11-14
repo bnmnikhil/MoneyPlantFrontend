@@ -29,6 +29,7 @@ import type {
   FilingImportReport,
   FilingImportResult,
   PriceLoadReport,
+  PriceStatus,
   SpotQuote,
   StrategyMetadata,
   StrategySimulationRequest,
@@ -261,6 +262,8 @@ export const api = {
     request<FilingImportResult>(
       `/api/admin/fundamentals/upload?symbol=${encodeURIComponent(symbol)}&source=${encodeURIComponent(source)}`,
       { method: "POST", rawBody: file }),
+  /** Owner only. How current the stored prices are and what the daily job last did. */
+  priceStatus: () => request<PriceStatus>("/api/admin/prices/status"),
   /** Owner only. At most 62 days per call; about 2 s per date not loaded before. */
   loadPrices: (from: string, to: string) =>
     request<PriceLoadReport>("/api/admin/prices/load", { method: "POST", body: { from, to } }),

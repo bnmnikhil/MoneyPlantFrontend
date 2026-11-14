@@ -11,8 +11,9 @@ import { spotItem } from "@/features/market/tickerItems";
 import { usePositions } from "@/features/positions/hooks";
 import {
   basesOf, chartBars, dateLabel, exposureIn, keyFigures, quarterLabel, quartersFor, resultRows, resultsAreStale,
-  type Basis, type StockFundamentals,
+  type Basis, type QuarterResult, type StockFundamentals,
 } from "@/features/research/fundamentals";
+import { annualColumns, growthRows, yearEndName } from "@/features/research/annual";
 import { useStockFundamentals } from "@/features/research/hooks";
 import { PriceSection } from "@/features/research/PriceSection";
 import { api } from "@/lib/api";
@@ -241,7 +242,77 @@ function Results({ data, price, symbol }: { data: StockFundamentals; price: numb
           )}. Ratios are calculated by GoldenBook from these figures and the current price.
         </p>
       </section>
+
+      <Annual quarters={quartersFor(data, basis, Number.MAX_SAFE_INTEGER)} basis={basis} />
     </>
+  );
+}
+
+/** Yearly profit and loss (AN-28): each year the sum of its four quarters, on the basis chosen above. */
+function Annual({ quarters, basis }: { quarters: QuarterResult[]; basis: Basis }) {
+  const columns = annualColumns(quarters);
+  const years = columns.filter((c) => c.kind === "year");
+  if (years.length === 0) return null;
+  const results = columns.map((c) => c.result);
+  const growth = growthRows(columns);
+  const toneText = { up: "text-profit", down: "text-loss", flat: "text-muted-foreground" } as const;
+
+  return (
+    <section aria-label="Profit and loss, yearly" className={cn(panel, "space-y-4")}>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="text-base font-semibold">Profit and loss, yearly</h2>
+          <p className="text-xs text-muted-foreground">
+            {basis === "consolidated" ? "Consolidated" : "Standalone"} · ₹ crore, EPS in ₹ · years ending {yearEndName(quarters)}
+          </p>
+        </div>
+        <table className="border-collapse text-sm tabular-nums" aria-label="Compounded yearly growth">
+          <thead>
+            <tr className="text-xs text-muted-foreground">
+              <th scope="col" className="pr-4 text-left font-medium">Growth a year</th>
+              {growth[0].cells.map((c) => <th key={c.span} scope="col" className="px-2 text-right font-medium">{c.span} yrs</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {growth.map((row) => (
+              <tr key={row.label}>
+                <th scope="row" className="pr-4 text-left font-normal text-muted-foreground">{row.label}</th>
+                {row.cells.map((c) => <td key={c.span} className={cn("px-2 text-right font-semibold", toneText[c.tone])}>{c.value}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="relative overflow-x-auto [scrollbar-color:var(--gb-thumb)_transparent] [scrollbar-width:thin]">
+        <table className="w-full min-w-[36rem] border-collapse text-sm tabular-nums">
+          <thead>
+            <tr className="border-b border-border text-muted-foreground">
+              <th scope="col" className="sticky left-0 w-36 min-w-36 bg-card px-3 py-2.5 text-left font-medium sm:w-auto"><span className="sr-only">Line item</span></th>
+              {columns.map((c) => (
+                <th key={c.label} scope="col" className={cn("whitespace-nowrap px-3 py-2.5 text-right font-medium", c.kind === "ttm" && "text-foreground")}
+                  title={c.kind === "ttm" ? `The four quarters to ${quarterLabel(c.result.periodEnd)}` : undefined}>
+                  {c.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {resultRows(results).map((row) => (
+              <tr key={row.label} className={cn("border-b border-border last:border-b-0", row.strong ? "font-semibold" : "text-foreground/80")}>
+                <th scope="row" className="sticky left-0 w-36 min-w-36 bg-card px-3 py-2.5 text-left font-[inherit] sm:w-auto sm:whitespace-nowrap">{row.label}</th>
+                {row.cells.map((cell, index) => <td key={columns[index].label} className="px-3 py-2.5 text-right">{cell}</td>)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Each year is the sum of its four quarters as filed; a year with a quarter missing is left out
+        {columns.some((c) => c.kind === "ttm") ? ", and TTM is the latest four quarters" : ""}. EPS is the sum of the quarters' EPS,
+        so it can differ slightly from the yearly figure the company reports. Growth is compounded over full years and shows a
+        dash when either end is a loss.
+      </p>
+    </section>
   );
 }
 

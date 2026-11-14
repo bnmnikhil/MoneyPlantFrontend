@@ -81,6 +81,10 @@ test("growth compounds over 3, 5 and 7 full years and dashes when there are too 
   assert.deepEqual(revenue.cells.map((c) => c.value), ["10.0%", "10.0%", "—"]);
   assert.equal(revenue.cells[0].tone, "up");
   assert.deepEqual(profit.cells.map((c) => c.value), ["10.0%", "10.0%", "—"]);
+  // A missing year (FY21 lost a quarter) must not stretch "3 years" across four: FY24 back to FY21 is a dash.
+  const gap = annualColumns(run(2018, 6, 4 * 6, 1.1).filter((q) => q.periodEnd !== "2020-09-30"));
+  assert.deepEqual(gap.map((c) => c.label), ["FY19", "FY20", "FY22", "FY23", "FY24"]);
+  assert.deepEqual(growthRows(gap)[0].cells.map((c) => c.value), ["—", "10.0%", "—"]);
   const shrinking = growthRows(annualColumns(run(2018, 6, 4 * 4, 0.9)));
   assert.equal(shrinking[0].cells[0].value, "−10.0%");
   assert.equal(shrinking[0].cells[0].tone, "down");

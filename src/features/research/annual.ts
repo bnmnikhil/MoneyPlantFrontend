@@ -124,14 +124,23 @@ export interface GrowthRow {
 
 const oneDp = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-/** Revenue and net profit growth over 3, 5 and 7 full years, ending with the latest full year. */
+/**
+ * Revenue and net profit growth over 3, 5 and 7 full years, ending with the latest full year. The
+ * start is the year ending exactly `span` years earlier, found by date: counting back along the list
+ * would silently stretch the span across a year that is missing.
+ */
 export function growthRows(columns: AnnualColumn[], spans = [3, 5, 7]): GrowthRow[] {
   const years = columns.filter((c) => c.kind === "year").map((c) => c.result);
+  const end = years[years.length - 1];
+  const yearsBefore = (span: number) => {
+    if (!end) return undefined;
+    const target = `${Number(end.periodEnd.slice(0, 4)) - span}${end.periodEnd.slice(4, 7)}`;
+    return years.find((q) => q.periodEnd.slice(0, 7) === target);
+  };
   const row = (label: string, pick: (q: QuarterResult) => number): GrowthRow => ({
     label,
     cells: spans.map((span) => {
-      const end = years[years.length - 1];
-      const start = years[years.length - 1 - span];
+      const start = yearsBefore(span);
       const value = start && end ? cagr(pick(start), pick(end), span) : null;
       if (value === null) return { span, value: "—", tone: "flat" as const };
       const text = `${oneDp.format(Math.abs(value))}%`;

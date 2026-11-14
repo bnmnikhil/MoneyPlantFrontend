@@ -48,6 +48,17 @@ export function useResearchAvailable(): boolean {
   return useStockList().data?.status === "loaded";
 }
 
+/** A year of daily prices for the price section. Stored once a day, so five minutes is plenty fresh. */
+export function useStockPrices(symbol: string) {
+  return useQuery({
+    queryKey: ["research", "prices", symbol],
+    queryFn: () => api.stockPrices(symbol),
+    enabled: symbol.length > 0,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+}
+
 export function useStockFundamentals(symbol: string) {
   return useQuery({
     queryKey: ["research", "stock", symbol],

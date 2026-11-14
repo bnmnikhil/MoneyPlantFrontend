@@ -189,6 +189,28 @@ export interface StockFundamentals {
   price?: PriceSummary | null;
 }
 
+/** One trading day from NSE's daily file (GET /api/research/stocks/{symbol}/prices). Rupees; shares. */
+export interface DailyPrice {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  prevClose: number | null;
+  volume: number | null;
+  /** Shares taken as delivery; null when the file printed none. */
+  deliveryQty: number | null;
+  deliveryPct: number | null;
+}
+
+/** A year of daily prices up to the latest stored day, oldest first. */
+export interface StockPrices {
+  symbol: string;
+  /** False: prices are as traded, not adjusted for splits or bonuses (until AN-23). */
+  adjusted: boolean;
+  days: DailyPrice[];
+}
+
 /**
  * One loaded company on the Research search page (GET /api/research/stocks). Figures are the
  * backend's `stock_metric` on the basis of the latest quarter; null when the inputs were

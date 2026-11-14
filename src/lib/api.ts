@@ -25,6 +25,7 @@ import type {
   SessionStatus,
   StockFundamentals,
   StockListing,
+  StockPrices,
   FilingImportReport,
   FilingImportResult,
   PriceLoadReport,
@@ -246,6 +247,9 @@ export const api = {
   adminStatus: () => request<AdminStatus>("/api/admin/status"),
   /** Every loaded company, for the Research search page. A bare 404 outside the audience. */
   researchStocks: () => request<{ stocks: StockListing[] }>("/api/research/stocks"),
+  /** A year of a stock's daily prices; no days when none are stored. A bare 404 outside the audience. */
+  stockPrices: (symbol: string) =>
+    request<StockPrices>(`/api/research/stocks/${encodeURIComponent(symbol)}/prices`),
   /** A stock's quarterly results. 404: see `missingKind` in features/research/fundamentals.ts. */
   stockFundamentals: (symbol: string) =>
     request<StockFundamentals>(`/api/research/stocks/${encodeURIComponent(symbol)}`),

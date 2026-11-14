@@ -14,6 +14,7 @@ import {
   type Basis, type StockFundamentals,
 } from "@/features/research/fundamentals";
 import { useStockFundamentals } from "@/features/research/hooks";
+import { PriceSection } from "@/features/research/PriceSection";
 import { api } from "@/lib/api";
 import { formatSignedINRWhole, pnlColor } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -88,7 +89,9 @@ export function StockPage() {
             description="Quarterly results appear here once this stock's filings have been imported." />
         </div>
       )}
-      {loaded && <Results data={loaded} price={price} />}
+      {/* Without results there are no key figures to sit under, so the chart stands on its own. */}
+      {state?.status === "not-loaded" && <PriceSection symbol={symbol} />}
+      {loaded && <Results data={loaded} price={price} symbol={symbol} />}
 
       <Exposure symbol={symbol} />
 
@@ -99,7 +102,7 @@ export function StockPage() {
   );
 }
 
-function Results({ data, price }: { data: StockFundamentals; price: number | null }) {
+function Results({ data, price, symbol }: { data: StockFundamentals; price: number | null; symbol: string }) {
   const bases = basesOf(data);
   const [chosen, setChosen] = useState<Basis>();
   const basis = chosen && bases.includes(chosen) ? chosen : bases[0];
@@ -128,6 +131,8 @@ function Results({ data, price }: { data: StockFundamentals; price: number | nul
           </div>
         ))}
       </section>
+
+      <PriceSection symbol={symbol} />
 
       <section className={cn(panel, "space-y-4")}>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
